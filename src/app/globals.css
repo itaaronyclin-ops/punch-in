@@ -98,16 +98,28 @@ html {
   scroll-behavior: smooth;
 }
 
+html,
+body {
+  height: 100dvh;
+  width: 100vw;
+  overflow: hidden;
+  position: fixed;
+  /* Prevent bouncy scroll on iOS */
+  margin: 0;
+  padding: 0;
+}
+
 body {
   font-family: var(--font);
   background: var(--surface-page);
   color: var(--text-primary);
-  min-height: 100vh;
   line-height: 1.47059;
   letter-spacing: -0.022em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ─── Layout ─────────────────────────────────────────────────────────────── */
@@ -1027,12 +1039,15 @@ tr:hover td {
 
 /* ─── Login ───────────────────────────────────────────────────────────────── */
 .login-page {
-  min-height: 100vh;
+  height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--surface-page);
   padding: 24px;
+  overflow: hidden;
+  position: fixed;
+  inset: 0;
 }
 
 .login-box {
@@ -1840,8 +1855,7 @@ code {
   border-radius: 50px;
   box-shadow: 0 40px 120px rgba(0, 0, 0, 0.12), inset 0 0 0 1px rgba(0, 0, 0, 0.05);
   overflow: hidden;
-  height: 850px;
-  max-height: calc(100vh - 80px);
+  height: min(850px, 100dvh - 80px);
   position: relative;
   display: flex;
   flex-direction: column;
@@ -1852,9 +1866,13 @@ code {
     margin: 0;
     max-width: 100vw;
     border-radius: 0;
-    height: 100vh;
-    max-height: none;
+    height: 100dvh;
     box-shadow: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
   }
 }
 
@@ -2061,4 +2079,152 @@ code {
   font-size: 0.95rem;
   color: #666;
   margin-top: 4px;
+}
+
+/* ─── Premium Animations ─────────────────────────────────────────────── */
+.anim-card-container {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  padding: 40px 32px;
+  border-radius: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  width: 85%;
+  max-width: 320px;
+  animation: scaleIn 0.5s var(--spring);
+  text-align: center;
+}
+
+@media (prefers-color-scheme: dark) {
+  .anim-card-container {
+    background: rgba(30, 30, 30, 0.7);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+}
+
+.anim-icon-stage {
+  position: relative;
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.anim-pulse-bg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 140px;
+  height: 140px;
+  border-radius: 50%;
+  opacity: 0.15;
+  z-index: 0;
+}
+
+.anim-pulse-bg.success {
+  background: radial-gradient(circle, var(--green) 0%, transparent 70%);
+  animation: pulseSuccess 2s infinite;
+}
+
+.anim-pulse-bg.fail {
+  background: radial-gradient(circle, var(--red) 0%, transparent 70%);
+  animation: pulseFail 1.5s infinite;
+}
+
+.anim-icon-stage svg {
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.1));
+}
+
+.anim-checkin-success {
+  color: var(--green);
+}
+
+.anim-checkin-fail {
+  color: var(--red);
+  animation: shake 0.4s ease-in-out;
+}
+
+.anim-leave-success {
+  color: #007aff;
+  animation: flyUp 1.5s ease-out forwards;
+}
+
+.anim-leave-fail {
+  color: var(--red);
+}
+
+.anim-message-area {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.anim-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--text-primary);
+}
+
+.anim-text {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+/* ─── Keyframe Magic ────────────────────────────────────────────────── */
+@keyframes pulseSuccess {
+  0% {
+    transform: translate(-50%, -50%) scale(0.8);
+    opacity: 0.2;
+  }
+
+  50% {
+    transform: translate(-50%, -50%) scale(1.2);
+    opacity: 0.1;
+  }
+
+  100% {
+    transform: translate(-50%, -50%) scale(0.8);
+    opacity: 0.2;
+  }
+}
+
+@keyframes flyUp {
+  0% {
+    transform: translate(0, 0) rotate(0);
+  }
+
+  20% {
+    transform: translate(-5px, 5px) rotate(-5deg);
+  }
+
+  100% {
+    transform: translate(150px, -150px) rotate(10deg);
+    opacity: 0;
+  }
+}
+
+@keyframes shake {
+
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+
+  25% {
+    transform: translateX(-8px);
+  }
+
+  75% {
+    transform: translateX(8px);
+  }
 }

@@ -131,56 +131,74 @@ export default function GlobalUI() {
                 </div>
             )}
 
-            {/* Fullscreen Special Animations */}
+            {/* Fullscreen Special Animations — Premium Re-layout */}
             {animOpts && (
-                <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(10px)', zIndex: 11000, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', animation: 'fadeIn 0.2s ease-out' }}>
-                    {/* Checkin Success: Time clock punching */}
-                    {animOpts.type === 'checkin-success' && (
-                        <div className="anim-checkin-success">
-                            <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                                <line x1="16" y1="2" x2="16" y2="6" />
-                                <line x1="8" y1="2" x2="8" y2="6" />
-                                <line x1="3" y1="10" x2="21" y2="10" />
-                                <path className="anim-check-mark" d="M9 16l2 2 4-4" />
-                            </svg>
+                <div style={{
+                    position: 'fixed',
+                    inset: 0,
+                    backgroundColor: 'rgba(0,0,0,0.4)',
+                    backdropFilter: 'blur(20px) saturate(180%)', // High-fidelity blur
+                    zIndex: 11000,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    animation: 'fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
+                }}>
+                    <div className="anim-card-container">
+                        {/* Dynamic Background Pulse */}
+                        <div className={`anim-pulse-bg ${animOpts.type.includes('success') ? 'success' : 'fail'}`}></div>
+
+                        <div className="anim-icon-stage">
+                            {/* Checkin Success: Time clock punching */}
+                            {animOpts.type === 'checkin-success' && (
+                                <div className="anim-checkin-success">
+                                    <svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                                        <line x1="16" y1="2" x2="16" y2="6" />
+                                        <line x1="8" y1="2" x2="8" y2="6" />
+                                        <line x1="3" y1="10" x2="21" y2="10" />
+                                        <path className="anim-check-mark" d="M9 16l2 2 4-4" />
+                                    </svg>
+                                </div>
+                            )}
+
+                            {/* Checkin Fail: Shaky broken clock */}
+                            {animOpts.type === 'checkin-fail' && (
+                                <div className="anim-checkin-fail">
+                                    <svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                                        <line x1="16" y1="2" x2="16" y2="6" />
+                                        <line x1="8" y1="2" x2="8" y2="6" />
+                                        <line x1="3" y1="10" x2="21" y2="10" />
+                                        <path d="M15 14l-6 6M9 14l6 6" />
+                                    </svg>
+                                </div>
+                            )}
+
+                            {/* Leave Success: Paper airplane fly */}
+                            {animOpts.type === 'leave-success' && (
+                                <div className="anim-leave-success">
+                                    <svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+                                    </svg>
+                                </div>
+                            )}
+
+                            {/* Leave Fail: Crash airplane */}
+                            {animOpts.type === 'leave-fail' && (
+                                <div className="anim-leave-fail">
+                                    <svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                        <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01" />
+                                    </svg>
+                                </div>
+                            )}
                         </div>
-                    )}
-                    {/* Checkin Fail: Broken shaken time clock */}
-                    {animOpts.type === 'checkin-fail' && (
-                        <div className="anim-checkin-fail">
-                            <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="var(--red)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                                <line x1="16" y1="2" x2="16" y2="6" />
-                                <line x1="8" y1="2" x2="8" y2="6" />
-                                <line x1="3" y1="10" x2="21" y2="10" />
-                                <line x1="9" y1="14" x2="15" y2="20" />
-                                <line x1="15" y1="14" x2="9" y2="20" />
-                            </svg>
+
+                        <div className="anim-message-area">
+                            <div className="anim-title">{animOpts.type.includes('success') ? '恭喜！' : '哎呀⋯'}</div>
+                            <div className="anim-text">{animOpts.msg}</div>
                         </div>
-                    )}
-                    {/* Leave Success: Paper airplane flying up */}
-                    {animOpts.type === 'leave-success' && (
-                        <div className="anim-leave-success">
-                            <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                <line x1="22" y1="2" x2="11" y2="13" />
-                                <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                            </svg>
-                        </div>
-                    )}
-                    {/* Leave Fail: Paper airplane crashing / X mark */}
-                    {animOpts.type === 'leave-fail' && (
-                        <div className="anim-leave-fail">
-                            <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="var(--red)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                                <circle cx="12" cy="12" r="10" strokeWidth="2" strokeDasharray="4 4" />
-                                <line x1="9" y1="9" x2="15" y2="15" strokeWidth="2" />
-                                <line x1="15" y1="9" x2="9" y2="15" strokeWidth="2" />
-                            </svg>
-                        </div>
-                    )}
-                    <div style={{ marginTop: 24, fontSize: '1.4rem', fontWeight: 600, color: 'white', textShadow: '0 2px 10px rgba(0,0,0,0.5)', animation: 'slideUp 0.5s var(--spring)' }}>
-                        {animOpts.msg}
                     </div>
                 </div>
             )}
