@@ -1,0 +1,471 @@
+/**
+ * 打卡系統 - Google Apps Script Web App
+ * 部署方式：Extensions → Apps Script → Deploy → New deployment → Web app
+ *   - Execute as: Me
+ *   - Who has access: Anyone
+ * 部署後取得 Web App URL，填入 Vercel 環境變數 GAS_URL
+ */
+
+// ─── 工作表名稱常數 ────────────────────────────────────────────────────────
+const SHEET = {
+  MEMBERS:       'Members',
+  ATTENDANCE:    'Attendance',
+  LEAVE:         'LeaveRequests',
+  VISIT:         'VisitRecords',
+  SETTINGS:      'Settings',
+  REQUIRED_DAYS: 'RequiredDays',
+  TG_SETTINGS:   'TGSettings',
+};
+
+// ─── Entry Points ──────────────────────────────────────────────────────────
+
+function doGet(e) {
+  return handleRequest(e);
+}
+
+function doPost(e) {
+  return handleRequest(e);
+}
+
+function handleRequest(e) {
+  try {
+    const params = e.parameter || {};
+    const action = params.action;
+    const body   = e.postData ? JSON.parse(e.postData.contents || '{}') : {};
+
+    // 合併 GET params 與 POST body
+    const data = Object.assign({}, params, body);
+    delete data.action;
+
+    let result;
+
+    switch (action) {
+      // ── Members ──────────────────────────────────────────────────────────
+      case 'getMembers':        result = getMembers();                break;
+      case 'getMemberByAgcode': result = getMemberByAgcode(data.agcode); break;
+      case 'addMember':         result = addMember(data);             break;
+      case 'updateMember':      result = updateMember(data);          break;
+      case 'deleteMember':      result = deleteMember(data.rowIndex); break;
+
+      // ── Attendance ────────────────────────────────────────────────────────
+      case 'getAttendance':     result = getAttendance(data.agcode);  break;
+      case 'addAttendance':     result = addAttendance(data);         break;
+      case 'updateAttendance':  result = updateAttendance(data);      break;
+      case 'deleteAttendance':  result = deleteAttendance(data.rowIndex); break;
+
+      // ── Leave ─────────────────────────────────────────────────────────────
+      case 'getLeaveRequests':  result = getLeaveRequests(data.agcode); break;
+      case 'addLeaveRequest':   result = addLeaveRequest(data);        break;
+      case 'updateLeaveRequest':result = updateLeaveRequest(data);     break;
+
+      // ── Visit ─────────────────────────────────────────────────────────────
+      case 'getVisitRecords':   result = getVisitRecords(data.agcode); break;
+      case 'addVisitRecord':    result = addVisitRecord(data);         break;
+
+      // ── Settings ──────────────────────────────────────────────────────────
+      case 'getAllSettings':    result = getAllSettings();             break;
+      case 'setSetting':        result = setSetting(data.key, data.value); break;
+
+      // ── Required Days ─────────────────────────────────────────────────────
+      case 'getRequiredDays':   result = getRequiredDays();           break;
+      case 'addRequiredDay':    result = addRequiredDay(data);        break;
+      case 'deleteRequiredDay': result = deleteRequiredDay(data.rowIndex); break;
+
+      // ── TG Settings ───────────────────────────────────────────────────────
+      case 'getTGSettings':     result = getTGSettings();             break;
+      case 'addTGSetting':      result = addTGSetting(data);          break;
+      case 'updateTGSetting':   result = updateTGSetting(data);       break;
+      case 'deleteTGSetting':   result = deleteTGSetting(data.rowIndex); break;
+
+      // ── Init ──────────────────────────────────────────────────────────────
+      case 'initSheets':        result = initSheets();                break;
+
+      default:
+        result = { error: 'Unknown action: ' + action };
+    }
+
+    return jsonResponse(result);
+  } catch (err) {
+    return jsonResponse({ error: err.message, stack: err.stack });
+  }
+}
+
+function jsonResponse(data) {
+  return ContentService
+    .createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ─── Spreadsheet Helper ────────────────────────────────────────────────────
+
+function getSpreadsheet() {
+  // 自動綁定您提供的 Google Sheet ID
+  return SpreadsheetApp.openById('1YjR1d4o84GHFV-CehMxVSI50TvOYdnxBBFaBWjndXj0');
+}
+
+function getSheet(name) {
+  const ss = getSpreadsheet();
+  let sheet = ss.getSheetByName(name);
+  if (!sheet) throw new Error('Sheet not found: ' + name);
+  return sheet;
+}
+
+function sheetToObjects(sheet) {
+  const data = sheet.getDataRange().getValues();
+  if (data.length < 2) return [];
+  const headers = data[0];
+  return data.slice(1).map((row, i) => {
+    const obj = { rowIndex: i + 2 };
+    headers.forEach((h, j) => { obj[h] = row[j] !== undefined ? String(row[j]) : ''; });
+    return obj;
+  });
+}
+
+function appendRow(sheetName, values) {
+  const sheet = getSheet(sheetName);
+  sheet.appendRow(values);
+}
+
+function updateRow(sheetName, rowIndex, values) {
+  const sheet = getSheet(sheetName);
+  const range = sheet.getRange(rowIndex, 1, 1, values.length);
+  range.setValues([values]);
+}
+
+function deleteRow(sheetName, rowIndex) {
+  const sheet = getSheet(sheetName);
+  sheet.deleteRow(parseInt(rowIndex));
+}
+
+function generateId() {
+  return new Date().getTime().toString(36) + Math.random().toString(36).slice(2);
+}
+
+function nowStr() {
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+}
+
+function todayStr() {
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  return `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+}
+
+// ─── Members ───────────────────────────────────────────────────────────────
+
+function getMembers() {
+  const sheet = getSheet(SHEET.MEMBERS);
+  const rows = sheetToObjects(sheet);
+  return { members: rows };
+}
+
+function getMemberByAgcode(agcode) {
+  if (!agcode) return { error: 'agcode required' };
+  const { members } = getMembers();
+  const member = members.find(m => m.AGCODE === agcode.toUpperCase().trim());
+  if (!member) return { error: '找不到此業務代號' };
+  return {
+    member: {
+      agcode: member.AGCODE,
+      name: member.Name,
+      rank: member.Rank,
+      group: member.Group,
+      supervisor: member.Supervisor,
+      createdAt: member.CreatedAt,
+      rowIndex: member.rowIndex,
+    }
+  };
+}
+
+function addMember(data) {
+  const { agcode, name, rank, group, supervisor } = data;
+  if (!agcode || !name || !rank) return { error: '參數不完整' };
+  // 檢查重複
+  const { members } = getMembers();
+  if (members.find(m => m.AGCODE === agcode.toUpperCase())) return { error: '此 AGCODE 已存在' };
+  appendRow(SHEET.MEMBERS, [agcode.toUpperCase(), name, rank, group || '', supervisor || '', nowStr()]);
+  return { success: true };
+}
+
+function updateMember(data) {
+  const { rowIndex, agcode, name, rank, group, supervisor, createdAt } = data;
+  if (!rowIndex) return { error: '參數不完整' };
+  updateRow(SHEET.MEMBERS, parseInt(rowIndex), [agcode || '', name || '', rank || '', group || '', supervisor || '', createdAt || '']);
+  return { success: true };
+}
+
+function deleteMember(rowIndex) {
+  if (!rowIndex) return { error: '參數不完整' };
+  deleteRow(SHEET.MEMBERS, rowIndex);
+  return { success: true };
+}
+
+// ─── Attendance ────────────────────────────────────────────────────────────
+
+function getAttendance(agcode) {
+  const sheet = getSheet(SHEET.ATTENDANCE);
+  const rows = sheetToObjects(sheet);
+  // 30 days filter
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 30);
+  const cutoffStr = cutoff.toISOString().split('T')[0];
+
+  let filtered = rows.filter(r => r.Date >= cutoffStr);
+  if (agcode) filtered = filtered.filter(r => r.AGCODE === agcode.toUpperCase());
+
+  return {
+    records: filtered.map(r => ({
+      id: r.ID,
+      agcode: r.AGCODE,
+      name: r.Name,
+      type: r.Type,
+      checkinTime: r.CheckinTime,
+      date: r.Date,
+      ip: r.IP,
+      lat: r.Lat,
+      lng: r.Lng,
+      isFieldWork: r.IsFieldWork === 'TRUE',
+      notes: r.Notes,
+      rowIndex: r.rowIndex,
+    }))
+  };
+}
+
+function addAttendance(data) {
+  const { agcode, name, type, checkinTime, date, ip, lat, lng, isFieldWork, notes } = data;
+  const id = generateId();
+  appendRow(SHEET.ATTENDANCE, [
+    id, agcode, name, type || 'normal',
+    checkinTime || nowStr(), date || todayStr(),
+    ip || '', lat || '', lng || '',
+    isFieldWork ? 'TRUE' : 'FALSE', notes || ''
+  ]);
+  return { success: true, id };
+}
+
+function updateAttendance(data) {
+  const { rowIndex, id, agcode, name, type, checkinTime, date, ip, lat, lng, isFieldWork, notes } = data;
+  if (!rowIndex) return { error: '參數不完整rowIndex' };
+  updateRow(SHEET.ATTENDANCE, parseInt(rowIndex), [
+    id || '', agcode || '', name || '', type || 'normal',
+    checkinTime || nowStr(), date || todayStr(),
+    ip || '', lat || '', lng || '',
+    isFieldWork ? 'TRUE' : 'FALSE', notes || ''
+  ]);
+  return { success: true };
+}
+
+function deleteAttendance(rowIndex) {
+  if (!rowIndex) return { error: '參數不完整' };
+  deleteRow(SHEET.ATTENDANCE, rowIndex);
+  return { success: true };
+}
+
+// ─── Leave Requests ────────────────────────────────────────────────────────
+
+function getLeaveRequests(agcode) {
+  const sheet = getSheet(SHEET.LEAVE);
+  const rows = sheetToObjects(sheet);
+  let filtered = rows;
+  if (agcode) filtered = rows.filter(r => r.AGCODE === agcode.toUpperCase());
+  return {
+    records: filtered.map(r => ({
+      id: r.ID,
+      agcode: r.AGCODE,
+      name: r.Name,
+      leaveDate: r.LeaveDate,
+      reason: r.Reason,
+      status: r.Status,
+      requestTime: r.RequestTime,
+      reviewTime: r.ReviewTime,
+      reviewer: r.Reviewer,
+      notes: r.Notes,
+      rowIndex: r.rowIndex,
+    }))
+  };
+}
+
+function addLeaveRequest(data) {
+  const { agcode, name, leaveDate, reason } = data;
+  if (!agcode || !leaveDate || !reason) return { error: '參數不完整' };
+  // Check duplicate
+  const { records } = getLeaveRequests(agcode);
+  const dup = records.find(r => r.leaveDate === leaveDate && r.status !== 'rejected');
+  if (dup) return { error: `該日期已有請假申請（狀態：${dup.status === 'pending' ? '待審核' : '已核准'}）` };
+  const id = generateId();
+  appendRow(SHEET.LEAVE, [id, agcode.toUpperCase(), name || '', leaveDate, reason, 'pending', nowStr(), '', '', '']);
+  return { success: true, id };
+}
+
+function updateLeaveRequest(data) {
+  const { rowIndex, id, agcode, name, leaveDate, reason, status, requestTime, reviewTime, reviewer, notes } = data;
+  if (!rowIndex) return { error: '參數不完整' };
+  updateRow(SHEET.LEAVE, parseInt(rowIndex), [
+    id || '', agcode || '', name || '', leaveDate || '',
+    reason || '', status || 'pending', requestTime || '',
+    reviewTime || nowStr(), reviewer || '', notes || ''
+  ]);
+  return { success: true };
+}
+
+// ─── Visit Records ──────────────────────────────────────────────────────────
+
+function getVisitRecords(agcode) {
+  const sheet = getSheet(SHEET.VISIT);
+  const rows = sheetToObjects(sheet);
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 30);
+  const cutoffStr = cutoff.toISOString().split('T')[0];
+
+  let filtered = rows.filter(r => r.Date >= cutoffStr);
+  if (agcode) filtered = filtered.filter(r => r.AGCODE === agcode.toUpperCase());
+
+  return {
+    records: filtered.map(r => ({
+      id: r.ID,
+      agcode: r.AGCODE,
+      name: r.Name,
+      visitTime: r.VisitTime,
+      date: r.Date,
+      purpose: r.Purpose,
+      clientName: r.ClientName,
+      notes: r.Notes,
+      lat: r.Lat,
+      lng: r.Lng,
+      rowIndex: r.rowIndex,
+    }))
+  };
+}
+
+function addVisitRecord(data) {
+  const { agcode, name, purpose, clientName, notes, lat, lng } = data;
+  if (!agcode || !purpose || !clientName) return { error: '參數不完整' };
+  const id = generateId();
+  const now = nowStr();
+  const today = todayStr();
+  appendRow(SHEET.VISIT, [id, agcode.toUpperCase(), name || '', now, today, purpose, clientName, notes || '', lat || '', lng || '']);
+  return { success: true, id };
+}
+
+// ─── Settings ──────────────────────────────────────────────────────────────
+
+function getAllSettings() {
+  const sheet = getSheet(SHEET.SETTINGS);
+  const rows = sheetToObjects(sheet);
+  const settings = {};
+  rows.forEach(r => { if (r.Key) settings[r.Key] = r.Value || ''; });
+  return { settings };
+}
+
+function setSetting(key, value) {
+  if (!key) return { error: '參數不完整' };
+  const sheet = getSheet(SHEET.SETTINGS);
+  const rows = sheetToObjects(sheet);
+  const existing = rows.find(r => r.Key === key);
+  if (existing) {
+    updateRow(SHEET.SETTINGS, existing.rowIndex, [key, value || '']);
+  } else {
+    appendRow(SHEET.SETTINGS, [key, value || '']);
+  }
+  return { success: true };
+}
+
+// ─── Required Days ──────────────────────────────────────────────────────────
+
+function getRequiredDays() {
+  const sheet = getSheet(SHEET.REQUIRED_DAYS);
+  const rows = sheetToObjects(sheet);
+  return {
+    records: rows.map(r => ({
+      agcode: r.AGCODE,
+      date: r.Date,
+      lateThreshold: r.LateThreshold,
+      rowIndex: r.rowIndex,
+    }))
+  };
+}
+
+function addRequiredDay(data) {
+  const { agcode, date, lateThreshold } = data;
+  if (!agcode || !date) return { error: '參數不完整' };
+  appendRow(SHEET.REQUIRED_DAYS, [agcode.toUpperCase(), date, lateThreshold || '09:00']);
+  return { success: true };
+}
+
+function deleteRequiredDay(rowIndex) {
+  if (!rowIndex) return { error: '參數不完整' };
+  deleteRow(SHEET.REQUIRED_DAYS, rowIndex);
+  return { success: true };
+}
+
+// ─── TG Settings ───────────────────────────────────────────────────────────
+
+function getTGSettings() {
+  const sheet = getSheet(SHEET.TG_SETTINGS);
+  const rows = sheetToObjects(sheet);
+  return {
+    records: rows.map(r => ({
+      agcode: r.AGCODE,
+      chatId: r.ChatId,
+      notificationTypes: r.NotificationTypes,
+      role: r.Role,
+      rowIndex: r.rowIndex,
+    }))
+  };
+}
+
+function addTGSetting(data) {
+  const { agcode, chatId, notificationTypes, role } = data;
+  if (!agcode || !chatId) return { error: '參數不完整' };
+  appendRow(SHEET.TG_SETTINGS, [agcode.toUpperCase(), chatId, notificationTypes || '', role || 'ag']);
+  return { success: true };
+}
+
+function updateTGSetting(data) {
+  const { rowIndex, agcode, chatId, notificationTypes, role } = data;
+  if (!rowIndex) return { error: '參數不完整' };
+  updateRow(SHEET.TG_SETTINGS, parseInt(rowIndex), [agcode || '', chatId || '', notificationTypes || '', role || 'ag']);
+  return { success: true };
+}
+
+function deleteTGSetting(rowIndex) {
+  if (!rowIndex) return { error: '參數不完整' };
+  deleteRow(SHEET.TG_SETTINGS, rowIndex);
+  return { success: true };
+}
+
+// ─── Init Sheets ────────────────────────────────────────────────────────────
+
+function initSheets() {
+  const ss = getSpreadsheet();
+  const sheetDefs = [
+    { name: SHEET.MEMBERS,       headers: ['AGCODE', 'Name', 'Rank', 'Group', 'Supervisor', 'CreatedAt'] },
+    { name: SHEET.ATTENDANCE,    headers: ['ID', 'AGCODE', 'Name', 'Type', 'CheckinTime', 'Date', 'IP', 'Lat', 'Lng', 'IsFieldWork', 'Notes'] },
+    { name: SHEET.LEAVE,         headers: ['ID', 'AGCODE', 'Name', 'LeaveDate', 'Reason', 'Status', 'RequestTime', 'ReviewTime', 'Reviewer', 'Notes'] },
+    { name: SHEET.VISIT,         headers: ['ID', 'AGCODE', 'Name', 'VisitTime', 'Date', 'Purpose', 'ClientName', 'Notes', 'Lat', 'Lng'] },
+    { name: SHEET.SETTINGS,      headers: ['Key', 'Value'] },
+    { name: SHEET.REQUIRED_DAYS, headers: ['AGCODE', 'Date', 'LateThreshold'] },
+    { name: SHEET.TG_SETTINGS,   headers: ['AGCODE', 'ChatId', 'NotificationTypes', 'Role'] },
+  ];
+
+  sheetDefs.forEach(def => {
+    let sheet = ss.getSheetByName(def.name);
+    if (!sheet) {
+      sheet = ss.insertSheet(def.name);
+      sheet.getRange(1, 1, 1, def.headers.length).setValues([def.headers]);
+      // 設定標題列格式
+      const headerRange = sheet.getRange(1, 1, 1, def.headers.length);
+      headerRange.setBackground('#4a4a4a');
+      headerRange.setFontColor('#ffffff');
+      headerRange.setFontWeight('bold');
+      sheet.setFrozenRows(1);
+      Logger.log('Created sheet: ' + def.name);
+    } else {
+      Logger.log('Sheet already exists: ' + def.name);
+    }
+  });
+
+  return { success: true, message: '所有工作表已初始化完成' };
+}
