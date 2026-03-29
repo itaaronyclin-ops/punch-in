@@ -3,38 +3,58 @@
  * 環境變數：GAS_URL（GAS 部署後的 Web App URL）
  */
 
-const GAS_URL = process.env.GAS_URL!;
+const GAS_URL = process.env.GAS_URL; // Remove ! to handle check manually
 
 // ─── Base Fetch ────────────────────────────────────────────────────────────
 
 async function gasGet<T>(action: string, params: Record<string, string> = {}, cacheSeconds = 0): Promise<T> {
-    const url = new URL(GAS_URL);
-    url.searchParams.set('action', action);
-    Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+    if (!GAS_URL) {
+        console.error('❌ [GAS CLIENT ERROR]: GAS_URL environment variable is missing on server!');
+        throw new Error('系統設定錯誤：缺少 GAS_URL 環境變數，請檢查 Vercel 設定。');
+    }
 
-    // Use Next.js extended fetch options for fine-grained revalidation
-    const fetchOptions: RequestInit = cacheSeconds > 0
-        ? { method: 'GET', next: { revalidate: cacheSeconds } }
-        : { method: 'GET', cache: 'no-store' };
+    try {
+        const url = new URL(GAS_URL);
+        url.searchParams.set('action', action);
+        Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
 
-    const res = await fetch(url.toString(), fetchOptions);
-    const data = await res.json() as Record<string, unknown>;
-    if (data.error) throw new Error(data.error as string);
-    return data as T;
+        // Use Next.js extended fetch options for fine-grained revalidation
+        const fetchOptions: RequestInit = cacheSeconds > 0
+            ? { method: 'GET', next: { revalidate: cacheSeconds } }
+            : { method: 'GET', cache: 'no-store' };
+
+        const res = await fetch(url.toString(), fetchOptions);
+        const data = await res.json() as Record<string, unknown>;
+        if (data.error) throw new Error(data.error as string);
+        return data as T;
+    } catch (err: any) {
+        console.error(`❌ [GAS GET FAILED]: action=${action}, error=${err.message}`);
+        throw err;
+    }
 }
 
 async function gasPost<T>(action: string, body: Record<string, unknown> = {}): Promise<T> {
-    const url = new URL(GAS_URL);
-    url.searchParams.set('action', action);
-    const res = await fetch(url.toString(), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-        cache: 'no-store',
-    });
-    const data = await res.json() as Record<string, unknown>;
-    if (data.error) throw new Error(data.error as string);
-    return data as T;
+    if (!GAS_URL) {
+        console.error('❌ [GAS CLIENT ERROR]: GAS_URL environment variable is missing on server!');
+        throw new Error('系統設定錯誤：缺少 GAS_URL 環境變數，請檢查 Vercel 設定。');
+    }
+
+    try {
+        const url = new URL(GAS_URL);
+        url.searchParams.set('action', action);
+        const res = await fetch(url.toString(), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+            cache: 'no-store',
+        });
+        const data = await res.json() as Record<string, unknown>;
+        if (data.error) throw new Error(data.error as string);
+        return data as T;
+    } catch (err: any) {
+        console.error(`❌ [GAS POST FAILED]: action=${action}, error=${err.message}`);
+        throw err;
+    }
 }
 
 // ─── Types ─────────────────────────────────────────────────────────────────
