@@ -111,7 +111,7 @@ function LiveClock({ className = 'hero', style }: { className?: string, style?: 
 }
 
 // ─── CheckIn Tab ──────────────────────────────────────────────────────────
-function CheckinTab({ fieldMode = false, forcedMember, onRequireFieldWork }: { fieldMode?: boolean; forcedMember?: Member; onRequireFieldWork?: () => void }) {
+function CheckinTab({ fieldMode = false, forcedMember, onRequireFieldWork, onComplete }: { fieldMode?: boolean; forcedMember?: Member; onRequireFieldWork?: () => void; onComplete?: () => void }) {
   const [member, setMember] = useState<Member | null>(null);
   const [loading, setLoading] = useState(false);
   const [geoLoading, setGeoLoading] = useState(false);
@@ -163,6 +163,7 @@ function CheckinTab({ fieldMode = false, forcedMember, onRequireFieldWork }: { f
           if (res.ok) {
             showAnimation('checkin-success', `簽到成功！${data.isFieldWork ? '（外勤）' : '（一般）'} 時間：${data.timeStr}`);
             setMember(null);
+            if (onComplete) onComplete();
           } else {
             if (data.needDuplicateConfirm) {
               confirmDialog(data.error || '確認要重複打卡嗎？', () => {
@@ -218,7 +219,7 @@ function CheckinTab({ fieldMode = false, forcedMember, onRequireFieldWork }: { f
 }
 
 // ─── Leave Tab ────────────────────────────────────────────────────────────
-function LeaveTab({ forcedMember }: { forcedMember?: Member }) {
+function LeaveTab({ forcedMember, onComplete }: { forcedMember?: Member; onComplete?: () => void }) {
   const [member, setMember] = useState<Member | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -276,6 +277,7 @@ function LeaveTab({ forcedMember }: { forcedMember?: Member }) {
       if (res.ok) {
         showAnimation('leave-success', '假單送出成功！請等候審核');
         setMember(null); setLeaveDate(''); setReason('');
+        if (onComplete) onComplete();
       } else {
         showAnimation('leave-fail', data.error || '申請失敗');
       }
@@ -325,7 +327,7 @@ function LeaveTab({ forcedMember }: { forcedMember?: Member }) {
 }
 
 // ─── Visit Tab ────────────────────────────────────────────────────────────
-function VisitTab({ forcedMember }: { forcedMember?: Member }) {
+function VisitTab({ forcedMember, onComplete }: { forcedMember?: Member; onComplete?: () => void }) {
   const [member, setMember] = useState<Member | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -362,6 +364,7 @@ function VisitTab({ forcedMember }: { forcedMember?: Member }) {
       if (res.ok) {
         showAnimation('visit-success', '拜訪紀錄已成功送出！');
         setMember(null); setPurpose(''); setClientName(''); setNotes('');
+        if (onComplete) onComplete();
       } else {
         showAnimation('visit-fail', data.error || '送出失敗');
       }
@@ -611,11 +614,11 @@ export default function HomePage() {
             </div>
           </div>
           <div className="ios-content">
-            {screen === 'checkin' && <CheckinTab forcedMember={member} onRequireFieldWork={() => setScreen('field')} />}
-            {screen === 'field' && <CheckinTab fieldMode forcedMember={member} />}
-            {screen === 'leave' && <LeaveTab forcedMember={member} />}
+            {screen === 'checkin' && <CheckinTab forcedMember={member} onRequireFieldWork={() => setScreen('field')} onComplete={() => setScreen('home')} />}
+            {screen === 'field' && <CheckinTab fieldMode forcedMember={member} onComplete={() => setScreen('home')} />}
+            {screen === 'leave' && <LeaveTab forcedMember={member} onComplete={() => setScreen('home')} />}
             {screen === 'query' && <QueryTab forcedMember={member} />}
-            {screen === 'visit' && <VisitTab forcedMember={member} />}
+            {screen === 'visit' && <VisitTab forcedMember={member} onComplete={() => setScreen('home')} />}
           </div>
         </>
       )}
