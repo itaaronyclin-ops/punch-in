@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
         const timeStr = format(now, 'yyyy-MM-dd HH:mm:ss');
 
         // Check if already checked in today
-        const myLogs = await getAttendance(member.agcode);
+        const myLogs = await getAttendance({ agcode: member.agcode });
         const existingRecord = myLogs.find(r => {
             // Use local date format to avoid UTC timezone shift
             try { return format(new Date(r.date), 'yyyy-MM-dd') === today; } catch { return r.date === today; }
