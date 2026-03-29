@@ -1,8 +1,6 @@
 import axios from 'axios';
 import { getTGSettings } from './gas-client';
 
-const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN!;
-const BASE_URL = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
 export type NotificationType =
     | 'new_checkin'
@@ -15,14 +13,17 @@ export type NotificationType =
     | 'weekly_visit_personal';
 
 export async function sendTelegramMessage(chatId: string, message: string) {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    if (!token) { console.error('[TG] TELEGRAM_BOT_TOKEN not set'); return; }
+    const url = `https://api.telegram.org/bot${token}/sendMessage`;
     try {
-        await axios.post(`${BASE_URL}/sendMessage`, {
+        await axios.post(url, {
             chat_id: chatId,
             text: message,
             parse_mode: 'HTML',
         });
     } catch (err) {
-        console.error('[TG] Failed to send message:', err);
+        console.error('[TG] Failed to send message to', chatId, ':', err);
     }
 }
 

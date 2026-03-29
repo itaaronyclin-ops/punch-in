@@ -583,10 +583,6 @@ export default function HomePage() {
               </div>
 
               <LiveClock className="ios-clock-wrap" />
-
-              <div style={{ marginTop: 28, display: 'flex', gap: 6, alignItems: 'center', position: 'relative', zIndex: 10 }}>
-                <span className="ios-sub-link" onClick={() => setScreen('field')}>其它地點打卡 (外勤)</span>
-              </div>
             </div>
           </div>
 

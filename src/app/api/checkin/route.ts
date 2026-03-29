@@ -38,9 +38,8 @@ export async function POST(req: NextRequest) {
         // Check if already checked in today
         const myLogs = await getAttendance(member.agcode);
         const existingRecord = myLogs.find(r => {
-            const dObj = new Date(r.date);
-            const rDate = isNaN(dObj.getTime()) ? r.date : dObj.toISOString().split('T')[0];
-            return rDate === today;
+            // Use local date format to avoid UTC timezone shift
+            try { return format(new Date(r.date), 'yyyy-MM-dd') === today; } catch { return r.date === today; }
         });
 
         if (existingRecord && !body.forceDuplicate) {
@@ -138,9 +137,13 @@ export async function POST(req: NextRequest) {
             });
         }
 
-        // Send TG notification
-        const msg = buildCheckinMessage(member.name, member.agcode, type, timeStr, isFieldWork);
-        await notifyByType('new_checkin', msg);
+        // Send TG notification in background (fire-and-forget)
+        try {
+            const msg = buildCheckinMessage(member.name, member.agcode, type, timeStr, isFieldWork);
+            notifyByType('new_checkin', msg); // intentionally not awaited
+        } catch (e) {
+            console.error('[TG] Notification launch failed:', e);
+        }
 
         return NextResponse.json({ success: true, isFieldWork, timeStr });
     } catch (err: any) {
