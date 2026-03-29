@@ -146,12 +146,8 @@ export async function getMembers(): Promise<Member[]> {
 }
 
 export async function getMemberByAgcode(agcode: string): Promise<Member | null> {
-    try {
-        const data = await gasGet<{ member: any }>('getMemberByAgcode', { agcode }, 30);
-        return data.member ? normalizeMember(data.member) : null;
-    } catch {
-        return null;
-    }
+    const data = await gasGet<{ member: any }>('getMemberByAgcode', { agcode }, 30);
+    return data.member ? normalizeMember(data.member) : null;
 }
 
 export async function addMember(m: Omit<Member, 'createdAt' | 'rowIndex'>) {
