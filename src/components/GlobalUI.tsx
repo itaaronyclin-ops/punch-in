@@ -17,7 +17,7 @@ interface ConfirmOptions {
     onConfirm: () => void;
 }
 
-export type FullscreenAnimType = 'checkin-success' | 'checkin-fail' | 'leave-success' | 'leave-fail';
+export type FullscreenAnimType = 'checkin-success' | 'checkin-fail' | 'leave-success' | 'leave-fail' | 'visit-success' | 'visit-fail';
 
 interface AnimOptions {
     type: FullscreenAnimType;
