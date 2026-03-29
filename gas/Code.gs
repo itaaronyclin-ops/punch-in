@@ -114,12 +114,22 @@ function sheetToObjects(sheet) {
   const data = sheet.getDataRange().getValues();
   if (data.length < 2) return [];
   const headers = data[0];
+  const pad = n => String(n).padStart(2, '0');
   return data.slice(1).map((row, i) => {
     const obj = { rowIndex: i + 2 };
-    headers.forEach((h, j) => { obj[h] = row[j] !== undefined ? String(row[j]) : ''; });
+    headers.forEach((h, j) => {
+      const val = row[j];
+      if (val instanceof Date) {
+        // Format Date objects as yyyy-MM-dd to avoid locale-specific String() conversion
+        obj[h] = `${val.getFullYear()}-${pad(val.getMonth()+1)}-${pad(val.getDate())}`;
+      } else {
+        obj[h] = val !== undefined && val !== null ? String(val) : '';
+      }
+    });
     return obj;
   });
 }
+
 
 function appendRow(sheetName, values) {
   const sheet = getSheet(sheetName);
