@@ -5,8 +5,8 @@ export type SoundEffect = 'success' | 'error' | 'click' | 'whoosh';
 
 let audioCtx: AudioContext | null = null;
 
-function getContext() {
-    if (typeof window === 'undefined') return null;
+export function resumeContext() {
+    if (typeof window === 'undefined') return;
     if (!audioCtx) {
         audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
@@ -14,6 +14,10 @@ function getContext() {
         audioCtx.resume();
     }
     return audioCtx;
+}
+
+function getContext() {
+    return resumeContext();
 }
 
 function playTone(freq: number, type: OscillatorType, duration: number, vol = 0.1, delay = 0) {

@@ -2,13 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getMembers, addMember, updateMember, deleteMember } from '@/lib/gas-client';
 import { format } from 'date-fns';
 
-function checkAdminAuth(req: NextRequest): boolean {
+function checkAdminAuth(req: NextRequest): { ok: boolean; error?: string } {
     const token = req.headers.get('x-admin-token');
-    return token === process.env.ADMIN_PASSWORD;
+    if (!process.env.ADMIN_PASSWORD) {
+        return { ok: false, error: 'ADMIN_PASSWORD_NOT_SET' };
+    }
+    return { ok: token === process.env.ADMIN_PASSWORD };
 }
 
 export async function GET(req: NextRequest) {
-    if (!checkAdminAuth(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = checkAdminAuth(req);
+    if (!auth.ok) {
+        return NextResponse.json({ error: auth.error || 'Unauthorized' }, { status: auth.error ? 500 : 401 });
+    }
     const members = await getMembers();
     return NextResponse.json({ members });
 }

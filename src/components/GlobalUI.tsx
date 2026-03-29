@@ -80,6 +80,9 @@ export default function GlobalUI() {
         const cListener = (c: ConfirmOptions) => { setConfirmOpts(c); };
         const aListener = (a: AnimOptions | null) => { setAnimOpts(a); };
 
+        const warmup = () => { playSystemSound('click'); window.removeEventListener('click', warmup); };
+        window.addEventListener('click', warmup);
+
         UIManager.toastListeners.push(tListener);
         UIManager.confirmListeners.push(cListener);
         UIManager.animListeners.push(aListener);
@@ -87,6 +90,7 @@ export default function GlobalUI() {
             UIManager.toastListeners = UIManager.toastListeners.filter(l => l !== tListener);
             UIManager.confirmListeners = UIManager.confirmListeners.filter(l => l !== cListener);
             UIManager.animListeners = UIManager.animListeners.filter(l => l !== aListener);
+            window.removeEventListener('click', warmup);
         };
     }, []);
 

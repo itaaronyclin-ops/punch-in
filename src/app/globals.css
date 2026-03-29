@@ -107,6 +107,7 @@ body {
   /* Prevent bouncy scroll on iOS */
   margin: 0;
   padding: 0;
+  overscroll-behavior: none;
 }
 
 body {
