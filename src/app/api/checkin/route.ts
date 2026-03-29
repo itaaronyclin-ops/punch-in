@@ -20,139 +20,147 @@ function getDistance(lat1: number, lng1: number, lat2: number, lng2: number): nu
 }
 
 export async function POST(req: NextRequest) {
-    const body = await req.json();
-    const { agcode, type, lat, lng, forceField } = body;
+    try {
+        const body = await req.json();
+        const { agcode, type, lat, lng, forceField } = body;
 
-    if (!agcode || !type) {
-        return NextResponse.json({ error: '參數不完整' }, { status: 400 });
-    }
-
-    const member = await getMemberByAgcode(agcode.trim().toUpperCase());
-    if (!member) return NextResponse.json({ error: '找不到此業務代號' }, { status: 404 });
-
-    const now = new Date();
-    const today = format(now, 'yyyy-MM-dd');
-    const timeStr = format(now, 'yyyy-MM-dd HH:mm:ss');
-
-    // Check if already checked in today
-    const myLogs = await getAttendance(member.agcode);
-    const existingRecord = myLogs.find(r => {
-        const dObj = new Date(r.date);
-        const rDate = isNaN(dObj.getTime()) ? r.date : dObj.toISOString().split('T')[0];
-        return rDate === today;
-    });
-
-    if (existingRecord && !body.forceDuplicate) {
-        return NextResponse.json({
-            error: '您今日稍早已經成功打過卡囉！是否要再次打卡？',
-            needDuplicateConfirm: true
-        }, { status: 400 });
-    }
-
-    const checkinLat = await getSetting('checkin_lat');
-    const checkinLng = await getSetting('checkin_lng');
-    const checkinRadius = await getSetting('checkin_radius');
-
-    const requiredDays = await getRequiredDays();
-
-    // Check if today is a required day for this member
-    const isRequiredDay = requiredDays.some(r => (r.agcode === member.agcode || r.agcode === 'ALL') && r.date === today);
-
-    let isFieldWork = false;
-    let locationValid = false;
-
-    if (lat && lng) {
-        const centerLat = parseFloat(checkinLat || '0');
-        const centerLng = parseFloat(checkinLng || '0');
-        const radius = parseFloat(checkinRadius || '200');
-
-        if (centerLat && centerLng) {
-            const distance = getDistance(lat, lng, centerLat, centerLng);
-            locationValid = distance <= radius;
+        if (!agcode || !type) {
+            return NextResponse.json({ error: '參數不完整' }, { status: 400 });
         }
-    }
 
-    if (type === 'normal') {
-        if (!locationValid && !forceField) {
+        const member = await getMemberByAgcode(agcode.trim().toUpperCase());
+        if (!member) return NextResponse.json({ error: '找不到此業務代號' }, { status: 404 });
+
+        const now = new Date();
+        const today = format(now, 'yyyy-MM-dd');
+        const timeStr = format(now, 'yyyy-MM-dd HH:mm:ss');
+
+        // Check if already checked in today
+        const myLogs = await getAttendance(member.agcode);
+        const existingRecord = myLogs.find(r => {
+            const dObj = new Date(r.date);
+            const rDate = isNaN(dObj.getTime()) ? r.date : dObj.toISOString().split('T')[0];
+            return rDate === today;
+        });
+
+        if (existingRecord && !body.forceDuplicate) {
             return NextResponse.json({
-                error: '您不在公司位置範圍內，請執行外勤簽到',
-                needFieldWork: true
+                error: '您今日稍早已經成功打過卡囉！是否要再次打卡？',
+                needDuplicateConfirm: true
             }, { status: 400 });
         }
-        if (isRequiredDay && forceField) {
-            // Need to check if leave is approved
-            const leaveRequests = await getLeaveRequests();
-            const approvedLeave = leaveRequests.find(l =>
-                l.agcode === member.agcode && l.leaveDate === today && l.status === 'approved'
-            );
-            if (!approvedLeave) {
-                return NextResponse.json({
-                    error: '今天為必要出席日，外勤簽到需先申請請假並核准',
-                    needLeave: true
-                }, { status: 400 });
+
+        const checkinLat = await getSetting('checkin_lat');
+        const checkinLng = await getSetting('checkin_lng');
+        const checkinRadius = await getSetting('checkin_radius');
+
+        const requiredDays = await getRequiredDays();
+
+        // Check if today is a required day for this member
+        const isRequiredDay = requiredDays.some(r => (r.agcode === member.agcode || r.agcode === 'ALL') && r.date === today);
+
+        let isFieldWork = false;
+        let locationValid = false;
+
+        if (lat && lng) {
+            const centerLat = parseFloat(checkinLat || '0');
+            const centerLng = parseFloat(checkinLng || '0');
+            const radius = parseFloat(checkinRadius || '200');
+
+            if (centerLat && centerLng) {
+                const distance = getDistance(lat, lng, centerLat, centerLng);
+                locationValid = distance <= radius;
             }
         }
-        isFieldWork = !locationValid || forceField;
-    } else if (type === 'field') {
-        isFieldWork = true;
-        if (isRequiredDay) {
-            const leaveRequests = await getLeaveRequests();
-            const approvedLeave = leaveRequests.find(l =>
-                l.agcode === member.agcode && l.leaveDate === today && l.status === 'approved'
-            );
-            if (!approvedLeave) {
+
+        if (type === 'normal') {
+            if (!locationValid && !forceField) {
                 return NextResponse.json({
-                    error: '今天為必要出席日，外勤簽到需先申請請假並核准',
-                    needLeave: true
+                    error: '您不在公司位置範圍內，請執行外勤簽到',
+                    needFieldWork: true
                 }, { status: 400 });
             }
+            if (isRequiredDay && forceField) {
+                // Need to check if leave is approved
+                const leaveRequests = await getLeaveRequests();
+                const approvedLeave = leaveRequests.find(l =>
+                    l.agcode === member.agcode && l.leaveDate === today && l.status === 'approved'
+                );
+                if (!approvedLeave) {
+                    return NextResponse.json({
+                        error: '今天為必要出席日，外勤簽到需先申請請假並核准',
+                        needLeave: true
+                    }, { status: 400 });
+                }
+            }
+            isFieldWork = !locationValid || forceField;
+        } else if (type === 'field') {
+            isFieldWork = true;
+            if (isRequiredDay) {
+                const leaveRequests = await getLeaveRequests();
+                const approvedLeave = leaveRequests.find(l =>
+                    l.agcode === member.agcode && l.leaveDate === today && l.status === 'approved'
+                );
+                if (!approvedLeave) {
+                    return NextResponse.json({
+                        error: '今天為必要出席日，外勤簽到需先申請請假並核准',
+                        needLeave: true
+                    }, { status: 400 });
+                }
+            }
         }
+
+        // Get IP
+        const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+
+        if (existingRecord) {
+            await updateAttendance({
+                ...existingRecord,
+                type,
+                checkinTime: timeStr,
+                ip,
+                lat: lat?.toString() || '',
+                lng: lng?.toString() || '',
+                isFieldWork: type === 'field',
+            });
+        } else {
+            await addAttendance({
+                agcode: member.agcode,
+                name: member.name,
+                type,
+                checkinTime: timeStr,
+                date: today,
+                ip,
+                lat: lat?.toString() || '',
+                lng: lng?.toString() || '',
+                isFieldWork: type === 'field',
+                notes: ''
+            });
+        }
+
+        // Send TG notification
+        const msg = buildCheckinMessage(member.name, member.agcode, type, timeStr, isFieldWork);
+        await notifyByType('new_checkin', msg);
+
+        return NextResponse.json({ success: true, isFieldWork, timeStr });
+    } catch (err: any) {
+        return NextResponse.json({ error: err.message || '伺服器內部錯誤' }, { status: 500 });
     }
-
-    // Get IP
-    const ip = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
-
-    if (existingRecord) {
-        await updateAttendance({
-            ...existingRecord,
-            type,
-            checkinTime: timeStr,
-            ip,
-            lat: lat?.toString() || '',
-            lng: lng?.toString() || '',
-            isFieldWork: type === 'field',
-        });
-    } else {
-        await addAttendance({
-            agcode: member.agcode,
-            name: member.name,
-            type,
-            checkinTime: timeStr,
-            date: today,
-            ip,
-            lat: lat?.toString() || '',
-            lng: lng?.toString() || '',
-            isFieldWork: type === 'field',
-            notes: ''
-        });
-    }
-
-    // Send TG notification
-    const msg = buildCheckinMessage(member.name, member.agcode, type, timeStr, isFieldWork);
-    await notifyByType('new_checkin', msg);
-
-    return NextResponse.json({ success: true, isFieldWork, timeStr });
 }
 
 export async function GET(req: NextRequest) {
-    const agcode = req.nextUrl.searchParams.get('agcode');
-    const attendance = await getAttendance();
-    const filtered = agcode
-        ? attendance.filter(a => a.agcode === agcode.toUpperCase())
-        : attendance;
-    // Last 30 days
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - 30);
-    const recent = filtered.filter(a => new Date(a.date) >= cutoff);
-    return NextResponse.json({ records: recent });
+    try {
+        const agcode = req.nextUrl.searchParams.get('agcode');
+        const attendance = await getAttendance();
+        const filtered = agcode
+            ? attendance.filter(a => a.agcode === agcode.toUpperCase())
+            : attendance;
+        // Last 30 days
+        const cutoff = new Date();
+        cutoff.setDate(cutoff.getDate() - 30);
+        const recent = filtered.filter(a => new Date(a.date) >= cutoff);
+        return NextResponse.json({ records: recent });
+    } catch (err: any) {
+        return NextResponse.json({ error: err.message || '伺服器內部錯誤' }, { status: 500 });
+    }
 }
