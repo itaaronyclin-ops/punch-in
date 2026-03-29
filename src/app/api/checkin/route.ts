@@ -61,14 +61,18 @@ export async function POST(req: NextRequest) {
         let isFieldWork = false;
         let locationValid = false;
 
-        if (lat && lng) {
+        if (lat !== undefined && lng !== undefined) {
+            const uLat = typeof lat === 'number' ? lat : parseFloat(lat.toString());
+            const uLng = typeof lng === 'number' ? lng : parseFloat(lng.toString());
+            
             const centerLat = parseFloat(checkinLat || '0');
             const centerLng = parseFloat(checkinLng || '0');
             const radius = parseFloat(checkinRadius || '200');
 
-            if (centerLat && centerLng) {
-                const distance = getDistance(lat, lng, centerLat, centerLng);
+            if (!isNaN(uLat) && !isNaN(uLng) && !isNaN(centerLat) && !isNaN(centerLng)) {
+                const distance = getDistance(uLat, uLng, centerLat, centerLng);
                 locationValid = distance <= radius;
+                console.log(`[Checkin] Distance: ${distance.toFixed(2)}m, Radius: ${radius}m, Valid: ${locationValid}`);
             }
         }
 

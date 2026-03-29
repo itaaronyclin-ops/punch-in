@@ -144,7 +144,11 @@ function CheckinTab({ fieldMode = false, forcedMember, onRequireFieldWork, onCom
       if (!fieldMode) {
         try {
           const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
-            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 8000 })
+            navigator.geolocation.getCurrentPosition(resolve, reject, { 
+                enableHighAccuracy: true, 
+                timeout: 10000, 
+                maximumAge: 0 
+            })
           );
           lat = pos.coords.latitude;
           lng = pos.coords.longitude;
@@ -154,7 +158,11 @@ function CheckinTab({ fieldMode = false, forcedMember, onRequireFieldWork, onCom
       } else {
         try {
           const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
-            navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 8000 })
+            navigator.geolocation.getCurrentPosition(resolve, reject, { 
+                enableHighAccuracy: true, 
+                timeout: 10000, 
+                maximumAge: 0 
+            })
           );
           lat = pos.coords.latitude;
           lng = pos.coords.longitude;
@@ -359,7 +367,11 @@ function VisitTab({ forcedMember, onComplete }: { forcedMember?: Member; onCompl
     let lat: number | undefined, lng: number | undefined;
     try {
       const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
-        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 8000 })
+        navigator.geolocation.getCurrentPosition(resolve, reject, { 
+            enableHighAccuracy: true, 
+            timeout: 10000, 
+            maximumAge: 0 
+        })
       );
       lat = pos.coords.latitude;
       lng = pos.coords.longitude;
