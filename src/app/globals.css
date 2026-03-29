@@ -2161,6 +2161,16 @@ code {
   color: var(--red);
 }
 
+.anim-visit-success {
+  color: #34c759;
+  animation: bounceIn 0.8s cubic-bezier(0.17, 0.67, 0.43, 1.49);
+}
+
+.anim-visit-fail {
+  color: var(--red);
+  animation: shake 0.4s ease-in-out;
+}
+
 .anim-message-area {
   display: flex;
   flex-direction: column;
@@ -2227,5 +2237,21 @@ code {
 
   75% {
     transform: translateX(8px);
+  }
+}
+
+@keyframes bounceIn {
+  0% {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+
+  50% {
+    transform: scale(1.1);
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
   }
 }

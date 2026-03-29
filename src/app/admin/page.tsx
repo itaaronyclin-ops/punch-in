@@ -1021,7 +1021,22 @@ function SettingsSection({ token }: { token: string }) {
 
     const save = async (key: string, value: string) => {
         setSaving(key);
-        await fetch('/api/admin/settings', { method: 'POST', headers: h, body: JSON.stringify({ key, value }) });
+        try {
+            const res = await fetch('/api/admin/settings', { method: 'POST', headers: h, body: JSON.stringify({ key, value }) });
+            if (res.ok) {
+                toast.success('設定已儲存');
+                // Reload settings to confirm
+                const r = await fetch('/api/admin/settings', { headers: { 'x-admin-token': token } });
+                if (r.ok) {
+                    const d = await r.json();
+                    setSettings(d.settings || {});
+                }
+            } else {
+                toast.error('儲存失敗');
+            }
+        } catch {
+            toast.error('網路錯誤');
+        }
         setSaving(null);
     };
 

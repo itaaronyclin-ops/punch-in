@@ -360,10 +360,10 @@ function VisitTab({ forcedMember }: { forcedMember?: Member }) {
       });
       const data = await res.json();
       if (res.ok) {
-        toast.success('拜訪紀錄已成功送出！');
+        showAnimation('visit-success', '拜訪紀錄已成功送出！');
         setMember(null); setPurpose(''); setClientName(''); setNotes('');
       } else {
-        toast.error(data.error || '送出失敗');
+        showAnimation('visit-fail', data.error || '送出失敗');
       }
     } catch {
       toast.error('網路錯誤');

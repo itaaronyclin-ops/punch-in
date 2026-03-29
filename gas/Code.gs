@@ -120,8 +120,12 @@ function sheetToObjects(sheet) {
     headers.forEach((h, j) => {
       const val = row[j];
       if (val instanceof Date) {
-        // Format Date objects as yyyy-MM-dd to avoid locale-specific String() conversion
-        obj[h] = `${val.getFullYear()}-${pad(val.getMonth()+1)}-${pad(val.getDate())}`;
+        // Google Sheets time-only cells are anchored at 1899-12-30 (serial 0)
+        if (val.getFullYear() === 1899 && val.getMonth() === 11 && val.getDate() === 30) {
+          obj[h] = `${pad(val.getHours())}:${pad(val.getMinutes())}`;
+        } else {
+          obj[h] = `${val.getFullYear()}-${pad(val.getMonth()+1)}-${pad(val.getDate())}`;
+        }
       } else {
         obj[h] = val !== undefined && val !== null ? String(val) : '';
       }
@@ -372,15 +376,26 @@ function getAllSettings() {
 function setSetting(key, value) {
   if (!key) return { error: '參數不完整' };
   const sheet = getSheet(SHEET.SETTINGS);
-  const rows = sheetToObjects(sheet);
-  const existing = rows.find(r => r.Key === key);
-  if (existing) {
-    updateRow(SHEET.SETTINGS, existing.rowIndex, [key, value || '']);
-  } else {
-    appendRow(SHEET.SETTINGS, [key, value || '']);
+  const data = sheet.getDataRange().getValues();
+  const headers = data[0];
+  const keyIndex = headers.indexOf('Key');
+  const valueIndex = headers.indexOf('Value');
+
+  if (keyIndex === -1 || valueIndex === -1) return { error: 'Settings 工作表格式錯誤' };
+
+  // Find if key exists
+  for (let i = 1; i < data.length; i++) {
+    if (String(data[i][keyIndex]) === key) {
+      sheet.getRange(i + 1, valueIndex + 1).setValue(value);
+      return { success: true };
+    }
   }
+
+  // If not found, find first empty row or append
+  sheet.appendRow([key, value]);
   return { success: true };
 }
+
 
 // ─── Required Days ──────────────────────────────────────────────────────────
 
