@@ -1,6 +1,6 @@
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getMemberByAgcode, getLeaveRequests, addLeaveRequest } from '@/lib/gas-client';
+import { getMemberByAgcode, getLeaveRequests, addLeaveRequest, addNotification } from '@/lib/gas-client';
 import { notifyByType, buildLeaveRequestMessage, buildLeaveResultMessage } from '@/lib/telegram';
 import { format } from 'date-fns';
 
@@ -36,13 +36,19 @@ export async function POST(req: NextRequest) {
     const msg = buildLeaveRequestMessage(member.name, member.agcode, leaveDate, reason);
     await notifyByType('new_leave_request', msg);
 
+    await addNotification({
+        agcode: member.agcode,
+        type: 'new_leave_request',
+        title: '📬 假單申請已送出',
+        content: `📅 您已送出 ${leaveDate} 的請假申請，目前狀態為待審核。`
+    });
+
     return NextResponse.json({ success: true, id });
 }
 
 export async function GET(req: NextRequest) {
-    const agcode = req.nextUrl.searchParams.get('agcode');
-    const all = await getLeaveRequests();
-    const result = agcode ? all.filter(l => l.agcode === agcode.toUpperCase()) : all;
-    return NextResponse.json({ records: result });
+    const agcode = req.nextUrl.searchParams.get('agcode') || undefined;
+    const records = await getLeaveRequests({ agcode });
+    return NextResponse.json({ records });
 }
 

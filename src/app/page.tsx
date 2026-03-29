@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   IconCheckCircle, IconRun, IconInbox, IconMapPin, IconSearch,
-  IconLogo, IconChevronRight, IconAlertTriangle, IconClock,
+  IconLogo, IconChevronRight, IconAlertTriangle, IconClock, IconLogOut, IconBell, IconX,
 } from '@/components/Icons';
 import { toast, confirmDialog, showAnimation } from '@/components/GlobalUI';
 
@@ -16,6 +16,17 @@ interface Member {
   rank: string;
   group: string;
   supervisor: string;
+}
+
+interface NotificationRecord {
+  id: string;
+  agcode: string;
+  type: string;
+  title: string;
+  content: string;
+  createdAt: string;
+  isRead: boolean;
+  rowIndex: number;
 }
 
 // ─── Shared: AGCODE Lookup ─────────────────────────────────────────────────
@@ -520,6 +531,77 @@ function QueryTab({ forcedMember }: { forcedMember?: Member }) {
   );
 }
 
+// ─── Notification Component ──────────────────────────────────────────────────
+function NotificationModal({ 
+  agcode, 
+  onClose,
+  onRefreshCount
+}: { 
+  agcode: string; 
+  onClose: () => void;
+  onRefreshCount: () => void;
+}) {
+  const [notifs, setNotifs] = useState<NotificationRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchNotifs = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/notifications?agcode=${agcode}`);
+      const data = await res.json();
+      if (res.ok) setNotifs(data.records || []);
+    } catch {}
+    setLoading(false);
+  }, [agcode]);
+
+  useEffect(() => { fetchNotifs(); }, [fetchNotifs]);
+
+  const markRead = async (rowIndex: number) => {
+    try {
+      await fetch('/api/notifications', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rowIndex })
+      });
+      setNotifs(prev => prev.map(n => n.rowIndex === rowIndex ? { ...n, isRead: true } : n));
+      onRefreshCount();
+    } catch {}
+  };
+
+  return (
+    <div className="ios-modal-overlay" onClick={onClose}>
+      <div className="ios-modal" onClick={e => e.stopPropagation()}>
+        <div className="ios-modal-header">
+          <div className="ios-modal-title">系統通知</div>
+          <button className="ios-modal-close" onClick={onClose}><IconX size={20} /></button>
+        </div>
+        <div className="ios-modal-body" style={{ maxHeight: '70vh', overflowY: 'auto', paddingBottom: 40 }}>
+          {loading ? <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><span className="spinner spinner-dark" /></div> : (
+            notifs.length === 0 ? (
+              <div className="empty-state" style={{ padding: '60px 0' }}>
+                <div className="empty-state-icon">🔔</div>
+                <div className="empty-state-text">尚無任何通知</div>
+              </div>
+            ) : (
+              <div className="notif-list">
+                {notifs.map(n => (
+                  <div key={n.id} className={`notif-item ${n.isRead ? 'read' : 'unread'}`} onClick={() => !n.isRead && markRead(n.rowIndex)}>
+                    <div className="notif-header">
+                      <span className="notif-title">{n.title}</span>
+                      {!n.isRead && <span className="notif-badge-new">NEW</span>}
+                    </div>
+                    <div className="notif-content">{n.content}</div>
+                    <div className="notif-time">{n.createdAt}</div>
+                  </div>
+                ))}
+              </div>
+            )
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────
 type AppScreen = 'home' | 'checkin' | 'field' | 'leave' | 'visit' | 'query';
 
@@ -527,6 +609,28 @@ export default function HomePage() {
   const [screen, setScreen] = useState<AppScreen>('home');
   const [member, setMember] = useState<Member | null>(null);
   const [loading, setLoading] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotif, setShowNotif] = useState(false);
+
+  const fetchUnread = useCallback(async () => {
+    if (!member) return;
+    try {
+      const res = await fetch(`/api/notifications?agcode=${member.agcode}`);
+      const data = await res.json();
+      if (res.ok) {
+        const count = (data.records || []).filter((n: any) => !n.isRead).length;
+        setUnreadCount(count);
+      }
+    } catch { }
+  }, [member]);
+
+  useEffect(() => {
+    if (member) {
+      fetchUnread();
+      const t = setInterval(fetchUnread, 60000); // Poll unread every minute
+      return () => clearInterval(t);
+    }
+  }, [member, fetchUnread]);
 
   // If unauthenticated
   if (!member) {
@@ -551,9 +655,28 @@ export default function HomePage() {
       {screen === 'home' ? (
         <>
           <div className="ios-body-scroll">
-            <div className="ios-header">
-              <h1>Hello! {member.name}</h1>
-              <p>祝你有美好的一天</p>
+            <div className="ios-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h1>Hello! {member.name}</h1>
+                <p>祝你有美好的一天</p>
+              </div>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <button 
+                  className="bell-btn" 
+                  onClick={() => setShowNotif(true)}
+                  aria-label="Notifications"
+                >
+                  <IconBell size={22} />
+                  {unreadCount > 0 && <div className="bell-badge" />}
+                </button>
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => confirmDialog('確定要登出系統嗎？', () => setMember(null))}
+                  style={{ borderRadius: '100px', padding: '6px 12px' }}
+                >
+                  <IconLogOut size={16} /> 登出
+                </button>
+              </div>
             </div>
 
             <div className="ios-cards-scroll">
@@ -621,6 +744,14 @@ export default function HomePage() {
             {screen === 'visit' && <VisitTab forcedMember={member} onComplete={() => setScreen('home')} />}
           </div>
         </>
+      )}
+      
+      {showNotif && member && (
+        <NotificationModal 
+          agcode={member.agcode} 
+          onClose={() => setShowNotif(false)} 
+          onRefreshCount={fetchUnread}
+        />
       )}
     </div>
   );

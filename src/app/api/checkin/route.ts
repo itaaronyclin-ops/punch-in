@@ -153,16 +153,9 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
     try {
-        const agcode = req.nextUrl.searchParams.get('agcode');
-        const attendance = await getAttendance();
-        const filtered = agcode
-            ? attendance.filter(a => a.agcode === agcode.toUpperCase())
-            : attendance;
-        // Last 30 days
-        const cutoff = new Date();
-        cutoff.setDate(cutoff.getDate() - 30);
-        const recent = filtered.filter(a => new Date(a.date) >= cutoff);
-        return NextResponse.json({ records: recent });
+        const agcode = req.nextUrl.searchParams.get('agcode') || undefined;
+        const attendance = await getAttendance({ agcode });
+        return NextResponse.json({ records: attendance });
     } catch (err: any) {
         return NextResponse.json({ error: err.message || '伺服器內部錯誤' }, { status: 500 });
     }

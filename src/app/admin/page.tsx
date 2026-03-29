@@ -6,7 +6,7 @@ import {
     IconCalendar, IconSettings, IconMessageSquare, IconLogo,
     IconShield, IconLock, IconPlus, IconX, IconEdit, IconTrash,
     IconLogOut, IconDownload, IconAlertTriangle, IconCheck, IconDatabase,
-    IconCheckCircle,
+    IconCheckCircle, IconSend, IconClock,
     LoadingState, SkeletonRows,
 } from '@/components/Icons';
 import { confirmDialog, toast } from '@/components/GlobalUI';
@@ -136,7 +136,8 @@ type AdminSection =
     | 'visit'
     | 'required-days'
     | 'settings'
-    | 'tg-settings';
+    | 'tg-settings'
+    | 'reports';
 
 // ─── Auth ─────────────────────────────────────────────────────────────────
 function useAdminAuth() {
@@ -221,6 +222,7 @@ const navItems: { key: AdminSection; icon: React.ReactNode; label: string; secti
     { key: 'attendance', icon: <IconClipboard size={16} />, label: '出席紀錄', section: '紀錄查詢' },
     { key: 'visit', icon: <IconMapPin size={16} />, label: '拜訪紀錄', section: '紀錄查詢' },
     { key: 'leave', icon: <IconInbox size={16} />, label: '請假審核', section: '審核管理' },
+    { key: 'reports', icon: <IconAlertTriangle size={16} />, label: '通知與報表', section: '審核管理' },
     { key: 'required-days', icon: <IconCalendar size={16} />, label: '必要出席日', section: '系統設定' },
     { key: 'settings', icon: <IconSettings size={16} />, label: '系統設定', section: '系統設定' },
     { key: 'tg-settings', icon: <IconMessageSquare size={16} />, label: 'TG 通知設定', section: '系統設定' },
@@ -1285,6 +1287,110 @@ function TGSettingsSection({ token }: { token: string }) {
     );
 }
 
+// ─── Reports & Notifications ────────────────────────────────────────────────
+function ReportsSection({ token }: { token: string }) {
+    const [msg, setMsg] = useState('');
+    const [running, setRunning] = useState(false);
+    const [sending, setSending] = useState(false);
+
+    const runReport = async (type: 'weekly' | 'monthly' | 'daily') => {
+        const labels = { weekly: '每週', monthly: '每月', daily: '每日' };
+        if (!confirm(`確定要現在生成並發送${labels[type]}報表嗎？這會發送通知給所有相關同仁。`)) return;
+        setRunning(true);
+        try {
+            const res = await fetch('/api/admin/report', { 
+                method: 'POST', 
+                headers: { 'x-admin-token': token, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type })
+            });
+            if (res.ok) toast.success(`${labels[type]}報表已成功發送`);
+            else toast.error('發送失敗');
+        } catch { toast.error('網路錯誤'); }
+        setRunning(false);
+    };
+
+    const sendManual = async () => {
+        if (!msg) return;
+        setSending(true);
+        try {
+            const res = await fetch('/api/admin/notify-manual', { 
+                method: 'POST', 
+                headers: { 'x-admin-token': token, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: msg })
+            });
+            if (res.ok) {
+                toast.success('訊息已發送');
+                setMsg('');
+            } else toast.error('發送失敗');
+        } catch { toast.error('網路錯誤'); }
+        setSending(false);
+    };
+
+    return (
+        <div>
+            <div className="page-header">
+                <h1 className="page-title">通知與報表</h1>
+                <p className="page-subtitle">手動發送 Telegram 通知或生成統計報表</p>
+            </div>
+
+            <div className="card" style={{ marginBottom: 24 }}>
+                <div className="card-header">
+                    <div className="card-icon blue">📊</div>
+                    <div>
+                        <div className="card-title">統計報表生成</div>
+                        <div className="card-subtitle">手動觸發各項出勤與拜訪統計通知</div>
+                    </div>
+                </div>
+                <div style={{ padding: '0 0 16px 0' }}>
+                    <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: 20 }}>
+                        點擊下方按鈕將立即計算對應時間區間的數據，發送至同仁的 Telegram 並寫入系統通知。
+                    </p>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+                        <button className="btn btn-primary" onClick={() => runReport('daily')} disabled={running}>
+                            {running ? <span className="spinner" /> : <IconClock size={16} />}
+                            每日拜訪統計
+                        </button>
+                        <button className="btn btn-primary" onClick={() => runReport('weekly')} disabled={running}>
+                            {running ? <span className="spinner" /> : <IconDatabase size={16} />}
+                            每週出席統計
+                        </button>
+                        <button className="btn btn-primary" onClick={() => runReport('monthly')} disabled={running}>
+                            {running ? <span className="spinner" /> : <IconCalendar size={16} />}
+                            每月出席統計
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div className="card">
+                <div className="card-header">
+                    <div className="card-icon orange">💬</div>
+                    <div>
+                        <div className="card-title">手動通告發送</div>
+                        <div className="card-subtitle">向所有已綁定 Telegram 的同仁發送自訂訊息</div>
+                    </div>
+                </div>
+                <div className="form-group">
+                    <label className="form-label">訊息內容 (支援 HTML 標籤)</label>
+                    <textarea 
+                        className="form-input" 
+                        style={{ minHeight: 120, paddingTop: 12, lineHeight: 1.5 }}
+                        value={msg}
+                        onChange={e => setMsg(e.target.value)}
+                        placeholder="請輸入欲發送的訊息內容..."
+                    />
+                </div>
+                <div className="action-row">
+                    <button className="btn btn-primary" onClick={sendManual} disabled={sending || !msg}>
+                        {sending ? <span className="spinner" /> : <IconSend size={16} />}
+                        {sending ? '發送中⋯' : '立即全體廣播'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // ─── Main Admin Page ───────────────────────────────────────────────────────
 export default function AdminPage() {
     const { token, authed, checking, login, logout } = useAdminAuth();
@@ -1309,6 +1415,7 @@ export default function AdminPage() {
         'required-days': <RequiredDaysSection token={token} />,
         settings: <SettingsSection token={token} />,
         'tg-settings': <TGSettingsSection token={token} />,
+        reports: <ReportsSection token={token} />,
     };
 
     return (

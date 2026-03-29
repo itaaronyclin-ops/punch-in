@@ -127,6 +127,17 @@ export interface TGSetting {
     rowIndex?: number;
 }
 
+export interface NotificationRecord {
+    id: string;
+    agcode: string;
+    type: string;
+    title: string;
+    content: string;
+    createdAt: string;
+    isRead: boolean;
+    rowIndex: number;
+}
+
 // ─── Members ───────────────────────────────────────────────────────────────
 
 const normalizeMember = (m: any): Member => ({
@@ -164,9 +175,8 @@ export async function deleteMember(rowIndex: number) {
 
 // ─── Attendance ────────────────────────────────────────────────────────────
 
-export async function getAttendance(agcode?: string): Promise<AttendanceRecord[]> {
-    const params: Record<string, string> = agcode ? { agcode } : {};
-    const data = await gasGet<{ records: AttendanceRecord[] }>('getAttendance', params);
+export async function getAttendance(params: { agcode?: string; startDate?: string; endDate?: string } = {}): Promise<AttendanceRecord[]> {
+    const data = await gasGet<{ records: AttendanceRecord[] }>('getAttendance', params as Record<string, string>);
     return data.records;
 }
 
@@ -180,9 +190,8 @@ export async function updateAttendance(record: AttendanceRecord) {
 
 // ─── Leave Requests ────────────────────────────────────────────────────────
 
-export async function getLeaveRequests(agcode?: string): Promise<LeaveRequest[]> {
-    const params: Record<string, string> = agcode ? { agcode } : {};
-    const data = await gasGet<{ records: LeaveRequest[] }>('getLeaveRequests', params);
+export async function getLeaveRequests(params: { agcode?: string; startDate?: string; endDate?: string } = {}): Promise<LeaveRequest[]> {
+    const data = await gasGet<{ records: LeaveRequest[] }>('getLeaveRequests', params as Record<string, string>);
     return data.records;
 }
 
@@ -196,9 +205,8 @@ export async function updateLeaveRequest(r: LeaveRequest) {
 
 // ─── Visit Records ─────────────────────────────────────────────────────────
 
-export async function getVisitRecords(agcode?: string): Promise<VisitRecord[]> {
-    const params: Record<string, string> = agcode ? { agcode } : {};
-    const data = await gasGet<{ records: VisitRecord[] }>('getVisitRecords', params);
+export async function getVisitRecords(params: { agcode?: string; startDate?: string; endDate?: string } = {}): Promise<VisitRecord[]> {
+    const data = await gasGet<{ records: VisitRecord[] }>('getVisitRecords', params as Record<string, string>);
     return data.records;
 }
 
@@ -256,6 +264,21 @@ export async function updateTGSetting(r: TGSetting) {
 
 export async function deleteTGSetting(rowIndex: number) {
     return gasPost('deleteTGSetting', { rowIndex });
+}
+
+// ─── Notifications ──────────────────────────────────────────────────────────
+
+export async function getNotifications(agcode: string): Promise<NotificationRecord[]> {
+    const data = await gasGet<{ records: NotificationRecord[] }>('getNotifications', { agcode });
+    return data.records;
+}
+
+export async function addNotification(n: Omit<NotificationRecord, 'id' | 'createdAt' | 'isRead' | 'rowIndex'>) {
+    return gasPost('addNotification', n as unknown as Record<string, unknown>);
+}
+
+export async function markNotificationRead(rowIndex: number) {
+    return gasPost('markNotificationRead', { rowIndex });
 }
 
 // ─── Init ───────────────────────────────────────────────────────────────────

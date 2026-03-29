@@ -40,12 +40,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
-    const agcode = req.nextUrl.searchParams.get('agcode');
-    const all = await getVisitRecords();
-    const result = agcode ? all.filter(v => v.agcode === agcode.toUpperCase()) : all;
-    // Last 30 days
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - 30);
-    const recent = result.filter(v => new Date(v.date) >= cutoff);
-    return NextResponse.json({ records: recent });
+    const agcode = req.nextUrl.searchParams.get('agcode') || undefined;
+    const records = await getVisitRecords({ agcode });
+    return NextResponse.json({ records });
 }

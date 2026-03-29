@@ -15,6 +15,7 @@ const SHEET = {
   SETTINGS:      'Settings',
   REQUIRED_DAYS: 'RequiredDays',
   TG_SETTINGS:   'TGSettings',
+  NOTIFICATIONS: 'Notifications',
 };
 
 // ─── Entry Points ──────────────────────────────────────────────────────────
@@ -48,18 +49,18 @@ function handleRequest(e) {
       case 'deleteMember':      result = deleteMember(data.rowIndex); break;
 
       // ── Attendance ────────────────────────────────────────────────────────
-      case 'getAttendance':     result = getAttendance(data.agcode);  break;
+      case 'getAttendance':     result = getAttendance(data);         break;
       case 'addAttendance':     result = addAttendance(data);         break;
       case 'updateAttendance':  result = updateAttendance(data);      break;
       case 'deleteAttendance':  result = deleteAttendance(data.rowIndex); break;
 
       // ── Leave ─────────────────────────────────────────────────────────────
-      case 'getLeaveRequests':  result = getLeaveRequests(data.agcode); break;
+      case 'getLeaveRequests':  result = getLeaveRequests(data);      break;
       case 'addLeaveRequest':   result = addLeaveRequest(data);        break;
       case 'updateLeaveRequest':result = updateLeaveRequest(data);     break;
 
       // ── Visit ─────────────────────────────────────────────────────────────
-      case 'getVisitRecords':   result = getVisitRecords(data.agcode); break;
+      case 'getVisitRecords':   result = getVisitRecords(data);       break;
       case 'addVisitRecord':    result = addVisitRecord(data);         break;
 
       // ── Settings ──────────────────────────────────────────────────────────
@@ -76,6 +77,11 @@ function handleRequest(e) {
       case 'addTGSetting':      result = addTGSetting(data);          break;
       case 'updateTGSetting':   result = updateTGSetting(data);       break;
       case 'deleteTGSetting':   result = deleteTGSetting(data.rowIndex); break;
+
+      // ── Notifications ─────────────────────────────────────────────────────
+      case 'getNotifications':  result = getNotifications(data.agcode); break;
+      case 'addNotification':   result = addNotification(data);        break;
+      case 'markNotificationRead': result = markNotificationRead(data.rowIndex); break;
 
       // ── Init ──────────────────────────────────────────────────────────────
       case 'initSheets':        result = initSheets();                break;
@@ -218,15 +224,27 @@ function deleteMember(rowIndex) {
 
 // ─── Attendance ────────────────────────────────────────────────────────────
 
-function getAttendance(agcode) {
+function getAttendance(data) {
+  const { agcode, startDate, endDate } = data;
   const sheet = getSheet(SHEET.ATTENDANCE);
   const rows = sheetToObjects(sheet);
-  // 30 days filter
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - 30);
-  const cutoffStr = cutoff.toISOString().split('T')[0];
 
-  let filtered = rows.filter(r => r.Date >= cutoffStr);
+  let filtered = rows;
+  if (startDate) {
+    filtered = filtered.filter(r => r.Date >= startDate);
+  }
+  if (endDate) {
+    filtered = filtered.filter(r => r.Date <= endDate);
+  }
+
+  // 如果都沒有帶日期，預設 30 天
+  if (!startDate && !endDate) {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 30);
+    const cutoffStr = cutoff.toISOString().split('T')[0];
+    filtered = filtered.filter(r => r.Date >= cutoffStr);
+  }
+
   if (agcode) filtered = filtered.filter(r => r.AGCODE === agcode.toUpperCase());
 
   return {
@@ -279,11 +297,14 @@ function deleteAttendance(rowIndex) {
 
 // ─── Leave Requests ────────────────────────────────────────────────────────
 
-function getLeaveRequests(agcode) {
+function getLeaveRequests(data) {
+  const { agcode, startDate, endDate } = data;
   const sheet = getSheet(SHEET.LEAVE);
   const rows = sheetToObjects(sheet);
   let filtered = rows;
-  if (agcode) filtered = rows.filter(r => r.AGCODE === agcode.toUpperCase());
+  if (startDate) filtered = filtered.filter(r => r.LeaveDate >= startDate);
+  if (endDate) filtered = filtered.filter(r => r.LeaveDate <= endDate);
+  if (agcode) filtered = filtered.filter(r => r.AGCODE === agcode.toUpperCase());
   return {
     records: filtered.map(r => ({
       id: r.ID,
@@ -326,14 +347,22 @@ function updateLeaveRequest(data) {
 
 // ─── Visit Records ──────────────────────────────────────────────────────────
 
-function getVisitRecords(agcode) {
+function getVisitRecords(data) {
+  const { agcode, startDate, endDate } = data;
   const sheet = getSheet(SHEET.VISIT);
   const rows = sheetToObjects(sheet);
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - 30);
-  const cutoffStr = cutoff.toISOString().split('T')[0];
 
-  let filtered = rows.filter(r => r.Date >= cutoffStr);
+  let filtered = rows;
+  if (startDate) filtered = filtered.filter(r => r.Date >= startDate);
+  if (endDate) filtered = filtered.filter(r => r.Date <= endDate);
+
+  if (!startDate && !endDate) {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 30);
+    const cutoffStr = cutoff.toISOString().split('T')[0];
+    filtered = filtered.filter(r => r.Date >= cutoffStr);
+  }
+
   if (agcode) filtered = filtered.filter(r => r.AGCODE === agcode.toUpperCase());
 
   return {
@@ -461,6 +490,49 @@ function deleteTGSetting(rowIndex) {
   return { success: true };
 }
 
+// ─── Notifications ──────────────────────────────────────────────────────────
+
+function getNotifications(agcode) {
+  if (!agcode) return { error: '參數不完整' };
+  const sheet = getSheet(SHEET.NOTIFICATIONS);
+  const rows = sheetToObjects(sheet);
+  
+  // 只取近 60 天通知
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 60);
+  const cutoffStr = cutoff.toISOString().split('T')[0];
+
+  const filtered = rows.filter(r => r.AGCODE === agcode.toUpperCase() && r.CreatedAt >= cutoffStr);
+  
+  return {
+    records: filtered.map(r => ({
+      id: r.ID,
+      agcode: r.AGCODE,
+      type: r.Type,
+      title: r.Title,
+      content: r.Content,
+      createdAt: r.CreatedAt,
+      isRead: r.IsRead === 'TRUE',
+      rowIndex: r.rowIndex,
+    })).reverse() // 顯示最新在最前
+  };
+}
+
+function addNotification(data) {
+  const { agcode, type, title, content } = data;
+  if (!agcode || !title || !content) return { error: '參數不完整' };
+  const id = generateId();
+  appendRow(SHEET.NOTIFICATIONS, [id, agcode.toUpperCase(), type || 'system', title, content, nowStr(), 'FALSE']);
+  return { success: true, id };
+}
+
+function markNotificationRead(rowIndex) {
+  if (!rowIndex) return { error: '參數不完整' };
+  const sheet = getSheet(SHEET.NOTIFICATIONS);
+  sheet.getRange(rowIndex, 7).setValue('TRUE'); // 第 7 欄是 IsRead
+  return { success: true };
+}
+
 // ─── Init Sheets ────────────────────────────────────────────────────────────
 
 function initSheets() {
@@ -473,6 +545,7 @@ function initSheets() {
     { name: SHEET.SETTINGS,      headers: ['Key', 'Value'] },
     { name: SHEET.REQUIRED_DAYS, headers: ['AGCODE', 'Date', 'LateThreshold'] },
     { name: SHEET.TG_SETTINGS,   headers: ['AGCODE', 'ChatId', 'NotificationTypes', 'Role'] },
+    { name: SHEET.NOTIFICATIONS, headers: ['ID', 'AGCODE', 'Type', 'Title', 'Content', 'CreatedAt', 'IsRead'] },
   ];
 
   sheetDefs.forEach(def => {

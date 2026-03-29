@@ -2255,3 +2255,102 @@ code {
     opacity: 1;
   }
 }
+
+/* ─── Notifications ───────────────────────────────────────────────────────── */
+.notif-item {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  transition: background 0.2s;
+  position: relative;
+}
+.notif-item:hover { background: rgba(0, 0, 0, 0.02); }
+.notif-item.unread { background: rgba(0, 122, 255, 0.05); }
+.notif-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.notif-title { font-weight: 600; font-size: 0.95rem; color: var(--text-primary); line-height: 1.4; }
+.notif-badge-new { 
+  background: #007aff; 
+  color: white; 
+  font-size: 0.65rem; 
+  padding: 2px 6px; 
+  border-radius: 4px; 
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.notif-content { 
+  white-space: pre-wrap; 
+  font-size: 0.9rem; 
+  color: var(--text-secondary); 
+  margin-top: 6px;
+  line-height: 1.5;
+}
+.notif-time { 
+  font-size: 0.75rem; 
+  color: var(--text-tertiary); 
+  margin-top: 10px; 
+}
+.bell-btn {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  border: none;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+.bell-btn:active { transform: scale(0.92); }
+.bell-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 10px;
+  height: 10px;
+  background: #ff3b30;
+  border-radius: 5px;
+  border: 2px solid white;
+}
+.ios-modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 2000;
+  animation: fadeIn 0.3s ease;
+}
+.ios-modal {
+  background: var(--surface-card);
+  width: 100%;
+  max-width: 500px;
+  border-radius: 28px 28px 0 0;
+  padding-bottom: env(safe-area-inset-bottom);
+  box-shadow: 0 -10px 40px rgba(0,0,0,0.1);
+  animation: slideInUp 0.4s cubic-bezier(0.3, 1.2, 0.4, 1);
+}
+.ios-modal-header {
+  padding: 20px 24px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ios-modal-title { font-weight: 700; font-size: 1.2rem; letter-spacing: -0.02em; }
+.ios-modal-close {
+  background: var(--gray-bg);
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes slideInUp { from { transform: translateY(100%); } to { transform: translateY(0); } }

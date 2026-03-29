@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getLeaveRequests, updateLeaveRequest, getMemberByAgcode } from '@/lib/gas-client';
+import { checkAdminAuth } from '@/lib/auth';
+import { getLeaveRequests, updateLeaveRequest, getMemberByAgcode, addNotification } from '@/lib/gas-client';
 import { notifyByType, buildLeaveResultMessage } from '@/lib/telegram';
 import { format } from 'date-fns';
-
-function checkAdminAuth(req: NextRequest): boolean {
-    const token = req.headers.get('x-admin-token');
-    return token === process.env.ADMIN_PASSWORD;
-}
 
 export async function GET(req: NextRequest) {
     if (!checkAdminAuth(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -50,8 +46,16 @@ export async function PATCH(req: NextRequest) {
         notes: notes || record.notes || ''
     });
 
+    const statusText = status === 'approved' ? '已核准' : '已拒絕';
     const msg = buildLeaveResultMessage(record.name, record.leaveDate, status, reviewerName);
     await notifyByType('leave_result', msg, record.agcode);
+
+    await addNotification({
+        agcode: record.agcode,
+        type: 'leave_result',
+        title: status === 'approved' ? '✅ 假單審核已通過' : '❌ 假單審核未通過',
+        content: `📅 您的 ${record.leaveDate} 請假申請由 ${reviewerName} 審核完成。\n📋 結果：${statusText}`
+    });
 
     return NextResponse.json({ success: true });
 }
