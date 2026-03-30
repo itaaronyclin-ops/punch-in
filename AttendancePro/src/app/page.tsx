@@ -877,7 +877,7 @@ function MoreTab({ member, onLogout, onExtHistory, onExtTrainingCheckin }: { mem
             <div className="section-header" style={{ marginTop: 0 }}>系統與外部整合</div>
             <div className="ios-list">
                 <div className="ios-list-item" onClick={onExtTrainingCheckin}>
-                    <div className="ios-list-icon" style={{ background: 'var(--blue)' }}><IconRun color="#fff" size={18} /></div>
+                    <div className="ios-list-icon" style={{ background: '#FF9500' }}><IconRun color="#fff" size={18} /></div>
                     <div className="ios-list-text">
                         <div className="ios-list-title">SEED PRO 課程簽到</div>
                         <div className="ios-list-desc">參加區單位主辦之訓練與活動</div>

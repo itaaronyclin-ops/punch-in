@@ -673,7 +673,6 @@ function LeaveSection({ token }: { token: string }) {
     const [notes, setNotes] = useState('');
     const [saving, setSaving] = useState(false);
     const [autoAgcode, setAutoAgcode] = useState('');
-    const [autoAction, setAutoAction] = useState('approve');
     const [isAutoMode, setIsAutoMode] = useState(false);
     const [bulkLoading, setBulkLoading] = useState(false);
 
@@ -696,7 +695,6 @@ function LeaveSection({ token }: { token: string }) {
                 const settings = sData.settings || {};
                 setAutoAgcode(settings.auto_approve_agcode || '');
                 setIsAutoMode(settings.auto_approve_leave === 'true');
-                setAutoAction(settings.auto_approve_action || 'approve');
             }
         } catch { }
 
@@ -755,20 +753,6 @@ function LeaveSection({ token }: { token: string }) {
                     <p className="page-subtitle">審核人員請假申請</p>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <style>{`
-                        @keyframes breathe {
-                            0% { opacity: 0.1; }
-                            50% { opacity: 0.4; }
-                            100% { opacity: 0.1; }
-                        }
-                        .breathing-light {
-                            position: absolute;
-                            inset: 0;
-                            background: var(--blue);
-                            animation: breathe 2s infinite ease-in-out;
-                            pointer-events: none;
-                        }
-                    `}</style>
                     <div style={{
                         display: 'flex',
                         background: 'var(--gray-bg)',
@@ -777,40 +761,26 @@ function LeaveSection({ token }: { token: string }) {
                         fontSize: '0.85rem',
                         alignItems: 'center',
                         gap: 8,
-                        border: isAutoMode ? '1px solid var(--blue)' : '1px solid transparent',
-                        position: 'relative',
-                        overflow: 'hidden'
+                        border: isAutoMode ? '1px solid var(--blue)' : '1px solid transparent'
                     }}>
-                        {isAutoMode && <div className="breathing-light" />}
-                        <span style={{ fontWeight: 600, color: isAutoMode ? 'var(--blue)' : 'var(--text-secondary)', zIndex: 1, position: 'relative' }}>
-                            {isAutoMode ? '⚡ 自動審核 ON' : '⚙️ 自動審核設定'}
+                        <span style={{ fontWeight: 600, color: isAutoMode ? 'var(--blue)' : 'var(--text-secondary)' }}>
+                            {isAutoMode ? '⚡ 自動審核模式 ON' : '⚙️ 代理審核設定'}
                         </span>
                         <input
                             type="text"
                             className="form-input"
-                            style={{ width: 100, height: 28, padding: '0 8px', fontSize: '0.8rem', zIndex: 1, position: 'relative' }}
-                            placeholder="代理人 AGCODE"
+                            style={{ width: 100, height: 28, padding: '0 8px', fontSize: '0.8rem' }}
+                            placeholder="代表人 AGCODE"
                             value={autoAgcode}
                             onChange={e => setAutoAgcode(e.target.value.toUpperCase())}
                         />
-                        <select
-                            className="form-select"
-                            style={{ width: 100, height: 28, padding: '0 8px', fontSize: '0.8rem', zIndex: 1, position: 'relative' }}
-                            value={autoAction}
-                            onChange={e => setAutoAction(e.target.value)}
-                        >
-                            <option value="approve">全部同意</option>
-                            <option value="reject">全部拒絕</option>
-                        </select>
                         <button
-                            className={`btn btn-sm ${isAutoMode ? 'btn-red' : 'btn-primary'}`}
-                            style={{ zIndex: 1, position: 'relative', background: isAutoMode ? 'var(--red)' : '' }}
+                            className={`btn btn-sm ${isAutoMode ? 'btn-primary' : 'btn-ghost'}`}
                             onClick={async () => {
                                 if (!autoAgcode) return toast.error('請先輸入 AGCODE');
                                 const newState = !isAutoMode;
                                 try {
                                     await fetch('/api/admin/settings', { method: 'POST', headers: h, body: JSON.stringify({ key: 'auto_approve_leave', value: newState ? 'true' : 'false' }) });
-                                    await fetch('/api/admin/settings', { method: 'POST', headers: h, body: JSON.stringify({ key: 'auto_approve_action', value: autoAction }) });
                                     await fetch('/api/admin/settings', { method: 'POST', headers: h, body: JSON.stringify({ key: 'auto_approve_agcode', value: autoAgcode }) });
                                     setIsAutoMode(newState);
                                     toast.success(`自動審核模式已${newState ? '啟動' : '關閉'}`);
@@ -819,7 +789,7 @@ function LeaveSection({ token }: { token: string }) {
                                 }
                             }}
                         >
-                            {isAutoMode ? '關閉自動審核' : '重設並開啟'}
+                            {isAutoMode ? '關閉自動審核' : '啟動自動審核'}
                         </button>
                     </div>
                 </div>
@@ -828,14 +798,14 @@ function LeaveSection({ token }: { token: string }) {
             {isAutoMode && (
                 <div className="alert alert-blue" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', animation: 'fadeIn 0.3s' }}>
                     <div style={{ fontSize: '0.9rem' }}>
-                        <b>⚡ 自動審核運作中：</b> 將會以 <code>{autoAgcode}</code> 的身分對所有新申請單自動執行「<b>{autoAction === 'approve' ? '全部同意' : '全部拒絕'}</b>」。
+                        <b>批次操作控制台：</b> 將會以 <code>{autoAgcode}</code> 的身分對所有待處理案件進行處理。
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>
                         <button className="btn btn-sm" onClick={() => handleBulkReview('approved')} disabled={bulkLoading}>
-                            ✅ 批次同意送出 ({records.filter(r => r.status === 'pending').length})
+                            ✅ 全部同意 ({records.filter(r => r.status === 'pending').length})
                         </button>
                         <button className="btn btn-danger btn-sm" onClick={() => handleBulkReview('rejected')} disabled={bulkLoading}>
-                            ❌ 批次拒絕退件
+                            ❌ 全部不同意
                         </button>
                     </div>
                 </div>
@@ -1033,7 +1003,7 @@ function RequiredDaysSection({ token }: { token: string }) {
     const [loading, setLoading] = useState(true);
     const [members, setMembers] = useState<any[]>([]);
     const [selectedAgcodes, setSelectedAgcodes] = useState<string[]>([]);
-    const [form, setForm] = useState({ dates: [] as string[], dateInput: '', lateThreshold: '09:00' });
+    const [form, setForm] = useState({ date: '', lateThreshold: '09:00' });
     const [saving, setSaving] = useState(false);
     const [msg, setMsg] = useState<{ ok: boolean; txt: string } | null>(null);
 
@@ -1064,24 +1034,20 @@ function RequiredDaysSection({ token }: { token: string }) {
     const add = async (e: React.FormEvent) => {
         e.preventDefault();
         if (selectedAgcodes.length === 0) return toast.error('請至少選擇一位人員（或標記為 ALL）');
-        if (form.dates.length === 0) return toast.error('請至少選擇一個日期');
         setSaving(true);
         let successCount = 0;
         try {
             for (const agcode of selectedAgcodes) {
-                for (const date of form.dates) {
-                    const res = await fetch('/api/admin/required-days', {
-                        method: 'POST',
-                        headers: h,
-                        body: JSON.stringify({ action: 'add', agcode, date, lateThreshold: form.lateThreshold })
-                    });
-                    if (res.ok) successCount++;
-                }
+                const res = await fetch('/api/admin/required-days', {
+                    method: 'POST',
+                    headers: h,
+                    body: JSON.stringify({ action: 'add', agcode, ...form })
+                });
+                if (res.ok) successCount++;
             }
             if (successCount > 0) {
-                toast.success(`已順利新增 ${successCount} 筆日期設定`);
+                toast.success(`已新增 ${successCount} 筆設定`);
                 setSelectedAgcodes([]);
-                setForm(f => ({ ...f, dates: [] }));
                 load();
             }
         } catch {
@@ -1154,28 +1120,13 @@ function RequiredDaysSection({ token }: { token: string }) {
                                     type="date"
                                     className="form-input"
                                     style={{ paddingLeft: 40 }}
-                                    value={form.dateInput}
-                                    onChange={e => {
-                                        const d = e.target.value;
-                                        if (d && !form.dates.includes(d)) {
-                                            setForm(f => ({ ...f, dates: [...f.dates, d].sort() }));
-                                        }
-                                        setForm(f => ({ ...f, dateInput: '' }));
-                                    }}
+                                    value={form.date}
+                                    onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
                                 />
-                                <div style={{ position: 'absolute', left: 12, top: 12, color: 'var(--text-secondary)' }}>
+                                <div style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }}>
                                     <IconCalendar size={18} />
                                 </div>
                             </div>
-                            {form.dates.length > 0 && (
-                                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
-                                    {form.dates.map(d => (
-                                        <div key={d} style={{ background: 'var(--blue)', color: '#fff', padding: '2px 8px', borderRadius: 12, fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                            {d} <IconX size={12} style={{ cursor: 'pointer' }} onClick={() => setForm(f => ({ ...f, dates: f.dates.filter(x => x !== d) }))} />
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
                         </div>
                         <div className="form-group" style={{ marginBottom: 0 }}>
                             <label className="form-label">遲到判定門檻 (HH:mm)</label>
@@ -1186,7 +1137,7 @@ function RequiredDaysSection({ token }: { token: string }) {
                                 onChange={e => setForm(f => ({ ...f, lateThreshold: e.target.value }))}
                             />
                         </div>
-                        <button className="btn btn-primary" type="submit" style={{ height: 42, minWidth: 100 }} disabled={saving || selectedAgcodes.length === 0 || form.dates.length === 0}>
+                        <button className="btn btn-primary" type="submit" style={{ height: 42, minWidth: 100 }} disabled={saving || selectedAgcodes.length === 0 || !form.date}>
                             {saving ? <span className="spinner" /> : '即刻新增'}
                         </button>
                     </div>

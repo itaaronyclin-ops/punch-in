@@ -343,12 +343,11 @@ function addLeaveRequest(data) {
   // Apply auto approval if enabled
   const { settings } = getAllSettings();
   const autoApprove = settings['auto_approve_leave'] === 'true';
-  const autoAction = settings['auto_approve_action'] || 'approve';
   const autoAgcode = settings['auto_approve_agcode'] || 'SYSTEM';
-  const status = autoApprove ? (autoAction === 'reject' ? 'rejected' : 'approved') : 'pending';
+  const status = autoApprove ? 'approved' : 'pending';
   const reviewer = autoApprove ? autoAgcode : '';
   const reviewTime = autoApprove ? nowStr() : '';
-  const notes = autoApprove ? (autoAction === 'reject' ? '[系統自動代理退件]' : '[系統自動代理審核]') : '';
+  const notes = autoApprove ? '[系統自動代理審核]' : '';
 
   const id = generateId();
   appendRow(SHEET.LEAVE, [id, agcode.toUpperCase(), name || '', leaveDate, reason, status, nowStr(), reviewTime, reviewer, notes]);
