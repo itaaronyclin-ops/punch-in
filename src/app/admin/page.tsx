@@ -139,7 +139,6 @@ type AdminSection =
     | 'tg-settings'
     | 'reports';
 
-// ─── Auth ─────────────────────────────────────────────────────────────────
 function useAdminAuth() {
     const [token, setToken] = useState('');
     const [authed, setAuthed] = useState(false);
@@ -1130,7 +1129,7 @@ function RequiredDaysSection({ token }: { token: string }) {
                     <tbody>
                         {loading ? <SkeletonRows cols={4} rows={4} /> : records.length === 0
                             ? <tr><td colSpan={4}><div className="empty-state"><div className="empty-state-icon">📅</div><div className="empty-state-text">尚無設定</div></div></td></tr>
-                            : records.sort((a, b) => b.date.localeCompare(a.date)).map((r, i) => (
+                            : records.sort((a, b) => (b.date || '').localeCompare(a.date || '')).map((r, i) => (
                                 <tr key={i}>
                                     <td><code style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>{r.agcode}</code></td>
                                     <td>{r.date}</td>

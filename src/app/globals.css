@@ -26,6 +26,9 @@
   --primary: #111111;
   --primary-press: #000000;
   --primary-muted: #EBEBEF;
+  --blue: #007aff;
+  --blue-press: #0056b3;
+  --blue-muted: rgba(0, 122, 255, 0.1);
 
   /* Status */
   --green: #1c8a45;
@@ -466,6 +469,19 @@ body {
 }
 
 /* ─── Form ───────────────────────────────────────────────────────────────── */
+.ios-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
 .form-group {
   margin-bottom: 14px;
 }

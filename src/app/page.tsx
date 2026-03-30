@@ -527,60 +527,6 @@ function QueryTab({ forcedMember, defaultSection }: { forcedMember?: Member; def
               出席紀錄（{attendance.length}）
             </button>
             <button className={`seg-btn ${section === 'leaves' ? 'active' : ''}`} onClick={() => setSection('leaves')}>
-              請假（{leaves.length}）
-            </button>
-            <button className={`seg-btn ${section === 'visit' ? 'active' : ''}`} onClick={() => setSection('visit')}>
-              拜訪
-            </button>
-            <button className={`seg-btn ${section === 'history' ? 'active' : ''}`} onClick={() => setSection('history')}>
-              歷程
-            </button>
-          </div>
-
-          {section === 'attendance' && (
-            attendance.length === 0
-              ? <div className="empty-state"><div className="empty-state-icon">📋</div><div className="empty-state-text">近 30 日無出席紀錄</div></div>
-              : <div className="table-wrapper">
-                <table>
-                  <thead><tr><th>日期</th><th>時間</th><th>類型</th></tr></thead>
-                  <tbody>
-                    {attendance.map((r, i) => (
-                      <tr key={i}>
-                        <td>{r.date}</td>
-                        <td style={{ fontVariantNumeric: 'tabular-nums' }}>{r.checkinTime?.split(' ')[1] || '—'}</td>
-                        <td>{r.isFieldWork ? <span className="badge badge-yellow">外勤</span> : <span className="badge badge-green">一般</span>}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-          )}
-
-          {section === 'history' && (
-            !history || !history.found
-              ? <div className="empty-state"><div className="empty-state-icon">🎓</div><div className="empty-state-text">查無外部歷程紀錄</div></div>
-              : <div className="history-tab-content">
-                  <div className="card-xs" style={{ background: 'var(--surface-input)', marginBottom: 12, borderRadius: 10, padding: 12 }}>
-                    <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>單位：{history.person.group}</div>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>主管：{history.person.manager}</div>
-                  </div>
-                  <div className="table-wrapper">
-                    <table>
-                      <thead><tr><th>課程/證照</th><th>類別</th><th>日期</th></tr></thead>
-                      <tbody>
-                        {history.history.map((h: any, i: number) => (
-                          <tr key={i}>
-                            <td style={{ maxWidth: 140 }}>
-                              <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{h.name}</div>
-                              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>{h.code}</div>
-                            </td>
-                            <td><span style={{ fontSize: '0.75rem' }}>{h.pName}</span></td>
-                            <td style={{ fontSize: '0.78rem', whiteSpace: 'nowrap' }}>{h.date}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
                 </div>
           )}
 
@@ -703,11 +649,11 @@ function HistoryExtView({ agcode }: { agcode: string }) {
 
 
   if (loading) return (
-    <div className="ios-modal-overlay" style={{ background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)', zIndex: 9999 }}>
+    <div className="ios-modal-overlay">
       <div style={{ textAlign: 'center' }}>
         <div className="spinner" style={{ width: 48, height: 48, border: '3px solid var(--blue)', borderTopColor: 'transparent', margin: '0 auto 20px' }} />
         <div style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>外部系統連線中</div>
-        <div style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', marginTop: 8 }}>請稍後...</div>
+        <div style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', marginTop: 8 }}>正在讀取 seed-pro 訓練歷程紀錄...</div>
       </div>
     </div>
   );
@@ -787,7 +733,7 @@ function MoreTab({ member, onLogout, onExtHistory }: { member: Member; onLogout:
 }
 
 // ─── Home Page (Main App) ────────────────────────────────────────────────────
-type AppScreen = 'home' | 'checkin' | 'field' | 'leave' | 'visit' | 'query' | 'more' | 'history-ext';
+type AppScreen = 'home' | 'checkin' | 'field' | 'leave' | 'visit' | 'query-attendance' | 'query-visit' | 'more' | 'history-ext';
 
 export default function HomePage() {
   const [screen, setScreen] = useState<AppScreen>('home');
@@ -871,7 +817,7 @@ export default function HomePage() {
             </div>
 
             <div className="ios-cards-scroll">
-              <div className="ios-card" onClick={() => { setQueryDefault('attendance'); setScreen('query'); }}>
+              <div className="ios-card" onClick={() => setScreen('query-attendance')}>
                 <div className="ios-card-icon"><IconSearch /></div>
                 <div style={{ fontWeight: 600 }}>個人出勤</div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>查看打卡紀錄</div>
@@ -886,8 +832,8 @@ export default function HomePage() {
                 <div style={{ fontWeight: 600 }}>紀錄拜訪</div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>上傳拜訪客戶資料</div>
               </div>
-              <div className="ios-card" onClick={() => { setQueryDefault('visit'); setScreen('query'); }}>
-                <div className="ios-card-icon" style={{ background: '#E5E5EA' }}><IconSearch color="var(--blue)" size={24} /></div>
+              <div className="ios-card" onClick={() => setScreen('query-visit')}>
+                <div className="ios-card-icon" style={{ background: 'var(--blue-muted)' }}><IconSearch color="var(--blue)" size={24} /></div>
                 <div style={{ fontWeight: 600 }}>拜訪查詢</div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>查看拜訪歷史紀錄</div>
               </div>
@@ -920,7 +866,8 @@ export default function HomePage() {
                 {screen === 'checkin' ? '上班定位打卡' : ''}
                 {screen === 'field' ? '外勤定位打卡' : ''}
                 {screen === 'leave' ? '請假申請' : ''}
-                {screen === 'query' ? '個人出勤紀錄' : ''}
+                {screen === 'query-attendance' ? '個人出勤紀錄' : ''}
+                {screen === 'query-visit' ? '客戶拜訪紀錄' : ''}
                 {screen === 'visit' ? '客戶拜訪紀錄' : ''}
                 {screen === 'more' ? '更多功能' : ''}
                 {screen === 'history-ext' ? '區單位訓練歷程' : ''}
@@ -930,7 +877,8 @@ export default function HomePage() {
               {screen === 'checkin' && <CheckinTab forcedMember={member} onRequireFieldWork={() => setScreen('field')} onComplete={() => setScreen('home')} />}
               {screen === 'field' && <CheckinTab fieldMode forcedMember={member} onComplete={() => setScreen('home')} />}
               {screen === 'leave' && <LeaveTab forcedMember={member} onComplete={() => setScreen('home')} />}
-              {screen === 'query' && <QueryTab forcedMember={member} defaultSection={queryDefault} />}
+              {screen === 'query-attendance' && <QueryTab forcedMember={member} title="個人出勤紀錄" type="attendance" />}
+              {screen === 'query-visit' && <QueryTab forcedMember={member} title="客戶拜訪查詢" type="visit" />}
               {screen === 'visit' && <VisitTab forcedMember={member} onComplete={() => setScreen('home')} />}
               {screen === 'more' && <MoreTab member={member} onLogout={logout} onExtHistory={() => setScreen('history-ext')} />}
               {screen === 'history-ext' && (
@@ -945,8 +893,8 @@ export default function HomePage() {
 
       <div className="ios-tab-bar">
         <div className={`ios-tab-item ${screen === 'home' ? 'active' : ''}`} onClick={() => setScreen('home')}><IconLogo size={22} /> 首頁</div>
-        <div className={`ios-tab-item ${screen === 'query' ? 'active' : ''}`} onClick={() => setScreen('query')}><IconSearch size={22} /> 紀錄</div>
-        <div className={`ios-tab-item ${screen === 'leave' ? 'active' : ''}`} onClick={() => setScreen('leave')}><IconInbox size={22} /> 請假</div>
+        <div className={`ios-tab-item ${screen === 'query-attendance' ? 'active' : ''}`} onClick={() => setScreen('query-attendance')}><IconSearch size={22} /> 出勤</div>
+        <div className={`ios-tab-item ${screen === 'query-visit' ? 'active' : ''}`} onClick={() => setScreen('query-visit')}><IconMapPin size={22} /> 拜訪</div>
         <div className={`ios-tab-item ${screen === 'more' ? 'active' : ''}`} onClick={() => setScreen('more')}><IconGrid size={22} /> 其他</div>
       </div>
       

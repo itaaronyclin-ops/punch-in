@@ -119,21 +119,26 @@ function getSheet(name) {
 function sheetToObjects(sheet) {
   const data = sheet.getDataRange().getValues();
   if (data.length < 2) return [];
-  const headers = data[0].map(h => String(h).trim().toUpperCase()); // 統一欄位鍵名為全大寫
+  const rawHeaders = data[0];
   const pad = n => String(n).padStart(2, '0');
   return data.slice(1).map((row, i) => {
     const obj = { rowIndex: i + 2 };
-    headers.forEach((h, j) => {
+    rawHeaders.forEach((h, j) => {
       const val = row[j];
+      let value = '';
       if (val instanceof Date) {
         if (val.getFullYear() === 1899 && val.getMonth() === 11 && val.getDate() === 30) {
-          obj[h] = `${pad(val.getHours())}:${pad(val.getMinutes())}`;
+          value = `${pad(val.getHours())}:${pad(val.getMinutes())}`;
         } else {
-          obj[h] = `${val.getFullYear()}-${pad(val.getMonth()+1)}-${pad(val.getDate())}`;
+          value = `${val.getFullYear()}-${pad(val.getMonth()+1)}-${pad(val.getDate())}`;
         }
       } else {
-        obj[h] = val !== undefined && val !== null ? String(val) : '';
+        value = val !== undefined && val !== null ? String(val) : '';
       }
+      
+      // 同時提供原始鍵名與全小寫鍵名，增加穩定性
+      obj[h] = value;
+      obj[String(h).trim().toLowerCase()] = value;
     });
     return obj;
   });
@@ -183,17 +188,17 @@ function getMembers() {
 function getMemberByAgcode(agcode) {
   if (!agcode) return { error: 'agcode required' };
   const { members } = getMembers();
-  const member = members.find(m => m.AGCODE === agcode.toUpperCase().trim());
-  if (!member) return { error: '找不到此業務代號' };
+  const m = members.find(x => x.agcode === agcode.toUpperCase().trim());
+  if (!m) return { error: '找不到此業務代號' };
   return {
     member: {
-      agcode: member.AGCODE,
-      name: member.Name,
-      rank: member.Rank,
-      group: member.Group,
-      supervisor: member.Supervisor,
-      createdAt: member.CreatedAt,
-      rowIndex: member.rowIndex,
+      agcode: m.agcode,
+      name: m.name,
+      rank: m.rank,
+      group: m.group,
+      supervisor: m.supervisor,
+      createdAt: m.createdat,
+      rowIndex: m.rowIndex,
     }
   };
 }
@@ -230,10 +235,10 @@ function getAttendance(data) {
 
   let filtered = rows;
   if (startDate) {
-    filtered = filtered.filter(r => r.Date >= startDate);
+    filtered = filtered.filter(r => r.date >= startDate);
   }
   if (endDate) {
-    filtered = filtered.filter(r => r.Date <= endDate);
+    filtered = filtered.filter(r => r.date <= endDate);
   }
 
   // 如果都沒有帶日期，預設 30 天
@@ -241,24 +246,24 @@ function getAttendance(data) {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - 30);
     const cutoffStr = cutoff.toISOString().split('T')[0];
-    filtered = filtered.filter(r => r.Date >= cutoffStr);
+    filtered = filtered.filter(r => r.date >= cutoffStr);
   }
 
-  if (agcode) filtered = filtered.filter(r => r.AGCODE === agcode.toUpperCase());
+  if (agcode) filtered = filtered.filter(r => r.agcode === agcode.toUpperCase());
 
   return {
     records: filtered.map(r => ({
-      id: r.ID,
-      agcode: r.AGCODE,
-      name: r.Name,
-      type: r.Type,
-      checkinTime: r.CheckinTime,
-      date: r.Date,
-      ip: r.IP,
-      lat: r.Lat,
-      lng: r.Lng,
-      isFieldWork: r.IsFieldWork === 'TRUE',
-      notes: r.Notes,
+      id: r.id,
+      agcode: r.agcode,
+      name: r.name,
+      type: r.type,
+      checkinTime: r.checkintime,
+      date: r.date,
+      ip: r.ip,
+      lat: r.lat,
+      lng: r.lng,
+      isFieldWork: String(r.isfieldwork).toUpperCase() === 'TRUE',
+      notes: r.notes,
       rowIndex: r.rowIndex,
     }))
   };
@@ -297,25 +302,25 @@ function deleteAttendance(rowIndex) {
 // ─── Leave Requests ────────────────────────────────────────────────────────
 
 function getLeaveRequests(data) {
-  const { agcode, startDate, endDate } = data;
+  const { agcode } = data;
   const sheet = getSheet(SHEET.LEAVE);
   const rows = sheetToObjects(sheet);
+
   let filtered = rows;
-  if (startDate) filtered = filtered.filter(r => r.LeaveDate >= startDate);
-  if (endDate) filtered = filtered.filter(r => r.LeaveDate <= endDate);
-  if (agcode) filtered = filtered.filter(r => r.AGCODE === agcode.toUpperCase());
+  if (agcode) filtered = filtered.filter(r => r.agcode === agcode.toUpperCase());
+
   return {
     records: filtered.map(r => ({
-      id: r.ID,
-      agcode: r.AGCODE,
-      name: r.Name,
-      leaveDate: r.LeaveDate,
-      reason: r.Reason,
-      status: r.Status,
-      requestTime: r.RequestTime,
-      reviewTime: r.ReviewTime,
-      reviewer: r.Reviewer,
-      notes: r.Notes,
+      id: r.id,
+      agcode: r.agcode,
+      name: r.name,
+      leaveDate: r.leavedate,
+      reason: r.reason,
+      status: r.status,
+      requestTime: r.requesttime,
+      reviewTime: r.reviewtime,
+      reviewer: r.reviewer,
+      notes: r.notes,
       rowIndex: r.rowIndex,
     }))
   };
@@ -325,7 +330,7 @@ function addLeaveRequest(data) {
   const { agcode, name, leaveDate, reason } = data;
   if (!agcode || !leaveDate || !reason) return { error: '參數不完整' };
   // Check duplicate
-  const { records } = getLeaveRequests(agcode);
+  const { records } = getLeaveRequests({ agcode });
   const dup = records.find(r => r.leaveDate === leaveDate && r.status !== 'rejected');
   if (dup) return { error: `該日期已有請假申請（狀態：${dup.status === 'pending' ? '待審核' : '已核准'}）` };
   const id = generateId();
@@ -346,36 +351,35 @@ function updateLeaveRequest(data) {
 
 // ─── Visit Records ──────────────────────────────────────────────────────────
 
-function getVisitRecords(data) {
-  const { agcode, startDate, endDate } = data;
+function getVisits(data) {
+  const { agcode, startDate } = data;
   const sheet = getSheet(SHEET.VISIT);
   const rows = sheetToObjects(sheet);
 
   let filtered = rows;
-  if (startDate) filtered = filtered.filter(r => r.Date >= startDate);
-  if (endDate) filtered = filtered.filter(r => r.Date <= endDate);
-
-  if (!startDate && !endDate) {
+  if (agcode) filtered = filtered.filter(r => r.agcode === agcode.toUpperCase());
+  if (startDate) {
+    filtered = filtered.filter(r => r.date >= startDate);
+  } else {
+    // 預設一週
     const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - 30);
+    cutoff.setDate(cutoff.getDate() - 7);
     const cutoffStr = cutoff.toISOString().split('T')[0];
-    filtered = filtered.filter(r => r.Date >= cutoffStr);
+    filtered = filtered.filter(r => r.date >= cutoffStr);
   }
-
-  if (agcode) filtered = filtered.filter(r => r.AGCODE === agcode.toUpperCase());
 
   return {
     records: filtered.map(r => ({
-      id: r.ID,
-      agcode: r.AGCODE,
-      name: r.Name,
-      visitTime: r.VisitTime,
-      date: r.Date,
-      purpose: r.Purpose,
-      clientName: r.ClientName,
-      notes: r.Notes,
-      lat: r.Lat,
-      lng: r.Lng,
+      id: r.id,
+      agcode: r.agcode,
+      name: r.name,
+      visitTime: r.visittime,
+      date: r.date,
+      purpose: r.purpose,
+      clientName: r.clientname,
+      notes: r.notes,
+      lat: r.lat,
+      lng: r.lng,
       rowIndex: r.rowIndex,
     }))
   };
@@ -395,10 +399,19 @@ function addVisitRecord(data) {
 
 function getAllSettings() {
   const sheet = getSheet(SHEET.SETTINGS);
-  const rows = sheetToObjects(sheet);
+  const rows = sheetToObjects(sheet); // sheetToObjects handles key lowercasing
   const settings = {};
-  rows.forEach(r => { if (r.Key) settings[r.Key] = r.Value || ''; });
+  rows.forEach(r => { 
+    if (r.key) {
+      settings[r.key.toLowerCase().trim()] = r.value || ''; 
+    }
+  });
   return { settings };
+}
+
+function getSetting(key) {
+  const { settings } = getAllSettings();
+  return { value: settings[key.toLowerCase().trim()] || '' };
 }
 
 function setSetting(key, value) {
@@ -432,9 +445,9 @@ function getRequiredDays() {
   const rows = sheetToObjects(sheet);
   return {
     records: rows.map(r => ({
-      agcode: r.AGCODE,
-      date: r.Date,
-      lateThreshold: r.LateThreshold,
+      agcode: r.agcode,
+      date: r.date,
+      lateThreshold: r.latethreshold,
       rowIndex: r.rowIndex,
     }))
   };
@@ -460,10 +473,10 @@ function getTGSettings() {
   const rows = sheetToObjects(sheet);
   return {
     records: rows.map(r => ({
-      agcode: r.AGCODE,
-      chatId: r.ChatId,
-      notificationTypes: r.NotificationTypes,
-      role: r.Role,
+      agcode: r.agcode,
+      chatId: r.chatid,
+      notificationTypes: r.notificationtypes,
+      role: r.role,
       rowIndex: r.rowIndex,
     }))
   };
@@ -491,27 +504,27 @@ function deleteTGSetting(rowIndex) {
 
 // ─── Notifications ──────────────────────────────────────────────────────────
 
-function getNotifications(agcode) {
-  if (!agcode) return { error: '參數不完整' };
+function getNotifications(data) {
+  const { agcode } = data;
   const sheet = getSheet(SHEET.NOTIFICATIONS);
   const rows = sheetToObjects(sheet);
-  
+
   // 只取近 60 天通知
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - 60);
   const cutoffStr = cutoff.toISOString().split('T')[0];
 
-  const filtered = rows.filter(r => r.AGCODE === agcode.toUpperCase() && r.CreatedAt >= cutoffStr);
+  const filtered = rows.filter(r => r.agcode === agcode.toUpperCase() && r.createdat >= cutoffStr);
   
   return {
     records: filtered.map(r => ({
-      id: r.ID,
-      agcode: r.AGCODE,
-      type: r.Type,
-      title: r.Title,
-      content: r.Content,
-      createdAt: r.CreatedAt,
-      isRead: r.IsRead === 'TRUE',
+      id: r.id,
+      agcode: r.agcode,
+      type: r.type,
+      title: r.title,
+      content: r.content,
+      createdAt: r.createdat,
+      isRead: String(r.isread).toUpperCase() === 'TRUE',
       rowIndex: r.rowIndex,
     })).reverse() // 顯示最新在最前
   };
