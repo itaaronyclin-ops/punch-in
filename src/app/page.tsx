@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   IconCheckCircle, IconRun, IconInbox, IconMapPin, IconSearch,
-  IconLogo, IconChevronRight, IconAlertTriangle, IconClock, IconLogOut, IconBell, IconX, IconGrid
+  IconLogo, IconChevronRight, IconAlertTriangle, IconClock, IconLogOut, IconBell, IconX, IconGrid, IconInfo
 } from '@/components/Icons';
 import { toast, confirmDialog, showAnimation } from '@/components/GlobalUI';
 
