@@ -839,9 +839,9 @@ export default function HomePage() {
   // Authenticated App Shell
   return (
     <div className="app-frame">
-      {screen === 'home' ? (
-        <>
-          <div className="ios-body-scroll">
+      <div className="ios-body-scroll">
+        {screen === 'home' ? (
+          <>
             <div className="ios-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <h1 style={{ fontSize: '1.8rem', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 2 }}>Hello! {member.name}</h1>
@@ -906,50 +906,49 @@ export default function HomePage() {
 
               <LiveClock className="ios-clock-wrap" />
             </div>
-          </div>
-
-          <div className="ios-tab-bar">
-            <div className={`ios-tab-item ${screen === 'home' ? 'active' : ''}`} onClick={() => setScreen('home')}><IconLogo size={22} /> 首頁</div>
-            <div className={`ios-tab-item ${screen === 'query' ? 'active' : ''}`} onClick={() => setScreen('query')}><IconSearch size={22} /> 紀錄</div>
-            <div className={`ios-tab-item ${screen === 'leave' ? 'active' : ''}`} onClick={() => setScreen('leave')}><IconInbox size={22} /> 請假</div>
-            <div className={`ios-tab-item ${screen === 'more' ? 'active' : ''}`} onClick={() => setScreen('more')}><IconGrid size={22} /> 其他</div>
-          </div>
-        </>
-      ) : (
-        <>
-          {/* Sub-screens */}
-          <div className="ios-nav-top">
-            <button className="ios-nav-back" onClick={() => setScreen('home')}>
-              <div style={{ transform: 'rotate(180deg)', marginRight: 4, display: 'flex', alignItems: 'center' }}>
-                <IconChevronRight size={18} />
+          </>
+        ) : (
+          <div className="ios-subview">
+            <div className="ios-nav-top">
+              <button className="ios-nav-back" onClick={() => setScreen('home')}>
+                <div style={{ transform: 'rotate(180deg)', marginRight: 4, display: 'flex', alignItems: 'center' }}>
+                  <IconChevronRight size={18} />
+                </div>
+                <span>返回</span>
+              </button>
+              <div className="ios-nav-title">
+                {screen === 'checkin' ? '上班定位打卡' : ''}
+                {screen === 'field' ? '外勤定位打卡' : ''}
+                {screen === 'leave' ? '請假申請' : ''}
+                {screen === 'query' ? '個人出勤紀錄' : ''}
+                {screen === 'visit' ? '客戶拜訪紀錄' : ''}
+                {screen === 'more' ? '更多功能' : ''}
+                {screen === 'history-ext' ? '區單位訓練歷程' : ''}
               </div>
-              <span>返回</span>
-            </button>
-            <div className="ios-nav-title">
-              {screen === 'checkin' ? '上班定位打卡' : ''}
-              {screen === 'field' ? '外勤定位打卡' : ''}
-              {screen === 'leave' ? '請假申請' : ''}
-              {screen === 'query' ? '個人出勤紀錄' : ''}
-              {screen === 'visit' ? '客戶拜訪紀錄' : ''}
-              {screen === 'more' ? '更多功能' : ''}
-              {screen === 'history-ext' ? '區單位訓練歷程' : ''}
+            </div>
+            <div className="ios-content">
+              {screen === 'checkin' && <CheckinTab forcedMember={member} onRequireFieldWork={() => setScreen('field')} onComplete={() => setScreen('home')} />}
+              {screen === 'field' && <CheckinTab fieldMode forcedMember={member} onComplete={() => setScreen('home')} />}
+              {screen === 'leave' && <LeaveTab forcedMember={member} onComplete={() => setScreen('home')} />}
+              {screen === 'query' && <QueryTab forcedMember={member} defaultSection={queryDefault} />}
+              {screen === 'visit' && <VisitTab forcedMember={member} onComplete={() => setScreen('home')} />}
+              {screen === 'more' && <MoreTab member={member} onLogout={logout} onExtHistory={() => setScreen('history-ext')} />}
+              {screen === 'history-ext' && (
+                <div className="ios-history-page">
+                  <HistoryExtView agcode={member.agcode} />
+                </div>
+              )}
             </div>
           </div>
-          <div className="ios-content">
-            {screen === 'checkin' && <CheckinTab forcedMember={member} onRequireFieldWork={() => setScreen('field')} onComplete={() => setScreen('home')} />}
-            {screen === 'field' && <CheckinTab fieldMode forcedMember={member} onComplete={() => setScreen('home')} />}
-            {screen === 'leave' && <LeaveTab forcedMember={member} onComplete={() => setScreen('home')} />}
-            {screen === 'query' && <QueryTab forcedMember={member} defaultSection={queryDefault} />}
-            {screen === 'visit' && <VisitTab forcedMember={member} onComplete={() => setScreen('home')} />}
-            {screen === 'more' && <MoreTab member={member} onLogout={logout} onExtHistory={() => setScreen('history-ext')} />}
-            {screen === 'history-ext' && (
-              <div className="ios-history-page">
-                <HistoryExtView agcode={member.agcode} />
-              </div>
-            )}
-          </div>
-        </>
-      )}
+        )}
+      </div>
+
+      <div className="ios-tab-bar">
+        <div className={`ios-tab-item ${screen === 'home' ? 'active' : ''}`} onClick={() => setScreen('home')}><IconLogo size={22} /> 首頁</div>
+        <div className={`ios-tab-item ${screen === 'query' ? 'active' : ''}`} onClick={() => setScreen('query')}><IconSearch size={22} /> 紀錄</div>
+        <div className={`ios-tab-item ${screen === 'leave' ? 'active' : ''}`} onClick={() => setScreen('leave')}><IconInbox size={22} /> 請假</div>
+        <div className={`ios-tab-item ${screen === 'more' ? 'active' : ''}`} onClick={() => setScreen('more')}><IconGrid size={22} /> 其他</div>
+      </div>
       
       {showNotif && member && (
         <NotificationModal 
