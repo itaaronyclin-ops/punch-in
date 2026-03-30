@@ -643,6 +643,37 @@ function saveProfile(data) {
       data.rank = data.rank || 'AG';
     }
 
+    if (actionStatus === 'delete') {
+      const sheet = getSheet(SHEET.PROFILES);
+      const dataRange = sheet.getDataRange();
+      const values = dataRange.getValues();
+      const headers = values[0];
+      const agcodeIdx = headers.indexOf('AGCODE');
+      const idcardIdx = headers.indexOf('IDCard');
+      
+      for (let i = 1; i < values.length; i++) {
+        const rowAg = String(values[i][agcodeIdx]).toUpperCase();
+        const rowId = String(values[i][idcardIdx]).toUpperCase();
+        if (rowAg === searchKey || rowId === searchKey || rowId === idcard) {
+          sheet.deleteRow(i + 1);
+          break;
+        }
+      }
+      
+      const memSheet = getSheet(SHEET.MEMBERS);
+      const memData = memSheet.getDataRange().getValues();
+      const memHeaders = memData[0];
+      const memAgcodeIdx = memHeaders.indexOf('AGCODE');
+      for (let i = 1; i < memData.length; i++) {
+        const memAg = String(memData[i][memAgcodeIdx]).toUpperCase();
+        if (memAg === searchKey || memAg === idcard) {
+          memSheet.deleteRow(i + 1);
+          break;
+        }
+      }
+      return { success: true, message: '帳號已成功撤銷' };
+    }
+
     const sheet = getSheet(SHEET.PROFILES);
     const dataRange = sheet.getDataRange();
     const values = dataRange.getValues();
@@ -656,7 +687,6 @@ function saveProfile(data) {
     
     let targetRowIndex = -1;
     let existingId = '';
-    const searchKey = actionStatus === 'upgrade' ? (oldAgcode || idcard).toUpperCase() : (agcode || idcard);
     
     for (let i = 1; i < values.length; i++) {
       const rowAgcode = String(values[i][agcodeIdx]).toUpperCase();
@@ -702,7 +732,7 @@ function saveProfile(data) {
     const mName = data.name || (targetRowIndex > -1 ? newRow[headers.indexOf('Name')] : '');
     const mRank = data.rank || (targetRowIndex > -1 ? newRow[headers.indexOf('Rank')] : '準增員');
     const mGroup = data.groupName || (targetRowIndex > -1 ? newRow[headers.indexOf('GroupName')] : '');
-    const mSuper = data.supervisor || ''; // Need to extract or use existing
+    const mSuper = data.supervisor || ''; 
     
     if (memRowIndex > -1) {
       const existingMemRow = memData[memRowIndex - 1];
@@ -711,6 +741,7 @@ function saveProfile(data) {
         if (h === 'Name') return mName;
         if (h === 'Rank') return mRank;
         if (h === 'Group') return mGroup || existingMemRow[j];
+        if (h === 'Supervisor') return mSuper || existingMemRow[j];
         return existingMemRow[j];
       });
       memSheet.getRange(memRowIndex, 1, 1, newMemRow.length).setValues([newMemRow]);

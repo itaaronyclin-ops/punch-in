@@ -2,12 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { HRProfile } from '@/lib/gas-client';
-import { toast, confirmDialog } from '@/components/GlobalUI';
-import { IconAlertTriangle, IconCheckCircle, IconChevronRight, IconLogo } from '@/components/Icons';
+import { toast } from '@/components/GlobalUI';
+import { IconAlertTriangle, IconCheckCircle, IconChevronRight, IconLogo, IconRun, IconRefreshCw, IconTrash, IconPlus, LoadingState } from '@/components/Icons';
 
 export default function HRPage() {
     const [step, setStep] = useState<'AUTH_1' | 'SELECT_MODE' | 'FILL_FORM' | 'REVIEW' | 'AUTH_2'>('AUTH_1');
-    const [mode, setMode] = useState<'candidate' | 'agent' | 'upgrade' | 'update'>('candidate');
+    const [mode, setMode] = useState<'candidate' | 'agent' | 'upgrade' | 'update' | 'delete'>('candidate');
     
     const [superAgcode, setSuperAgcode] = useState('');
     const [superName, setSuperName] = useState('');
@@ -43,9 +43,9 @@ export default function HRPage() {
             const data = await res.json();
             if (res.ok && data.profile) {
                 setForm(prev => ({ ...prev, ...data.profile, oldAgcode: data.profile.agcode }));
-                toast.success('已載入現有資料');
+                toast.success('已載入現有人員資料');
             } else {
-                toast.error('查無資料');
+                toast.error('查無此人員資料');
             }
         } catch {
             toast.error('查詢失敗');
@@ -56,9 +56,9 @@ export default function HRPage() {
 
     const handleModeSelect = (m: typeof mode) => {
         setMode(m);
-        setForm({ supervisor: superAgcode, actionStatus: m });
-        if (m === 'upgrade' || m === 'update') {
-            const id = prompt('請輸入要查詢的身分證字號或 AGCODE：');
+        setForm({ supervisor: superAgcode.toUpperCase().trim(), actionStatus: m });
+        if (m === 'upgrade' || m === 'update' || m === 'delete') {
+            const id = prompt('請輸入要查詢的身分證字號或業務代號：');
             if (id) {
                 loadProfile(id);
                 setStep('FILL_FORM');
@@ -70,10 +70,12 @@ export default function HRPage() {
 
     const handleFormSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        // Validation logic
+        if (mode === 'delete') {
+            return setStep('REVIEW');
+        }
         if (!form.name || !form.idcard) return toast.error('必填欄位（姓名、身分證）不可為空');
         if (mode === 'upgrade' || mode === 'agent') {
-            if (!form.agcode) return toast.error('必須提供新進業務員的 AGCODE');
+            if (!form.agcode) return toast.error('必須輸入業務代號');
         }
         setStep('REVIEW');
     };
@@ -85,7 +87,6 @@ export default function HRPage() {
             const res = await fetch(`/api/member?agcode=${superAgcode.toUpperCase().trim()}`);
             const data = await res.json();
             if (res.ok && data.member && data.member.name === superName) {
-                // Submit to GAS via our proxy
                 const saveRes = await fetch('/api/hr', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -93,7 +94,7 @@ export default function HRPage() {
                 });
                 const saveData = await saveRes.json();
                 if (saveRes.ok && saveData.success) {
-                    toast.success('表單送出成功，系統已更新！');
+                    toast.success(mode === 'delete' ? '帳號已成功撤銷' : '資料已成功儲存');
                     setTimeout(() => window.location.reload(), 1500);
                 } else {
                     toast.error(saveData.error || '儲存失敗');
@@ -110,186 +111,358 @@ export default function HRPage() {
 
     const renderInput = (label: string, field: keyof HRProfile, type = 'text', required = false) => (
         <div className="form-group">
-            <label className="form-label">{label} {required && <span style={{color: 'red'}}>*</span>}</label>
+            <label className="form-label">{label} {required && <span style={{color: '#FF3B30'}}>*</span>}</label>
             <input 
                 type={type} 
                 className="form-input" 
                 value={(form[field] as string) || ''} 
                 onChange={e => setForm(f => ({ ...f, [field]: e.target.value }))}
                 required={required}
-                disabled={step === 'REVIEW' || step === 'AUTH_2'}
+                disabled={step === 'REVIEW' || step === 'AUTH_2' || mode === 'delete'}
             />
         </div>
     );
 
     return (
-        <div style={{ background: 'var(--bg-secondary)', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-            <div style={{ background: '#fff', padding: '16px 24px', display: 'flex', alignItems: 'center', boxShadow: '0 1px 3px rgba(0,0,0,0.05)', position: 'sticky', top: 0, zIndex: 10 }}>
-                <IconLogo size={24} color="var(--blue)" />
-                <h1 style={{ marginLeft: 12, fontSize: '1.2rem', fontWeight: 600 }}>人事基本資料庫 (HR Admin)</h1>
-                {superName && <div style={{ marginLeft: 'auto', background: 'var(--blue-muted)', color: 'var(--blue)', padding: '4px 12px', borderRadius: 20, fontSize: '0.85rem' }}>授權主管: {superName}</div>}
+        <div className="hr-system-container">
+            {loading && (
+                <div className="global-loader-overlay">
+                    <LoadingState label="處理中，請稍候..." />
+                </div>
+            )}
+
+            <div className="hr-header">
+                <div className="hr-header-content">
+                    <div className="hr-brand">
+                        <IconLogo size={28} color="var(--blue)" />
+                        <span className="hr-title">人事資料異動系統 (iPad 橫向適配)</span>
+                    </div>
+                    {superName && (
+                        <div className="hr-badge-supervisor">
+                            授權主管：{superName} ({superAgcode.toUpperCase()})
+                        </div>
+                    )}
+                </div>
             </div>
 
-            <div style={{ maxWidth: 800, width: '100%', margin: '0 auto', padding: '32px 24px', flex: 1 }}>
-                
-                {step === 'AUTH_1' && (
-                    <div className="card" style={{ padding: 40, textAlign: 'center', maxWidth: 400, margin: '60px auto' }}>
-                        <div style={{ background: 'var(--blue-muted)', width: 64, height: 64, borderRadius: '50%', margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <IconAlertTriangle size={32} color="var(--blue)" />
-                        </div>
-                        <h2 style={{ fontSize: '1.5rem', marginBottom: 8 }}>主管授權解鎖</h2>
-                        <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>請輸入主管 AGCODE 以解鎖人事系統編輯權限</p>
-                        <form onSubmit={handleAuth1}>
-                            <input 
-                                className="form-input" 
-                                style={{ textAlign: 'center', fontSize: '1.2rem', letterSpacing: 2 }} 
-                                placeholder="輸入主管 AGCODE"
-                                value={superAgcode}
-                                onChange={e => setSuperAgcode(e.target.value)}
-                                autoFocus
-                            />
-                            <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: 16, height: 48 }} disabled={loading || !superAgcode}>
-                                {loading ? <span className="spinner" /> : '驗證並解鎖'}
-                            </button>
-                        </form>
-                    </div>
-                )}
-
-                {step === 'SELECT_MODE' && (
-                    <div className="card" style={{ padding: 32 }}>
-                        <h2 style={{ fontSize: '1.5rem', marginBottom: 24, textAlign: 'center' }}>請選擇作業項目</h2>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                            <button className="ios-card" style={{ textAlign: 'center', padding: 24 }} onClick={() => handleModeSelect('candidate')}>
-                                <div style={{ fontSize: '2rem', marginBottom: 8 }}>👤</div>
-                                <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>準增員建檔</div>
-                                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>建立新人基本資料</div>
-                            </button>
-                            <button className="ios-card" style={{ textAlign: 'center', padding: 24 }} onClick={() => handleModeSelect('agent')}>
-                                <div style={{ fontSize: '2rem', marginBottom: 8 }}>💼</div>
-                                <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>新進業務員建檔</div>
-                                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>直接建立業務員資料</div>
-                            </button>
-                            <button className="ios-card" style={{ textAlign: 'center', padding: 24 }} onClick={() => handleModeSelect('upgrade')}>
-                                <div style={{ fontSize: '2rem', marginBottom: 8 }}>✨</div>
-                                <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>準增員轉業務員</div>
-                                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>載入既有資料並升級配號</div>
-                            </button>
-                            <button className="ios-card" style={{ textAlign: 'center', padding: 24 }} onClick={() => handleModeSelect('update')}>
-                                <div style={{ fontSize: '2rem', marginBottom: 8 }}>✏️</div>
-                                <div style={{ fontWeight: 600, fontSize: '1.1rem' }}>現有資料變更</div>
-                                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>修改個資、職級、組別</div>
-                            </button>
-                        </div>
-                    </div>
-                )}
-
-                {(step === 'FILL_FORM' || step === 'REVIEW' || step === 'AUTH_2') && (
-                    <div className="card" style={{ padding: '32px 40px' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--line)', paddingBottom: 20, marginBottom: 24 }}>
-                            <div>
-                                <h2 style={{ fontSize: '1.6rem', fontWeight: 700 }}>
-                                    {mode === 'candidate' && '準增員建檔 (Candidate)'}
-                                    {mode === 'agent' && '新進業務員建檔 (New Agent)'}
-                                    {mode === 'upgrade' && '準增員升級表單 (Promotion)'}
-                                    {mode === 'update' && '人事資料變更 (Update)'}
-                                </h2>
-                                {step === 'REVIEW' && <p style={{ color: 'var(--blue)', fontWeight: 600, marginTop: 4 }}>進入檢視模式：請確認資料是否正確</p>}
+            <div className="hr-main-viewport">
+                <div className="hr-form-wrapper">
+                    
+                    {step === 'AUTH_1' && (
+                        <div className="auth-card">
+                            <div className="auth-icon-circle">
+                                <IconAlertTriangle size={32} color="var(--blue)" />
                             </div>
-                            <div style={{ display: 'flex', gap: 8 }}>
-                                <span className={`member-pill ${step === 'FILL_FORM' ? 'active' : ''}`} style={step === 'FILL_FORM' ? {background: 'var(--blue)', color: '#fff'} : {}}>1. 編輯</span>
-                                <span className={`member-pill ${step === 'REVIEW' ? 'active' : ''}`} style={step === 'REVIEW' ? {background: 'var(--blue)', color: '#fff'} : {}}>2. 檢視確認</span>
-                                <span className={`member-pill ${step === 'AUTH_2' ? 'active' : ''}`} style={step === 'AUTH_2' ? {background: 'var(--blue)', color: '#fff'} : {}}>3. 主管送出</span>
+                            <h2>主管授權解鎖</h2>
+                            <p>請輸入您的業務代號以開始人事作業</p>
+                            <form onSubmit={handleAuth1}>
+                                <input 
+                                    className="form-input auth-large-input" 
+                                    placeholder="輸入主管 AGCODE"
+                                    value={superAgcode}
+                                    onChange={e => setSuperAgcode(e.target.value)}
+                                    autoFocus
+                                />
+                                <button type="submit" className="btn btn-primary btn-large" disabled={loading || !superAgcode}>
+                                    驗證身分
+                                </button>
+                            </form>
+                        </div>
+                    )}
+
+                    {step === 'SELECT_MODE' && (
+                        <div className="mode-selection-view">
+                            <h2 className="section-title">請選擇異動型態</h2>
+                            <div className="mode-grid">
+                                <div className="mode-option" onClick={() => handleModeSelect('candidate')}>
+                                    <div className="mode-icon"><IconPlus size={32} /></div>
+                                    <h3>準增員建檔</h3>
+                                    <p>建立新進人員基礎資料</p>
+                                </div>
+                                <div className="mode-option" onClick={() => handleModeSelect('agent')}>
+                                    <div className="mode-icon"><IconRun size={32} /></div>
+                                    <h3>新進業務員建檔</h3>
+                                    <p>直接建立具備代號的人員</p>
+                                </div>
+                                <div className="mode-option" onClick={() => handleModeSelect('upgrade')}>
+                                    <div className="mode-icon"><IconChevronRight size={32} /></div>
+                                    <h3>準增員轉業務員</h3>
+                                    <p>新人升級並沿用打卡紀錄</p>
+                                </div>
+                                <div className="mode-option" onClick={() => handleModeSelect('update')}>
+                                    <div className="mode-icon"><IconRefreshCw size={32} /></div>
+                                    <h3>人事資料變更</h3>
+                                    <p>修改電話、地址或證照資訊</p>
+                                </div>
+                                <div className="mode-option mode-option-danger" onClick={() => handleModeSelect('delete')}>
+                                    <div className="mode-icon"><IconTrash size={32} color="#FF3B30" /></div>
+                                    <h3 style={{color: '#FF3B30'}}>撤銷登錄 / 刪除申請</h3>
+                                    <p>移除特定人員及其系統權限</p>
+                                </div>
                             </div>
                         </div>
+                    )}
 
-                        <form onSubmit={handleFormSubmit}>
-                            <h3 style={{ fontSize: '1.1rem', marginBottom: 16, color: 'var(--text-secondary)' }}>▍ 基本個資</h3>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                                {renderInput('身分證字號', 'idcard', 'text', true)}
-                                {renderInput('姓名', 'name', 'text', true)}
-                                {renderInput('出生年月日', 'birthday', 'date')}
-                                {renderInput('性別', 'gender')}
+                    {(step === 'FILL_FORM' || step === 'REVIEW' || step === 'AUTH_2') && (
+                        <div className="full-form-view">
+                            <div className="form-header">
+                                <div>
+                                    <h2 className="form-type-title">
+                                        {mode === 'candidate' && '準增員建檔作業'}
+                                        {mode === 'agent' && '新進業務員建檔作業'}
+                                        {mode === 'upgrade' && '準增員升級作業'}
+                                        {mode === 'update' && '人事資料變更作業'}
+                                        {mode === 'delete' && '撤銷登錄 / 刪除申請'}
+                                    </h2>
+                                    <div className="form-step-indicators">
+                                        <div className={`step-dot ${step === 'FILL_FORM' ? 'active' : ''}`}>1. 填寫</div>
+                                        <div className="step-line" />
+                                        <div className={`step-dot ${step === 'REVIEW' ? 'active' : ''}`}>2. 校對</div>
+                                        <div className="step-line" />
+                                        <div className={`step-dot ${step === 'AUTH_2' ? 'active' : ''}`}>3. 授權</div>
+                                    </div>
+                                </div>
                             </div>
 
-                            <h3 style={{ fontSize: '1.1rem', margin: '32px 0 16px', color: 'var(--text-secondary)' }}>▍ 聯絡方式</h3>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                                {renderInput('手機號碼', 'phone')}
-                                {renderInput('常用 Email', 'email', 'email')}
-                                <div style={{ gridColumn: '1 / -1' }}>{renderInput('通訊地址', 'addressContact')}</div>
-                                <div style={{ gridColumn: '1 / -1' }}>{renderInput('戶籍地址', 'addressResident')}</div>
-                            </div>
+                            <form onSubmit={handleFormSubmit} className="scrollable-form-content">
+                                <div className="form-section-head">基本身分資訊</div>
+                                <div className="input-grid-2">
+                                    {renderInput('身分證字號', 'idcard', 'text', true)}
+                                    {renderInput('姓名', 'name', 'text', true)}
+                                    {renderInput('出生年月日', 'birthday', 'date')}
+                                    {renderInput('性別', 'gender')}
+                                </div>
 
-                            <h3 style={{ fontSize: '1.1rem', margin: '32px 0 16px', color: 'var(--text-secondary)' }}>▍ 緊急聯絡人</h3>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
-                                {renderInput('姓名', 'emgName')}
-                                {renderInput('關係', 'emgRelation')}
-                                {renderInput('聯絡電話', 'emgPhone')}
-                            </div>
+                                <div className="form-section-head">聯繫資訊</div>
+                                <div className="input-grid-2">
+                                    {renderInput('手機號碼', 'phone')}
+                                    {renderInput('電子郵件', 'email', 'email')}
+                                    <div className="grid-full">{renderInput('通訊地址', 'addressContact')}</div>
+                                    <div className="grid-full">{renderInput('戶籍地址', 'addressResident')}</div>
+                                </div>
 
-                            <h3 style={{ fontSize: '1.1rem', margin: '32px 0 16px', color: 'var(--text-secondary)' }}>▍ 學經歷</h3>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                                {renderInput('最高學歷 (校名/科系)', 'eduLevel')}
-                                {renderInput('過往主要工作產業與職位', 'prevIndustry')}
-                            </div>
+                                <div className="form-section-head">緊急聯絡資訊</div>
+                                <div className="input-grid-3">
+                                    {renderInput('聯絡人姓名', 'emgName')}
+                                    {renderInput('關係', 'emgRelation')}
+                                    {renderInput('聯絡電話', 'emgPhone')}
+                                </div>
 
-                            {/* 業務員專屬欄位 */}
-                            {(mode === 'agent' || mode === 'upgrade' || mode === 'update') && (
-                                <>
-                                    <h3 style={{ fontSize: '1.1rem', margin: '32px 0 16px', color: '#FF9500' }}>▍ 業務員專屬配置</h3>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16, background: 'rgba(255, 149, 0, 0.05)', padding: 16, borderRadius: 12 }}>
-                                        {renderInput('AGCODE (業務代號)', 'agcode', 'text', true)}
-                                        {renderInput('組別 (Group)', 'groupName')}
-                                        {(mode === 'update') && renderInput('職級 (Rank)', 'rank')}
-                                        <div style={{ gridColumn: '1 / -1', borderTop: '1px solid rgba(255, 149, 0, 0.2)', paddingTop: 16, marginTop: 8, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                                            {renderInput('金融市場與倫理道德證號/日期', 'certEthics')}
-                                            {renderInput('壽險合格證號/日期', 'certLife')}
-                                            {renderInput('產險合格證號/日期', 'certProperty')}
-                                            {renderInput('外幣合格證號/日期', 'certForeign')}
-                                            {renderInput('投資型合格證號/日期', 'certInvestment')}
+                                {(mode === 'agent' || mode === 'upgrade' || mode === 'update') && (
+                                    <>
+                                        <div className="form-section-head highlight-gold">業務人員系統配置</div>
+                                        <div className="config-box">
+                                            <div className="input-grid-3">
+                                                {renderInput('業務代號 (AGCODE)', 'agcode', 'text', true)}
+                                                {renderInput('所屬組別', 'groupName')}
+                                                {mode === 'update' ? renderInput('職級名稱', 'rank') : <div />}
+                                            </div>
+                                            <div className="divider-gold" />
+                                            <div className="input-grid-2">
+                                                {renderInput('金融市場與倫理道德', 'certEthics')}
+                                                {renderInput('壽險合格證號', 'certLife')}
+                                                {renderInput('產險合格證號', 'certProperty')}
+                                                {renderInput('外幣合格證號', 'certForeign')}
+                                                {renderInput('投資型合格證號', 'certInvestment')}
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+                                {mode === 'delete' && (
+                                    <div className="danger-alert-box">
+                                        <IconAlertTriangle color="#FF3B30" />
+                                        <div>
+                                            <strong>確認撤銷此帳號？</strong>
+                                            <p>此操作將移除該人員的登錄資訊，該代號將無法再次登入系統。</p>
                                         </div>
                                     </div>
-                                </>
+                                )}
+
+                                <div className="footer-actions">
+                                    {step === 'FILL_FORM' && (
+                                        <>
+                                            <button type="button" className="btn btn-ghost" onClick={() => setStep('SELECT_MODE')}>返回上一頁</button>
+                                            <button type="submit" className="btn btn-primary">{mode === 'delete' ? '確認刪除對象' : '進入校對模式'}</button>
+                                        </>
+                                    )}
+                                    {step === 'REVIEW' && (
+                                        <>
+                                            <button type="button" className="btn btn-ghost" onClick={() => setStep('FILL_FORM')}>回頭修改</button>
+                                            <button type="button" className="btn btn-success" onClick={() => setStep('AUTH_2')}>資料無誤，主管送出</button>
+                                        </>
+                                    )}
+                                </div>
+                            </form>
+
+                            {step === 'AUTH_2' && (
+                                <div className="final-auth-overlay">
+                                    <div className="final-auth-modal">
+                                        <h3>最終主管電子簽章</h3>
+                                        <p>請主管 <strong>{superName}</strong> ({superAgcode.toUpperCase()}) 再次驗證身分以完成本案：</p>
+                                        <form onSubmit={handleAuth2} className="auth-row">
+                                            <input 
+                                                className="form-input" 
+                                                placeholder="輸入 AGCODE"
+                                                value={superAgcode}
+                                                onChange={e => setSuperAgcode(e.target.value)}
+                                                autoFocus
+                                            />
+                                            <button type="submit" className="btn btn-danger" disabled={loading}>
+                                                確認授權
+                                            </button>
+                                            <button type="button" className="btn btn-ghost" onClick={() => setStep('REVIEW')}>取消</button>
+                                        </form>
+                                    </div>
+                                </div>
                             )}
-
-                            <div style={{ marginTop: 40, display: 'flex', gap: 16, justifyContent: 'flex-end' }}>
-                                {step === 'FILL_FORM' && (
-                                    <>
-                                        <button type="button" className="btn btn-secondary" onClick={() => setStep('SELECT_MODE')}>取消</button>
-                                        <button type="submit" className="btn btn-primary" style={{ minWidth: 160 }}>完成編輯，進入檢視</button>
-                                    </>
-                                )}
-                                {step === 'REVIEW' && (
-                                    <>
-                                        <button type="button" className="btn btn-secondary" onClick={() => setStep('FILL_FORM')}>返回修改</button>
-                                        <button type="button" className="btn btn-primary" style={{ background: '#34C759', minWidth: 160 }} onClick={() => setStep('AUTH_2')}>確認無誤，前往送出</button>
-                                    </>
-                                )}
-                            </div>
-                        </form>
-
-                        {step === 'AUTH_2' && (
-                            <div style={{ marginTop: 32, padding: 24, background: 'var(--bg-secondary)', borderRadius: 12, textAlign: 'center' }}>
-                                <h3 style={{ fontSize: '1.2rem', marginBottom: 8 }}>最終主管授權</h3>
-                                <p style={{ color: 'var(--text-secondary)', marginBottom: 20 }}>表單已鎖定。請主管 <strong>{superName}</strong> ({superAgcode}) 再次輸入密碼(代號)以確認送出更新。</p>
-                                <form onSubmit={handleAuth2} style={{ display: 'flex', justifyContent: 'center', gap: 10 }}>
-                                    <input 
-                                        className="form-input" 
-                                        style={{ maxWidth: 240, textAlign: 'center' }} 
-                                        placeholder="輸入 AGCODE"
-                                        value={superAgcode}
-                                        onChange={e => setSuperAgcode(e.target.value)}
-                                        autoFocus
-                                    />
-                                    <button type="button" className="btn btn-secondary" onClick={() => setStep('REVIEW')}>取消</button>
-                                    <button type="submit" className="btn btn-primary" disabled={loading || !superAgcode} style={{ background: '#FF3B30' }}>
-                                        {loading ? <span className="spinner" /> : '授權並完成新增/變更'}
-                                    </button>
-                                </form>
-                            </div>
-                        )}
-                    </div>
-                )}
+                        </div>
+                    )}
+                </div>
             </div>
+
+            <style jsx>{`
+                .hr-system-container {
+                    background: #F2F2F7;
+                    min-height: 100vh;
+                    display: flex;
+                    flex-direction: column;
+                    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                }
+                .global-loader-overlay {
+                    position: fixed;
+                    inset: 0;
+                    background: rgba(255,255,255,0.8);
+                    backdrop-filter: blur(4px);
+                    z-index: 1000;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                }
+                .hr-header {
+                    background: #FFF;
+                    border-bottom: 1px solid #D1D1D6;
+                    padding: 16px 24px;
+                    position: sticky;
+                    top: 0;
+                    z-index: 100;
+                }
+                .hr-header-content {
+                    max-width: 1200px;
+                    margin: 0 auto;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+                .hr-brand {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                }
+                .hr-title {
+                    font-size: 1.25rem;
+                    fontWeight: 600;
+                    letter-spacing: -0.02em;
+                }
+                .hr-badge-supervisor {
+                    background: var(--blue-muted);
+                    color: var(--blue);
+                    padding: 6px 16px;
+                    border-radius: 20px;
+                    font-size: 0.9rem;
+                    font-weight: 500;
+                }
+                .hr-main-viewport {
+                    flex: 1;
+                    padding: 40px 24px;
+                    overflow-y: auto;
+                    -webkit-overflow-scrolling: touch;
+                }
+                .hr-form-wrapper {
+                    max-width: 900px;
+                    margin: 0 auto;
+                }
+                .auth-card {
+                    background: #FFF;
+                    border-radius: 20px;
+                    padding: 48px;
+                    text-align: center;
+                    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+                    max-width: 480px;
+                    margin: 60px auto;
+                }
+                .auth-icon-circle {
+                    width: 72px;
+                    height: 72px;
+                    background: var(--blue-muted);
+                    border-radius: 50%;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    margin: 0 auto 24px;
+                }
+                .auth-card h2 { font-size: 1.7rem; margin-bottom: 8px; }
+                .auth-card p { color: #8E8E93; margin-bottom: 32px; }
+                .auth-large-input { text-align: center; font-size: 1.5rem; letter-spacing: 4px; height: 60px; margin-bottom: 20px; }
+                
+                .mode-selection-view { width: 100%; }
+                .section-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 32px; text-align: center; color: #1C1C1E; }
+                .mode-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+                .mode-option {
+                    background: #FFF;
+                    border-radius: 20px;
+                    padding: 32px 24px;
+                    text-align: center;
+                    cursor: pointer;
+                    transition: all 0.2s cubic-bezier(0.1, 0.7, 0.1, 1);
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+                }
+                .mode-option:active { transform: scale(0.96); }
+                .mode-icon { margin-bottom: 16px; color: var(--blue); }
+                .mode-option h3 { font-size: 1.2rem; margin-bottom: 8px; }
+                .mode-option p { font-size: 0.9rem; color: #8E8E93; }
+                .mode-option-danger:hover { background: #FFF5F5; }
+
+                .full-form-view {
+                    background: #FFF;
+                    border-radius: 24px;
+                    box-shadow: 0 12px 40px rgba(0,0,0,0.08);
+                    overflow: hidden;
+                    display: flex;
+                    flex-direction: column;
+                }
+                .form-header { padding: 32px 40px; border-bottom: 1px solid #E5E5E7; background: #FAFAFA; }
+                .form-type-title { font-size: 1.8rem; font-weight: 800; color: #1C1C1E; }
+                .form-step-indicators { display: flex; align-items: center; gap: 12px; margin-top: 12px; }
+                .step-dot { font-size: 0.85rem; font-weight: 600; color: #8E8E93; }
+                .step-dot.active { color: var(--blue); }
+                .step-line { width: 40px; height: 1px; background: #D1D1D6; }
+
+                .scrollable-form-content { padding: 40px; max-height: 70vh; overflow-y: auto; }
+                .form-section-head { font-size: 1.1rem; font-weight: 700; color: #1C1C1E; margin-bottom: 20px; padding-left: 12px; border-left: 4px solid var(--blue); }
+                .form-section-head.highlight-gold { border-left-color: #FF9500; color: #D67F00; margin-top: 48px; }
+                
+                .input-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 24px 32px; margin-bottom: 40px; }
+                .input-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px 20px; }
+                .grid-full { grid-column: 1 / -1; }
+
+                .config-box { background: #FDF8F0; border: 1px solid #FCE4B6; border-radius: 16px; padding: 24px; }
+                .divider-gold { height: 1px; background: #FCE4B6; margin: 24px 0; }
+                
+                .danger-alert-box { background: #FFF5F5; border: 1px solid #FFD1D1; padding: 20px; border-radius: 12px; display: flex; gap: 16px; margin-bottom: 32px; }
+                .danger-alert-box strong { color: #FF3B30; display: block; margin-bottom: 4px; }
+
+                .footer-actions { display: flex; justify-content: flex-end; gap: 16px; margin-top: 40px; padding-top: 24px; border-top: 1px solid #E5E5E7; }
+                
+                .final-auth-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(8px); z-index: 500; display: flex; align-items: center; justify-content: center; padding: 20px; }
+                .final-auth-modal { background: #FFF; border-radius: 24px; padding: 40px; max-width: 500px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.2); text-align: center; }
+                .final-auth-modal h3 { font-size: 1.6rem; margin-bottom: 12px; color: #FF3B30; }
+                .auth-row { display: flex; flex-direction: column; gap: 12px; margin-top: 24px; }
+                
+                .btn-large { height: 56px; font-size: 1.1rem; width: 100%; border-radius: 14px; }
+                .btn-success { background: #34C759; color: #fff; }
+                .btn-danger { background: #FF3B30; color: #fff; }
+            `}</style>
         </div>
     );
 }

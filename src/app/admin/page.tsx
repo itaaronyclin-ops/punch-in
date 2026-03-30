@@ -1617,6 +1617,7 @@ function ReportsSection({ token }: { token: string }) {
 function ProfilesSection({ token }: { token: string }) {
     const [records, setRecords] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState('');
 
     const load = async () => {
         setLoading(true);
@@ -1633,34 +1634,76 @@ function ProfilesSection({ token }: { token: string }) {
 
     useEffect(() => { load(); }, []);
 
+    const filtered = records.filter(r => 
+        (r.name || '').includes(search) || 
+        (r.agcode || '').toUpperCase().includes(search.toUpperCase()) ||
+        (r.idcard || '').toUpperCase().includes(search.toUpperCase())
+    );
+
     return (
-        <div>
-            <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div><h1 className="page-title">基本資料庫 (HR Profiles)</h1><p className="page-subtitle">管理準增員與業務員的詳細履歷及證照資訊</p></div>
+        <div style={{ height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
+            <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexShrink: 0 }}>
+                <div>
+                    <h1 className="page-title">轄屬人員基本資料維護</h1>
+                    <p className="page-subtitle">維護準增員與業務員的詳細履歷、證照及通訊資訊</p>
+                </div>
                 <div style={{ display: 'flex', gap: 12 }}>
-                    <button className="btn btn-secondary" onClick={load}><IconRefreshCw size={14} /> 重新整理</button>
+                    <button className="btn btn-secondary" onClick={load} disabled={loading}>
+                        {loading ? <span className="spinner" /> : <IconRefreshCw size={14} />} 重新整理
+                    </button>
                     <a href="/hr" target="_blank" rel="noreferrer" className="btn btn-primary" style={{ textDecoration: 'none' }}>
-                        前往 HR 建檔系統 (開啟新頁籤) →
+                        開啟 HR 異動申請系統 →
                     </a>
                 </div>
             </div>
 
-            <div className="table-wrapper">
+            <div className="card" style={{ marginBottom: 20, padding: 16, flexShrink: 0 }}>
+                <div className="form-group" style={{ maxWidth: 400, marginBottom: 0 }}>
+                    <input 
+                        type="text" 
+                        className="form-input" 
+                        placeholder="搜尋姓名、代號或身分證..." 
+                        value={search}
+                        onChange={e => setSearch(e.target.value)}
+                    />
+                </div>
+            </div>
+
+            <div className="table-wrapper" style={{ flex: 1, overflow: 'auto' }}>
                 <table>
-                    <thead><tr><th>職級</th><th>AGCODE</th><th>身分證</th><th>姓名</th><th>電話</th><th>建立時間</th></tr></thead>
+                    <thead style={{ position: 'sticky', top: 0, zIndex: 5 }}>
+                        <tr>
+                            <th>職級狀態</th>
+                            <th>業務代號</th>
+                            <th>姓名</th>
+                            <th>身分證</th>
+                            <th>手機號碼</th>
+                            <th>組別</th>
+                            <th>壽險證照</th>
+                            <th>更新時間</th>
+                        </tr>
+                    </thead>
                     <tbody>
-                        {loading ? <SkeletonRows cols={6} rows={5} /> : records.length === 0
-                            ? <tr><td colSpan={6}><div className="empty-state"><div className="empty-state-text">尚無基本資料記錄</div></div></td></tr>
-                            : records.map((r, i) => (
-                                <tr key={r.id || i}>
-                                    <td><span className={`badge ${r.rank === '準增員' ? 'badge-orange' : 'badge-blue'}`}>{r.rank || '未知'}</span></td>
-                                    <td><code style={{ fontFamily: 'var(--font-mono)' }}>{r.agcode}</code></td>
-                                    <td><code style={{ fontFamily: 'var(--font-mono)' }}>{r.idcard}</code></td>
-                                    <td style={{ fontWeight: 600 }}>{r.name}</td>
-                                    <td>{r.phone || '—'}</td>
-                                    <td><span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{r.createdAt?.substring(0, 16) || '—'}</span></td>
-                                </tr>
-                            ))}
+                        {loading ? (
+                            <tr><td colSpan={8} style={{ textAlign: 'center', padding: 40 }}><LoadingState label="讀取人員資料中..." /></td></tr>
+                        ) : filtered.length === 0 ? (
+                            <tr><td colSpan={8} style={{ textAlign: 'center', padding: 40, color: '#8E8E93' }}>查無相符的人員資料</td></tr>
+                        ) : filtered.map((r, i) => (
+                            <tr key={r.id || i}>
+                                <td>
+                                    <span className={`badge ${r.rank === '準增員' ? 'badge-orange' : 'badge-blue'}`} style={{ fontSize: '0.75rem' }}>
+                                        {r.rank}
+                                    </span>
+                                </td>
+                                <td><code style={{ background: '#F2F2F7', padding: '2px 4px', borderRadius: 4 }}>{r.agcode}</code></td>
+                                <td style={{ fontWeight: 600 }}>{r.name}</td>
+                                <td>{r.idcard}</td>
+                                <td>{r.phone}</td>
+                                <td>{r.groupName}</td>
+                                <td>{r.certLife ? '已取得' : '未登錄'}</td>
+                                <td style={{ fontSize: '0.8rem', color: '#8E8E93' }}>{r.updatedAt || r.createdAt}</td>
+                            </tr>
+                        ))}
                     </tbody>
                 </table>
             </div>
