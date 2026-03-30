@@ -100,46 +100,46 @@ export function IconPlus({ size = 18, color = 'currentColor' }: { size?: number;
     return <svg {...props} width={size} height={size} stroke={color}><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>;
 }
 
-export function IconX({ size = 16 }: { size?: number }) {
-    return <svg {...props} width={size} height={size}><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>;
+export function IconX({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {
+    return <svg {...props} width={size} height={size} stroke={color}><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>;
 }
 
-export function IconEdit({ size = 16 }: { size?: number }) {
-    return <svg {...props} width={size} height={size}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>;
+export function IconEdit({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {
+    return <svg {...props} width={size} height={size} stroke={color}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>;
 }
 
-export function IconTrash({ size = 16 }: { size?: number }) {
-    return <svg {...props} width={size} height={size}><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" /></svg>;
+export function IconTrash({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {
+    return <svg {...props} width={size} height={size} stroke={color}><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" /></svg>;
 }
 
-export function IconLogOut({ size = 16 }: { size?: number }) {
-    return <svg {...props} width={size} height={size}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>;
+export function IconLogOut({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {
+    return <svg {...props} width={size} height={size} stroke={color}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" /></svg>;
 }
 
-export function IconCheck({ size = 16 }: { size?: number }) {
-    return <svg {...props} width={size} height={size}><polyline points="20 6 9 17 4 12" /></svg>;
+export function IconCheck({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {
+    return <svg {...props} width={size} height={size} stroke={color}><polyline points="20 6 9 17 4 12" /></svg>;
 }
 
-export function IconAlertTriangle({ size = 16 }: { size?: number }) {
-    return <svg {...props} width={size} height={size}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>;
+export function IconAlertTriangle({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {
+    return <svg {...props} width={size} height={size} stroke={color}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>;
 }
 
-export function IconDatabase({ size = 20 }: { size?: number }) {
-    return <svg {...props} width={size} height={size}><ellipse cx="12" cy="5" rx="9" ry="3" /><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" /><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" /></svg>;
+export function IconDatabase({ size = 20, color = 'currentColor' }: { size?: number; color?: string }) {
+    return <svg {...props} width={size} height={size} stroke={color}><ellipse cx="12" cy="5" rx="9" ry="3" /><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" /><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" /></svg>;
 }
 
-export function IconLock({ size = 28 }: { size?: number }) {
-    return <svg {...props} width={size} height={size}><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>;
+export function IconLock({ size = 28, color = 'currentColor' }: { size?: number; color?: string }) {
+    return <svg {...props} width={size} height={size} stroke={color}><rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>;
 }
 
-export function IconClock({ size = 20 }: { size?: number }) {
-    return <svg {...props} width={size} height={size}><circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15 15" /></svg>;
+export function IconClock({ size = 20, color = 'currentColor' }: { size?: number; color?: string }) {
+    return <svg {...props} width={size} height={size} stroke={color}><circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15 15" /></svg>;
 }
 
-export function IconSend({ size = 20 }: { size?: number }) {
-    return <svg {...props} width={size} height={size}><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>;
+export function IconSend({ size = 20, color = 'currentColor' }: { size?: number; color?: string }) {
+    return <svg {...props} width={size} height={size} stroke={color}><line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" /></svg>;
 }
 
-export function IconBell({ size = 20 }: { size?: number }) {
-    return <svg {...props} width={size} height={size}><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>;
+export function IconBell({ size = 20, color = 'currentColor' }: { size?: number; color?: string }) {
+    return <svg {...props} width={size} height={size} stroke={color}><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>;
 }
