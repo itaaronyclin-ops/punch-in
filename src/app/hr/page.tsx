@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getMemberByAgcode } from '@/lib/gas-client';
-import { getProfile, saveProfile, HRProfile } from '@/lib/gas-client';
+import { HRProfile } from '@/lib/gas-client';
 import { toast, confirmDialog } from '@/components/GlobalUI';
 import { IconAlertTriangle, IconCheckCircle, IconChevronRight, IconLogo } from '@/components/Icons';
 
@@ -21,13 +20,14 @@ export default function HRPage() {
         e.preventDefault();
         setLoading(true);
         try {
-            const m = await getMemberByAgcode(superAgcode.toUpperCase().trim());
-            if (m) {
-                setSuperName(m.name);
+            const res = await fetch(`/api/member?agcode=${superAgcode.toUpperCase().trim()}`);
+            const data = await res.json();
+            if (res.ok && data.member) {
+                setSuperName(data.member.name);
                 setForm(f => ({ ...f, supervisor: superAgcode.toUpperCase().trim() }));
                 setStep('SELECT_MODE');
             } else {
-                toast.error('查無此主管代號');
+                toast.error(data.error || '查無此主管代號');
             }
         } catch {
             toast.error('系統錯誤，請重試');
@@ -39,9 +39,10 @@ export default function HRPage() {
     const loadProfile = async (agcodeOrIdcard: string) => {
         setLoading(true);
         try {
-            const p = await getProfile(agcodeOrIdcard);
-            if (p) {
-                setForm(prev => ({ ...prev, ...p, oldAgcode: p.agcode }));
+            const res = await fetch(`/api/hr?q=${agcodeOrIdcard}`);
+            const data = await res.json();
+            if (res.ok && data.profile) {
+                setForm(prev => ({ ...prev, ...data.profile, oldAgcode: data.profile.agcode }));
                 toast.success('已載入現有資料');
             } else {
                 toast.error('查無資料');
@@ -81,15 +82,21 @@ export default function HRPage() {
         e.preventDefault();
         setLoading(true);
         try {
-            const m = await getMemberByAgcode(superAgcode.toUpperCase().trim());
-            if (m && m.name === superName) {
-                // Submit to GAS
-                const res = await saveProfile({ ...form, actionStatus: mode });
-                if (res.success) {
+            const res = await fetch(`/api/member?agcode=${superAgcode.toUpperCase().trim()}`);
+            const data = await res.json();
+            if (res.ok && data.member && data.member.name === superName) {
+                // Submit to GAS via our proxy
+                const saveRes = await fetch('/api/hr', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ...form, actionStatus: mode })
+                });
+                const saveData = await saveRes.json();
+                if (saveRes.ok && saveData.success) {
                     toast.success('表單送出成功，系統已更新！');
                     setTimeout(() => window.location.reload(), 1500);
                 } else {
-                    toast.error(res.error || '儲存失敗');
+                    toast.error(saveData.error || '儲存失敗');
                 }
             } else {
                 toast.error('主管代號驗證錯誤');
