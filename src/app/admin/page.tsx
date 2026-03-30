@@ -687,6 +687,17 @@ function LeaveSection({ token }: { token: string }) {
                 setRecords(data.records || []);
             }
         } catch { }
+
+        try {
+            const sRes = await fetch('/api/admin/settings', { headers: { 'x-admin-token': token } });
+            if (sRes.ok) {
+                const sData = await sRes.json();
+                const settings = sData.settings || {};
+                setAutoAgcode(settings.auto_approve_agcode || '');
+                setIsAutoMode(settings.auto_approve_leave === 'true');
+            }
+        } catch { }
+
         setLoading(false);
     }, [token]);
 
@@ -765,12 +776,20 @@ function LeaveSection({ token }: { token: string }) {
                         />
                         <button
                             className={`btn btn-sm ${isAutoMode ? 'btn-primary' : 'btn-ghost'}`}
-                            onClick={() => {
+                            onClick={async () => {
                                 if (!autoAgcode) return toast.error('請先輸入 AGCODE');
-                                setIsAutoMode(!isAutoMode);
+                                const newState = !isAutoMode;
+                                try {
+                                    await fetch('/api/admin/settings', { method: 'POST', headers: h, body: JSON.stringify({ key: 'auto_approve_leave', value: newState ? 'true' : 'false' }) });
+                                    await fetch('/api/admin/settings', { method: 'POST', headers: h, body: JSON.stringify({ key: 'auto_approve_agcode', value: autoAgcode }) });
+                                    setIsAutoMode(newState);
+                                    toast.success(`自動審核模式已${newState ? '啟動' : '關閉'}`);
+                                } catch {
+                                    toast.error('設定儲存失敗');
+                                }
                             }}
                         >
-                            {isAutoMode ? '關閉' : '啟動'}
+                            {isAutoMode ? '關閉自動審核' : '啟動自動審核'}
                         </button>
                     </div>
                 </div>

@@ -16,8 +16,11 @@ async function gasGet<T>(action: string, params: Record<string, string> = {}, ca
     try {
         const url = new URL(GAS_URL);
         url.searchParams.set('action', action);
-        Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-
+        Object.entries(params).forEach(([k, v]) => {
+            if (v !== undefined && v !== null && v !== '') {
+                url.searchParams.set(k, String(v));
+            }
+        });
         // Use Next.js extended fetch options for fine-grained revalidation
         const fetchOptions: RequestInit = cacheSeconds > 0
             ? { method: 'GET', next: { revalidate: cacheSeconds } }

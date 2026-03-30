@@ -79,7 +79,7 @@ function handleRequest(e) {
       case 'deleteTGSetting':   result = deleteTGSetting(data.rowIndex); break;
 
       // ── Notifications ─────────────────────────────────────────────────────
-      case 'getNotifications':  result = getNotifications(data.agcode); break;
+      case 'getNotifications':  result = getNotifications(data); break;
       case 'addNotification':   result = addNotification(data);        break;
       case 'markNotificationRead': result = markNotificationRead(data.rowIndex); break;
 
@@ -339,8 +339,18 @@ function addLeaveRequest(data) {
   const { records } = getLeaveRequests({ agcode });
   const dup = records.find(r => r.leaveDate === leaveDate && r.status !== 'rejected');
   if (dup) return { error: `該日期已有請假申請（狀態：${dup.status === 'pending' ? '待審核' : '已核准'}）` };
+  
+  // Apply auto approval if enabled
+  const { settings } = getAllSettings();
+  const autoApprove = settings['auto_approve_leave'] === 'true';
+  const autoAgcode = settings['auto_approve_agcode'] || 'SYSTEM';
+  const status = autoApprove ? 'approved' : 'pending';
+  const reviewer = autoApprove ? autoAgcode : '';
+  const reviewTime = autoApprove ? nowStr() : '';
+  const notes = autoApprove ? '[系統自動代理審核]' : '';
+
   const id = generateId();
-  appendRow(SHEET.LEAVE, [id, agcode.toUpperCase(), name || '', leaveDate, reason, 'pending', nowStr(), '', '', '']);
+  appendRow(SHEET.LEAVE, [id, agcode.toUpperCase(), name || '', leaveDate, reason, status, nowStr(), reviewTime, reviewer, notes]);
   return { success: true, id };
 }
 
@@ -357,7 +367,7 @@ function updateLeaveRequest(data) {
 
 // ─── Visit Records ──────────────────────────────────────────────────────────
 
-function getVisits(data) {
+function getVisitRecords(data) {
   const { agcode, startDate } = data;
   const sheet = getSheet(SHEET.VISIT);
   const rows = sheetToObjects(sheet);

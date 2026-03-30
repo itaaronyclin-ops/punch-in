@@ -699,12 +699,190 @@ function HistoryExtView({ agcode }: { agcode: string }) {
   );
 }
 
+// ─── External Training Checkin Tab ──────────────────────────────────────────
+function TrainingCheckinTab({ member, onComplete }: { member: Member; onComplete: () => void }) {
+  const [loading, setLoading] = useState(false);
+  const [initing, setIniting] = useState(true);
+  const [events, setEvents] = useState<any[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState('');
+  const [locText, setLocText] = useState('📍 定位獲取中...');
+  const [userLoc, setUserLoc] = useState<{latitude: number, longitude: number} | null>(null);
+
+  const API_URL = 'https://script.google.com/macros/s/AKfycbz4kiWGCG96zZHAJgc-wOAaCxOkS7WXf5IriAEKk0StXYFNVlME7x2SjaSva3Rp8obX/exec';
+
+  const gasRun = async (action: string, ...args: any[]) => {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      mode: 'cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ action, args })
+    });
+    return res.json();
+  };
+
+  useEffect(() => {
+    let watchId: number;
+    if (!navigator.geolocation) {
+      setLocText('❌ 不支援定位功能');
+    } else {
+      watchId = navigator.geolocation.watchPosition(
+        (pos) => {
+          setUserLoc({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
+          setLocText(`📍 定位已就緒 (誤差 ${Math.round(pos.coords.accuracy)}m)`);
+        },
+        () => setLocText('⚠️ 無法獲取定位，請確認權限'),
+        { enableHighAccuracy: true }
+      );
+    }
+    
+    // Simulate connection delay for better UX and fetch events
+    Promise.all([
+      gasRun('getTrainingEvents', true),
+      new Promise(resolve => setTimeout(resolve, 1500))
+    ]).then(([res]) => {
+      setIniting(false);
+      if (res && res.success && res.events) {
+        setEvents(res.events);
+        if (res.events.length > 0) setSelectedEvent(res.events[0].id);
+      }
+    }).catch(() => {
+      setIniting(false);
+      alert('載入場次失敗，請稍後重試。');
+    });
+
+    return () => {
+      if (watchId) navigator.geolocation.clearWatch(watchId);
+    };
+  }, []);
+
+  const handleCheckin = async () => {
+    if (!userLoc) return alert('尚未獲取 GPS 定位，請稍候。');
+    if (!selectedEvent) return alert('請選擇欲簽到的場次');
+    
+    setLoading(true);
+    try {
+      const res = await gasRun('trainingCheckin', {
+        eventId: selectedEvent,
+        agcode: member.agcode,
+        name: member.name,
+        department: `${member.rank} / ${member.group}`,
+        location: userLoc
+      });
+      setLoading(false);
+      if (res && res.success) {
+        alert(res.message + (res.penalty ? '\n\n⚠️ 遲到紀錄已產生' : ''));
+        onComplete();
+      } else {
+        alert('❌ 簽到失敗: ' + (res?.message || '未知錯誤'));
+      }
+    } catch (e: any) {
+      setLoading(false);
+      alert('連線失敗: ' + e.message);
+    }
+  };
+
+  if (initing) {
+    return (
+      <div style={{
+        position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.3)', backdropFilter: 'blur(8px)',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        animation: 'fadeIn 0.3s ease-out'
+      }}>
+        <div style={{ padding: '32px 32px 24px 32px', background: 'var(--bg)', borderRadius: 24, boxShadow: '0 20px 40px rgba(0,0,0,0.2)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
+          <div className="spinner" style={{ width: 56, height: 56, borderTopColor: 'var(--blue)', borderWidth: 4 }}></div>
+          <div style={{ color: 'var(--text)', fontWeight: 600, fontSize: '1.25rem' }}>連線至外部系統中</div>
+          <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: -8 }}>正在安全加密同步 SEED PRO 課程資料⋯</div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="ios-page p-4">
+      <div className="ios-card" style={{ marginBottom: '1rem', background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
+         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+           <div className="ios-card-icon" style={{ background: 'var(--blue)', width: 44, height: 44, flexShrink: 0, borderRadius: '50%' }}><IconCheckCircle size={24} color="#fff" /></div>
+           <div>
+             <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: '1.1rem' }}>{member.name} {member.rank}</div>
+             <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{member.agcode} • {member.group}</div>
+           </div>
+         </div>
+         <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg)', padding: '8px 12px', borderRadius: 8 }}>
+            <span style={{ fontSize: '1.2rem' }}>📍</span> {locText}
+         </div>
+      </div>
+
+      {events.length === 0 ? (
+         <div className="ios-card" style={{ textAlign: 'center', padding: '3rem 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', background: 'transparent', boxShadow: 'none' }}>
+           <div style={{ padding: '24px', background: 'var(--bg-secondary)', borderRadius: '50%', color: 'var(--blue)' }}>
+             <IconInfo size={48} />
+           </div>
+           <div>
+             <div style={{ fontWeight: 600, fontSize: '1.2rem', marginBottom: '0.5rem' }}>目前無進行中的活動</div>
+             <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>請確認報到時間，或稍後再返回查看。</div>
+           </div>
+         </div>
+      ) : (
+         <div className="ios-card" style={{ padding: '1.5rem 1rem' }}>
+           <div style={{ fontWeight: 600, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: 6, fontSize: '1.1rem' }}>
+             <IconGrid size={20} color="var(--blue)" />
+             請選擇簽到場次
+           </div>
+           
+           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
+             {events.map((ev: any) => (
+               <div 
+                 key={ev.id} 
+                 onClick={() => setSelectedEvent(ev.id)}
+                 style={{ 
+                   padding: '1.25rem', 
+                   borderRadius: '16px', 
+                   border: selectedEvent === ev.id ? '2px solid var(--blue)' : '2px solid transparent', 
+                   background: selectedEvent === ev.id ? 'var(--blue-muted)' : 'var(--bg-secondary)',
+                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                   transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                   cursor: 'pointer'
+                 }}>
+                 <div style={{ fontWeight: selectedEvent === ev.id ? 600 : 500, color: selectedEvent === ev.id ? 'var(--blue)' : 'var(--text)' }}>
+                   {ev.title}
+                 </div>
+                 {selectedEvent === ev.id && (
+                   <div style={{ color: 'var(--blue)', animation: 'scaleIn 0.3s ease-out' }}>
+                     <IconCheckCircle size={24} />
+                   </div>
+                 )}
+               </div>
+             ))}
+           </div>
+
+           <button 
+             className="ios-giant-btn" 
+             style={{ background: loading ? '#ccc' : 'var(--blue)', width: '100%', flexDirection: 'row', gap: 10, height: '3.5rem' }} 
+             onClick={handleCheckin}
+             disabled={loading}
+           >
+             {loading && <span className="spinner" style={{ width: 22, height: 22, borderWidth: 2 }} />}
+             <span style={{ fontSize: '1.2rem' }}>{loading ? '處理中...' : '確認簽到'}</span>
+           </button>
+         </div>
+      )}
+    </div>
+  );
+}
+
 // ─── More Tab ──────────────────────────────────────────────────────────────
-function MoreTab({ member, onLogout, onExtHistory }: { member: Member; onLogout: () => void; onExtHistory: () => void }) {
+function MoreTab({ member, onLogout, onExtHistory, onExtTrainingCheckin }: { member: Member; onLogout: () => void; onExtHistory: () => void; onExtTrainingCheckin: () => void }) {
     return (
         <div className="ios-history-page">
             <div className="section-header" style={{ marginTop: 0 }}>系統與外部整合</div>
             <div className="ios-list">
+                <div className="ios-list-item" onClick={onExtTrainingCheckin}>
+                    <div className="ios-list-icon" style={{ background: '#FF9500' }}><IconRun color="#fff" size={18} /></div>
+                    <div className="ios-list-text">
+                        <div className="ios-list-title">SEED PRO 課程簽到</div>
+                        <div className="ios-list-desc">參加區單位主辦之訓練與活動</div>
+                    </div>
+                </div>
                 <div className="ios-list-item" onClick={onExtHistory}>
                     <div className="ios-list-icon" style={{ background: '#5856D6' }}>🎓</div>
                     <div className="ios-list-text">
@@ -728,7 +906,7 @@ function MoreTab({ member, onLogout, onExtHistory }: { member: Member; onLogout:
 }
 
 // ─── Home Page (Main App) ────────────────────────────────────────────────────
-type AppScreen = 'home' | 'checkin' | 'field' | 'leave' | 'visit' | 'query-attendance' | 'query-visit' | 'more' | 'history-ext';
+type AppScreen = 'home' | 'checkin' | 'field' | 'leave' | 'visit' | 'query-attendance' | 'query-visit' | 'more' | 'history-ext' | 'external-training';
 
 export default function HomePage() {
   const [screen, setScreen] = useState<AppScreen>('home');
@@ -825,12 +1003,12 @@ export default function HomePage() {
               <div className="ios-card" onClick={() => setScreen('visit')}>
                 <div className="ios-card-icon"><IconMapPin /></div>
                 <div style={{ fontWeight: 600 }}>紀錄拜訪</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>上傳拜訪客戶資料</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>上傳拜訪資料</div>
               </div>
               <div className="ios-card" onClick={() => setScreen('query-visit')}>
                 <div className="ios-card-icon" style={{ background: 'var(--blue-muted)' }}><IconSearch color="var(--blue)" size={24} /></div>
                 <div style={{ fontWeight: 600 }}>拜訪查詢</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>查看拜訪歷史紀錄</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>歷史拜訪紀錄</div>
               </div>
             </div>
 
@@ -866,6 +1044,7 @@ export default function HomePage() {
                 {screen === 'visit' ? '客戶拜訪紀錄' : ''}
                 {screen === 'more' ? '更多功能' : ''}
                 {screen === 'history-ext' ? '區單位訓練歷程' : ''}
+                {screen === 'external-training' ? 'SEED PRO 課程簽到' : ''}
               </div>
             </div>
             <div className="ios-content">
@@ -875,11 +1054,14 @@ export default function HomePage() {
               {screen === 'query-attendance' && <QueryTab forcedMember={member} title="個人出勤紀錄" type="attendance" />}
               {screen === 'query-visit' && <QueryTab forcedMember={member} title="客戶拜訪查詢" type="visit" />}
               {screen === 'visit' && <VisitTab forcedMember={member} onComplete={() => setScreen('home')} />}
-              {screen === 'more' && <MoreTab member={member} onLogout={logout} onExtHistory={() => setScreen('history-ext')} />}
+              {screen === 'more' && <MoreTab member={member} onLogout={logout} onExtHistory={() => setScreen('history-ext')} onExtTrainingCheckin={() => setScreen('external-training')} />}
               {screen === 'history-ext' && (
                 <div className="ios-history-page">
                   <HistoryExtView agcode={member.agcode} />
                 </div>
+              )}
+              {screen === 'external-training' && (
+                <TrainingCheckinTab member={member} onComplete={() => setScreen('home')} />
               )}
             </div>
           </div>
