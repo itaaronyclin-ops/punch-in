@@ -197,6 +197,24 @@ export default function GlobalUI() {
                                     </svg>
                                 </div>
                             )}
+
+                             {animOpts.type === 'visit-success' && (
+                                 <div className="anim-checkin-success">
+                                     <svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                         <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                                         <circle cx="12" cy="10" r="3" />
+                                         <path className="anim-check-mark" d="M10 10l.5.5 1-1" />
+                                     </svg>
+                                 </div>
+                             )}
+
+                             {animOpts.type === 'visit-fail' && (
+                                 <div className="anim-leave-fail">
+                                     <svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                         <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01" />
+                                     </svg>
+                                 </div>
+                             )}
                         </div>
 
                         <div className="anim-message-area">

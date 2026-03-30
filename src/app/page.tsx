@@ -385,7 +385,7 @@ function VisitTab({ forcedMember, onComplete }: { forcedMember?: Member; onCompl
       });
       const data = await res.json();
       if (res.ok) {
-        showAnimation('📍 拜訪紀錄已上傳');
+        showAnimation('visit-success', '📍 拜訪紀錄已上傳');
         toast.success('拜訪紀錄已上傳');
         setPurpose(''); setClientName(''); setNotes('');
         if (onComplete) onComplete();
