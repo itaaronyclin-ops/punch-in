@@ -29,6 +29,16 @@ interface NotificationRecord {
   rowIndex: number;
 }
 
+interface AttendanceRecord {
+  id: string;
+  agcode: string;
+  name: string;
+  type: 'normal' | 'field';
+  checkinTime: string;
+  date: string;
+  notes: string;
+}
+
 // ─── Shared: AGCODE Lookup ─────────────────────────────────────────────────
 function AgcodeLookup({
   onFound,
