@@ -552,7 +552,7 @@ function AttendanceSection({ token }: { token: string }) {
         (async () => {
             setLoading(true);
             try {
-                const res = await fetch('/api/checkin', { headers: { 'x-admin-token': token } });
+                const res = await fetch(`/api/checkin?startDate=${filterStart}&endDate=${filterEnd}`, { headers: { 'x-admin-token': token } });
                 if (res.ok) {
                     const data = await res.json();
                     setRecords(data.records || []);
@@ -564,7 +564,7 @@ function AttendanceSection({ token }: { token: string }) {
             }
             setLoading(false);
         })();
-    }, [token]);
+    }, [token, filterStart, filterEnd]);
 
     const filtered = records.filter(r => {
         const rDate = normalizeDate(r.date);
@@ -671,6 +671,9 @@ function LeaveSection({ token }: { token: string }) {
     const [reviewer, setReviewer] = useState('');
     const [notes, setNotes] = useState('');
     const [saving, setSaving] = useState(false);
+    const [autoAgcode, setAutoAgcode] = useState('');
+    const [isAutoMode, setIsAutoMode] = useState(false);
+    const [bulkLoading, setBulkLoading] = useState(false);
 
     const h = { 'x-admin-token': token, 'Content-Type': 'application/json' };
 
@@ -707,12 +710,86 @@ function LeaveSection({ token }: { token: string }) {
         return <span className="badge badge-red">已拒絕</span>;
     };
 
+    const handleBulkReview = async (status: 'approved' | 'rejected') => {
+        const pending = records.filter(r => r.status === 'pending');
+        if (pending.length === 0) { toast.error('目前沒有待處理的案件'); return; }
+        if (!autoAgcode) { toast.error('請先輸入代表審核人的 AGCODE'); return; }
+
+        confirmDialog(`確定要批次【${status === 'approved' ? '核准' : '駁回'}】目前的 ${pending.length} 筆待處理案件嗎？`, async () => {
+            setBulkLoading(true);
+            let count = 0;
+            for (const rec of pending) {
+                try {
+                    await fetch('/api/admin/leave-review', {
+                        method: 'PATCH', headers: h,
+                        body: JSON.stringify({ rowIndex: rec.rowIndex, status, reviewer: autoAgcode, notes: `[系統批次代理審核]` }),
+                    });
+                    count++;
+                } catch { }
+            }
+            toast.success(`批次處理完成，共處理 ${count} 筆案件`);
+            load();
+            setBulkLoading(false);
+        });
+    };
+
     return (
         <div>
-            <div className="page-header">
-                <h1 className="page-title">請假審核</h1>
-                <p className="page-subtitle">審核人員請假申請</p>
+            <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                    <h1 className="page-title">請假審核</h1>
+                    <p className="page-subtitle">審核人員請假申請</p>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{
+                        display: 'flex',
+                        background: 'var(--gray-bg)',
+                        padding: '4px 8px',
+                        borderRadius: 8,
+                        fontSize: '0.85rem',
+                        alignItems: 'center',
+                        gap: 8,
+                        border: isAutoMode ? '1px solid var(--blue)' : '1px solid transparent'
+                    }}>
+                        <span style={{ fontWeight: 600, color: isAutoMode ? 'var(--blue)' : 'var(--text-secondary)' }}>
+                            {isAutoMode ? '⚡ 自動審核模式 ON' : '⚙️ 代理審核設定'}
+                        </span>
+                        <input
+                            type="text"
+                            className="form-input"
+                            style={{ width: 100, height: 28, padding: '0 8px', fontSize: '0.8rem' }}
+                            placeholder="代表人 AGCODE"
+                            value={autoAgcode}
+                            onChange={e => setAutoAgcode(e.target.value.toUpperCase())}
+                        />
+                        <button
+                            className={`btn btn-sm ${isAutoMode ? 'btn-primary' : 'btn-ghost'}`}
+                            onClick={() => {
+                                if (!autoAgcode) return toast.error('請先輸入 AGCODE');
+                                setIsAutoMode(!isAutoMode);
+                            }}
+                        >
+                            {isAutoMode ? '關閉' : '啟動'}
+                        </button>
+                    </div>
+                </div>
             </div>
+
+            {isAutoMode && (
+                <div className="alert alert-blue" style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', animation: 'fadeIn 0.3s' }}>
+                    <div style={{ fontSize: '0.9rem' }}>
+                        <b>批次操作控制台：</b> 將會以 <code>{autoAgcode}</code> 的身分對所有待處理案件進行處理。
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                        <button className="btn btn-sm" onClick={() => handleBulkReview('approved')} disabled={bulkLoading}>
+                            ✅ 全部同意 ({records.filter(r => r.status === 'pending').length})
+                        </button>
+                        <button className="btn btn-danger btn-sm" onClick={() => handleBulkReview('rejected')} disabled={bulkLoading}>
+                            ❌ 全部不同意
+                        </button>
+                    </div>
+                </div>
+            )}
 
             <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
                 {(['all', 'pending', 'approved', 'rejected'] as const).map(f => (
@@ -801,7 +878,7 @@ function VisitSection({ token }: { token: string }) {
         (async () => {
             setLoading(true);
             try {
-                const res = await fetch('/api/visit', { headers: { 'x-admin-token': token } });
+                const res = await fetch(`/api/visit?startDate=${filterStart}&endDate=${filterEnd}`, { headers: { 'x-admin-token': token } });
                 if (res.ok) {
                     const data = await res.json();
                     setRecords(data.records || []);
@@ -809,7 +886,7 @@ function VisitSection({ token }: { token: string }) {
             } catch { }
             setLoading(false);
         })();
-    }, [token]);
+    }, [token, filterStart, filterEnd]);
 
     const filtered = records.filter(r => {
         const rDate = normalizeDate(r.date);
@@ -904,7 +981,9 @@ function VisitSection({ token }: { token: string }) {
 function RequiredDaysSection({ token }: { token: string }) {
     const [records, setRecords] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const [form, setForm] = useState({ agcode: '', date: '', lateThreshold: '09:00' });
+    const [members, setMembers] = useState<any[]>([]);
+    const [selectedAgcodes, setSelectedAgcodes] = useState<string[]>([]);
+    const [form, setForm] = useState({ date: '', lateThreshold: '09:00' });
     const [saving, setSaving] = useState(false);
     const [msg, setMsg] = useState<{ ok: boolean; txt: string } | null>(null);
 
@@ -922,21 +1001,49 @@ function RequiredDaysSection({ token }: { token: string }) {
         setLoading(false);
     }, [token]);
 
-    useEffect(() => { load(); }, [load]);
+    const loadMembers = useCallback(async () => {
+        const res = await fetch('/api/admin/members', { headers: { 'x-admin-token': token } });
+        if (res.ok) {
+            const data = await res.json();
+            setMembers(data.members || []);
+        }
+    }, [token]);
+
+    useEffect(() => { load(); loadMembers(); }, [load, loadMembers]);
 
     const add = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (selectedAgcodes.length === 0) return toast.error('請至少選擇一位人員（或標記為 ALL）');
         setSaving(true);
+        let successCount = 0;
         try {
-            const res = await fetch('/api/admin/required-days', { method: 'POST', headers: h, body: JSON.stringify({ action: 'add', ...form }) });
-            if (res.ok) { toast.success('已新增'); setForm(f => ({ ...f, agcode: '', date: '' })); load(); }
-            else {
-                const data = await res.json().catch(() => ({}));
-                toast.error(data.error || '新增失敗');
+            for (const agcode of selectedAgcodes) {
+                const res = await fetch('/api/admin/required-days', {
+                    method: 'POST',
+                    headers: h,
+                    body: JSON.stringify({ action: 'add', agcode, ...form })
+                });
+                if (res.ok) successCount++;
+            }
+            if (successCount > 0) {
+                toast.success(`已新增 ${successCount} 筆設定`);
+                setSelectedAgcodes([]);
+                load();
             }
         } catch {
             toast.error('伺服器錯誤');
         } finally { setSaving(false); }
+    };
+
+    const toggleAgcode = (code: string) => {
+        if (code === 'ALL') {
+            setSelectedAgcodes(['ALL']);
+            return;
+        }
+        setSelectedAgcodes(prev => {
+            const filtered = prev.filter(x => x !== 'ALL');
+            return filtered.includes(code) ? filtered.filter(x => x !== code) : [...filtered, code];
+        });
     };
 
     const del = async (r: any) => {
@@ -952,27 +1059,66 @@ function RequiredDaysSection({ token }: { token: string }) {
             <div className="page-header"><h1 className="page-title">必要出席日設定</h1><p className="page-subtitle">設定特定人員或全體的必要出席日</p></div>
             {msg && <div className={`alert ${msg.ok ? 'alert-success' : 'alert-error'}`} style={{ marginBottom: 16 }}>{msg.ok ? '✅' : '⚠️'} {msg.txt}</div>}
 
-            <div className="card" style={{ marginBottom: 24 }}>
-                <div className="card-header">
+            <div className="card" style={{ marginBottom: 24, padding: 20 }}>
+                <div className="card-header" style={{ marginBottom: 20 }}>
                     <div className="card-icon green">➕</div>
-                    <div><div className="card-title">新增必要出席日</div><div className="card-subtitle">填入 ALL 表示適用全體人員</div></div>
+                    <div><div className="card-title">批次新增必要出席日</div><div className="card-subtitle">選取多位同仁並指定日期與門檻</div></div>
                 </div>
+
+                <div className="form-group">
+                    <label className="form-label" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>人員選擇 (可複選)</span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 400 }}>已選：{selectedAgcodes.length} 位</span>
+                    </label>
+                    <div className="chip-list" style={{ maxHeight: 160, overflowY: 'auto', border: '1px solid var(--line)', padding: 12, borderRadius: 12, background: 'var(--gray-bg)' }}>
+                        <button
+                            type="button"
+                            className={`chip ${selectedAgcodes.includes('ALL') ? 'selected' : ''}`}
+                            onClick={() => toggleAgcode('ALL')}
+                        >
+                            🌍 全體人員 (ALL)
+                        </button>
+                        {members.map(m => (
+                            <button
+                                key={m.agcode}
+                                type="button"
+                                className={`chip ${selectedAgcodes.includes(m.agcode) ? 'selected' : ''}`}
+                                onClick={() => toggleAgcode(m.agcode)}
+                            >
+                                {m.name} ({m.agcode})
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
                 <form onSubmit={add}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 12, alignItems: 'flex-end' }}>
-                        <div>
-                            <label className="form-label">AGCODE / ALL</label>
-                            <input className="form-input" value={form.agcode} onChange={e => setForm(f => ({ ...f, agcode: e.target.value.toUpperCase() }))} placeholder="ALL 或 業務代號" autoCapitalize="characters" />
+                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr auto', gap: 16, alignItems: 'flex-end', marginTop: 16 }}>
+                        <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label className="form-label">日期選擇</label>
+                            <div style={{ position: 'relative' }}>
+                                <input
+                                    type="date"
+                                    className="form-input"
+                                    style={{ paddingLeft: 40 }}
+                                    value={form.date}
+                                    onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+                                />
+                                <div style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }}>
+                                    <IconCalendar size={18} />
+                                </div>
+                            </div>
                         </div>
-                        <div>
-                            <label className="form-label">日期</label>
-                            <input type="date" className="form-input" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
+                        <div className="form-group" style={{ marginBottom: 0 }}>
+                            <label className="form-label">遲到判定門檻 (HH:mm)</label>
+                            <input
+                                type="time"
+                                className="form-input"
+                                value={form.lateThreshold}
+                                onChange={e => setForm(f => ({ ...f, lateThreshold: e.target.value }))}
+                            />
                         </div>
-                        <div>
-                            <label className="form-label">遲到時間</label>
-                            <input type="time" className="form-input" value={form.lateThreshold} onChange={e => setForm(f => ({ ...f, lateThreshold: e.target.value }))} />
-                        </div>
-                        <button className="btn btn-primary" type="submit" disabled={saving || !form.agcode || !form.date}>
-                            {saving ? <span className="spinner spinner-dark" /> : '新增'}
+                        <button className="btn btn-primary" type="submit" style={{ height: 42, minWidth: 100 }} disabled={saving || selectedAgcodes.length === 0 || !form.date}>
+                            {saving ? <span className="spinner" /> : '即刻新增'}
                         </button>
                     </div>
                 </form>

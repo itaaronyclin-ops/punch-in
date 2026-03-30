@@ -61,15 +61,21 @@ export async function POST(req: NextRequest) {
         let isFieldWork = false;
         let locationValid = false;
 
-        if (lat !== undefined && lng !== undefined) {
+        if (lat !== undefined && lng !== undefined && lat !== null && lng !== null) {
             const uLat = typeof lat === 'number' ? lat : parseFloat(lat.toString());
             const uLng = typeof lng === 'number' ? lng : parseFloat(lng.toString());
             
-            const centerLat = parseFloat(checkinLat || '0');
-            const centerLng = parseFloat(checkinLng || '0');
+            const centerLat = parseFloat(checkinLat || 'NaN');
+            const centerLng = parseFloat(checkinLng || 'NaN');
             const radius = parseFloat(checkinRadius || '200');
 
-            if (!isNaN(uLat) && !isNaN(uLng) && !isNaN(centerLat) && !isNaN(centerLng)) {
+            if (isNaN(centerLat) || isNaN(centerLng)) {
+                return NextResponse.json({
+                    error: '系統設定錯誤：尚未設定辦公室地理座標 (緯度/經度)，請洽管理員。'
+                }, { status: 400 });
+            }
+
+            if (!isNaN(uLat) && !isNaN(uLng)) {
                 const distance = getDistance(uLat, uLng, centerLat, centerLng);
                 locationValid = distance <= radius;
                 console.log(`[Checkin] Distance: ${distance.toFixed(2)}m, Radius: ${radius}m, Valid: ${locationValid}`);
@@ -77,9 +83,15 @@ export async function POST(req: NextRequest) {
         }
 
         if (type === 'normal') {
+            if (!lat || !lng) {
+                return NextResponse.json({
+                    error: '無法取得您的 GPS 座標，請確認瀏覽器已開啟定位權限',
+                    needFieldWork: true
+                }, { status: 400 });
+            }
             if (!locationValid && !forceField) {
                 return NextResponse.json({
-                    error: '您不在公司位置範圍內，請執行外勤簽到',
+                    error: `您不在簽到範圍內 (離中心約 ${getDistance(parseFloat(lat?.toString()), parseFloat(lng?.toString()), parseFloat(checkinLat), parseFloat(checkinLng)).toFixed(0)}公尺)，請執行外勤簽到`,
                     needFieldWork: true
                 }, { status: 400 });
             }

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   IconCheckCircle, IconRun, IconInbox, IconMapPin, IconSearch,
-  IconLogo, IconChevronRight, IconAlertTriangle, IconClock, IconLogOut, IconBell, IconX,
+  IconLogo, IconChevronRight, IconAlertTriangle, IconClock, IconLogOut, IconBell, IconX, IconGrid
 } from '@/components/Icons';
 import { toast, confirmDialog, showAnimation } from '@/components/GlobalUI';
 
@@ -385,8 +385,9 @@ function VisitTab({ forcedMember, onComplete }: { forcedMember?: Member; onCompl
       });
       const data = await res.json();
       if (res.ok) {
-        showAnimation('visit-success', '拜訪紀錄已成功送出！');
-        setMember(null); setPurpose(''); setClientName(''); setNotes('');
+        showAnimation('📍 拜訪紀錄已上傳');
+        toast.success('拜訪紀錄已上傳');
+        setPurpose(''); setClientName(''); setNotes('');
         if (onComplete) onComplete();
       } else {
         showAnimation('visit-fail', data.error || '送出失敗');
@@ -436,13 +437,20 @@ function VisitTab({ forcedMember, onComplete }: { forcedMember?: Member; onCompl
 }
 
 // ─── Query Tab ────────────────────────────────────────────────────────────
-function QueryTab({ forcedMember }: { forcedMember?: Member }) {
+function QueryTab({ forcedMember, defaultSection }: { forcedMember?: Member; defaultSection?: 'attendance' | 'leaves' | 'history' | 'visit' }) {
   const [agcode, setAgcode] = useState(forcedMember ? forcedMember.agcode : '');
   const [member, setMember] = useState<Member | null>(null);
   const [loading, setLoading] = useState(false);
   const [attendance, setAttendance] = useState<any[]>([]);
   const [leaves, setLeaves] = useState<any[]>([]);
-  const [section, setSection] = useState<'attendance' | 'leaves'>('attendance');
+  const [history, setHistory] = useState<any>(null);
+  const [visits, setVisits] = useState<any[]>([]);
+  const [section, setSection] = useState<'attendance' | 'leaves' | 'history' | 'visit'>(defaultSection || 'attendance');
+  const [visitRange, setVisitRange] = useState(() => {
+    const d = new Date(); d.setDate(d.getDate() - 7);
+    return d.toISOString().split('T')[0];
+  });
+  const [loadingVisits, setLoadingVisits] = useState(false);
 
   useEffect(() => {
     if (forcedMember && agcode) {
@@ -464,10 +472,33 @@ function QueryTab({ forcedMember }: { forcedMember?: Member }) {
       if (mRes.ok) setMember((await mRes.json()).member);
       if (aRes.ok) setAttendance((await aRes.json()).records);
       if (lRes.ok) setLeaves((await lRes.json()).records);
+
+      // Fetch external history
+      try {
+        const hRes = await fetch(`/api/external-history?agcode=${agcode.toUpperCase()}`);
+        if (hRes.ok) setHistory(await hRes.json());
+      } catch { /* ignore external error */ }
     } finally {
       setLoading(false);
     }
   };
+
+  const loadVisits = async () => {
+    if (!member) return;
+    setLoadingVisits(true);
+    try {
+      const res = await fetch(`/api/visit?agcode=${member.agcode}&startDate=${visitRange}`);
+      if (res.ok) {
+        const data = await res.json();
+        setVisits(data.records || []);
+      }
+    } catch { }
+    setLoadingVisits(false);
+  };
+
+  useEffect(() => {
+    if (section === 'visit' && visits.length === 0) loadVisits();
+  }, [section, member]);
 
   const statusLabel = (s: string) => {
     if (s === 'pending') return <span className="badge badge-yellow">待審核</span>;
@@ -496,7 +527,13 @@ function QueryTab({ forcedMember }: { forcedMember?: Member }) {
               出席紀錄（{attendance.length}）
             </button>
             <button className={`seg-btn ${section === 'leaves' ? 'active' : ''}`} onClick={() => setSection('leaves')}>
-              請假紀錄（{leaves.length}）
+              請假（{leaves.length}）
+            </button>
+            <button className={`seg-btn ${section === 'visit' ? 'active' : ''}`} onClick={() => setSection('visit')}>
+              拜訪
+            </button>
+            <button className={`seg-btn ${section === 'history' ? 'active' : ''}`} onClick={() => setSection('history')}>
+              歷程
             </button>
           </div>
 
@@ -519,23 +556,58 @@ function QueryTab({ forcedMember }: { forcedMember?: Member }) {
               </div>
           )}
 
-          {section === 'leaves' && (
-            leaves.length === 0
-              ? <div className="empty-state"><div className="empty-state-icon">🗒️</div><div className="empty-state-text">無請假紀錄</div></div>
-              : <div className="table-wrapper">
-                <table>
-                  <thead><tr><th>請假日期</th><th>原因</th><th>狀態</th></tr></thead>
-                  <tbody>
-                    {leaves.map((l, i) => (
-                      <tr key={i}>
-                        <td>{l.leaveDate}</td>
-                        <td style={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.reason}</td>
-                        <td>{statusLabel(l.status)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          {section === 'history' && (
+            !history || !history.found
+              ? <div className="empty-state"><div className="empty-state-icon">🎓</div><div className="empty-state-text">查無外部歷程紀錄</div></div>
+              : <div className="history-tab-content">
+                  <div className="card-xs" style={{ background: 'var(--surface-input)', marginBottom: 12, borderRadius: 10, padding: 12 }}>
+                    <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>單位：{history.person.group}</div>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>主管：{history.person.manager}</div>
+                  </div>
+                  <div className="table-wrapper">
+                    <table>
+                      <thead><tr><th>課程/證照</th><th>類別</th><th>日期</th></tr></thead>
+                      <tbody>
+                        {history.history.map((h: any, i: number) => (
+                          <tr key={i}>
+                            <td style={{ maxWidth: 140 }}>
+                              <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{h.name}</div>
+                              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>{h.code}</div>
+                            </td>
+                            <td><span style={{ fontSize: '0.75rem' }}>{h.pName}</span></td>
+                            <td style={{ fontSize: '0.78rem', whiteSpace: 'nowrap' }}>{h.date}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+          )}
+
+          {section === 'visit' && (
+            <div className="visit-query-content">
+              <div style={{ padding: '0 0 16px 0', display: 'flex', gap: 8 }}>
+                <input type="date" className="form-input" style={{ flex: 1, padding: '0 12px' }} value={visitRange} onChange={e => setVisitRange(e.target.value)} />
+                <button className="btn btn-primary" style={{ minWidth: 70 }} onClick={loadVisits} disabled={loadingVisits}>
+                  {loadingVisits ? '...' : '查詢'}
+                </button>
               </div>
+              {visits.length === 0 ? (
+                <div className="empty-state"><div className="empty-state-icon">📍</div><div className="empty-state-text">此區間內無拜訪紀錄</div></div>
+              ) : (
+                <div className="ios-list">
+                  {visits.map((v, i) => (
+                    <div key={i} className="ios-list-item" style={{ background: 'var(--surface-input)', marginBottom: 8, borderRadius: 12 }}>
+                      <div className="ios-list-text">
+                        <div className="ios-list-title" style={{ fontSize: '1rem' }}>{v.clientName}</div>
+                        <div className="ios-list-desc">{v.visitTime} • {v.purpose}</div>
+                        {v.notes && <div style={{ fontSize: '0.8rem', marginTop: 4, color: 'var(--text-primary)' }}>{v.notes}</div>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           )}
         </>
       )}
@@ -614,11 +686,112 @@ function NotificationModal({
   );
 }
 
-// ─── Main Page ────────────────────────────────────────────────────────────
-type AppScreen = 'home' | 'checkin' | 'field' | 'leave' | 'visit' | 'query';
+function HistoryExtView({ agcode }: { agcode: string }) {
+  const [history, setHistory] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`/api/external-history?agcode=${agcode}`);
+        const data = await res.json();
+        setHistory(data);
+      } catch { }
+      setLoading(false);
+    })();
+  }, [agcode]);
+
+
+  if (loading) return (
+    <div className="ios-modal-overlay" style={{ background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)', zIndex: 9999 }}>
+      <div style={{ textAlign: 'center' }}>
+        <div className="spinner" style={{ width: 48, height: 48, border: '3px solid var(--blue)', borderTopColor: 'transparent', margin: '0 auto 20px' }} />
+        <div style={{ fontSize: '1.2rem', fontWeight: 600, color: 'var(--text-primary)', letterSpacing: '-0.02em' }}>外部系統連線中</div>
+        <div style={{ fontSize: '0.95rem', color: 'var(--text-secondary)', marginTop: 8 }}>請稍後...</div>
+      </div>
+    </div>
+  );
+
+  if (!history || !history.found) {
+    return (
+      <div className="empty-state" style={{ padding: '60px 0' }}>
+        <div className="empty-state-icon">🎓</div>
+        <div className="empty-state-text">查無外部訓練歷程紀錄</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="history-ext-container">
+      <div className="card-xs" style={{ background: 'var(--surface-input)', marginBottom: 20, borderRadius: 14 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: '1.1rem', fontWeight: 700 }}>{history.person.name} <span style={{ fontSize: '0.85rem', fontWeight: 400, color: 'var(--text-secondary)' }}>{history.person.rank}</span></div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: 2 }}>{history.person.group}</div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>直屬主管</div>
+            <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{history.person.manager}</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="section-header" style={{ marginLeft: 4 }}>歷程與證照清單</div>
+      <div className="table-wrapper">
+        <table>
+          <thead><tr><th>課程/證照名稱</th><th style={{ textAlign: 'center' }}>類別</th><th style={{ textAlign: 'right' }}>日期</th></tr></thead>
+          <tbody>
+            {history.history.map((h: any, i: number) => (
+              <tr key={i}>
+                <td>
+                  <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>{h.name}</div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>代碼: {h.code}</div>
+                </td>
+                <td style={{ textAlign: 'center' }}><span style={{ fontSize: '0.75rem' }}>{h.pName}</span></td>
+                <td style={{ textAlign: 'right', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>{h.date}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ─── More Tab ──────────────────────────────────────────────────────────────
+function MoreTab({ member, onLogout, onExtHistory }: { member: Member; onLogout: () => void; onExtHistory: () => void }) {
+    return (
+        <div className="ios-history-page">
+            <div className="section-header" style={{ marginTop: 0 }}>系統與外部整合</div>
+            <div className="ios-list">
+                <div className="ios-list-item" onClick={onExtHistory}>
+                    <div className="ios-list-icon" style={{ background: '#5856D6' }}>🎓</div>
+                    <div className="ios-list-text">
+                        <div className="ios-list-title">區單位訓練歷程</div>
+                        <div className="ios-list-desc">同步查詢 seed-pro 課程與證照紀錄</div>
+                    </div>
+                    <IconChevronRight size={16} color="var(--text-secondary)" />
+                </div>
+                <div className="ios-list-item" onClick={onLogout}>
+                    <div className="ios-list-icon" style={{ background: '#FF3B30' }}>
+                        <IconLogOut size={18} />
+                    </div>
+                    <div className="ios-list-text">
+                        <div className="ios-list-title" style={{ color: '#FF3B30' }}>登出系統</div>
+                        <div className="ios-list-desc">登出目前帳號並返回登入頁面</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ─── Home Page (Main App) ────────────────────────────────────────────────────
+type AppScreen = 'home' | 'checkin' | 'field' | 'leave' | 'visit' | 'query' | 'more' | 'history-ext';
 
 export default function HomePage() {
   const [screen, setScreen] = useState<AppScreen>('home');
+  const [queryDefault, setQueryDefault] = useState<'attendance' | 'leaves' | 'history' | 'visit'>('attendance');
   const [member, setMember] = useState<Member | null>(null);
   const [loading, setLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -643,6 +816,8 @@ export default function HomePage() {
       return () => clearInterval(t);
     }
   }, [member, fetchUnread]);
+
+  const logout = () => confirmDialog('確定要登出系統嗎？', () => setMember(null));
 
   // If unauthenticated
   if (!member) {
@@ -669,30 +844,34 @@ export default function HomePage() {
           <div className="ios-body-scroll">
             <div className="ios-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <h1>Hello! {member.name}</h1>
-                <p>祝你有美好的一天</p>
+                <h1 style={{ fontSize: '1.8rem', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 2 }}>Hello! {member.name}</h1>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>祝你有美好的一天</p>
               </div>
               <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                 <button 
-                  className="bell-btn" 
-                  onClick={() => setShowNotif(true)}
-                  aria-label="Notifications"
+                  className="avatar-btn" 
+                  onClick={() => setShowNotif(true)} 
+                  style={{ 
+                    position: 'relative', 
+                    background: 'var(--surface-card)', 
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+                    borderRadius: '50%',
+                    width: 44,
+                    height: 44,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: '1px solid var(--line)'
+                  }}
                 >
-                  <IconBell size={22} />
-                  {unreadCount > 0 && <div className="bell-badge" />}
-                </button>
-                <button
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => confirmDialog('確定要登出系統嗎？', () => setMember(null))}
-                  style={{ borderRadius: '100px', padding: '6px 12px' }}
-                >
-                  <IconLogOut size={16} /> 登出
+                    <IconBell size={22} color="var(--blue)" />
+                    {unreadCount > 0 && <span className="notification-badge" style={{ top: 2, right: 2 }}>{unreadCount}</span>}
                 </button>
               </div>
             </div>
 
             <div className="ios-cards-scroll">
-              <div className="ios-card" onClick={() => setScreen('query')}>
+              <div className="ios-card" onClick={() => { setQueryDefault('attendance'); setScreen('query'); }}>
                 <div className="ios-card-icon"><IconSearch /></div>
                 <div style={{ fontWeight: 600 }}>個人出勤</div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>查看打卡紀錄</div>
@@ -704,8 +883,13 @@ export default function HomePage() {
               </div>
               <div className="ios-card" onClick={() => setScreen('visit')}>
                 <div className="ios-card-icon"><IconMapPin /></div>
-                <div style={{ fontWeight: 600 }}>拜訪紀錄</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>紀錄客戶拜訪</div>
+                <div style={{ fontWeight: 600 }}>紀錄拜訪</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>上傳拜訪客戶資料</div>
+              </div>
+              <div className="ios-card" onClick={() => { setQueryDefault('visit'); setScreen('query'); }}>
+                <div className="ios-card-icon" style={{ background: '#E5E5EA' }}><IconSearch color="var(--blue)" size={24} /></div>
+                <div style={{ fontWeight: 600 }}>拜訪查詢</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>查看拜訪歷史紀錄</div>
               </div>
             </div>
 
@@ -725,9 +909,10 @@ export default function HomePage() {
           </div>
 
           <div className="ios-tab-bar">
-            <div className="ios-tab-item active" onClick={() => setScreen('home')}><IconLogo size={22} /> 首頁</div>
-            <div className="ios-tab-item" onClick={() => setScreen('query')}><IconSearch size={22} /> 出勤紀錄</div>
-            <div className="ios-tab-item" onClick={() => setScreen('leave')}><IconInbox size={22} /> 請假單</div>
+            <div className={`ios-tab-item ${screen === 'home' ? 'active' : ''}`} onClick={() => setScreen('home')}><IconLogo size={22} /> 首頁</div>
+            <div className={`ios-tab-item ${screen === 'query' ? 'active' : ''}`} onClick={() => setScreen('query')}><IconSearch size={22} /> 紀錄</div>
+            <div className={`ios-tab-item ${screen === 'leave' ? 'active' : ''}`} onClick={() => setScreen('leave')}><IconInbox size={22} /> 請假</div>
+            <div className={`ios-tab-item ${screen === 'more' ? 'active' : ''}`} onClick={() => setScreen('more')}><IconGrid size={22} /> 其他</div>
           </div>
         </>
       ) : (
@@ -746,14 +931,22 @@ export default function HomePage() {
               {screen === 'leave' ? '請假申請' : ''}
               {screen === 'query' ? '個人出勤紀錄' : ''}
               {screen === 'visit' ? '客戶拜訪紀錄' : ''}
+              {screen === 'more' ? '更多功能' : ''}
+              {screen === 'history-ext' ? '區單位訓練歷程' : ''}
             </div>
           </div>
           <div className="ios-content">
             {screen === 'checkin' && <CheckinTab forcedMember={member} onRequireFieldWork={() => setScreen('field')} onComplete={() => setScreen('home')} />}
             {screen === 'field' && <CheckinTab fieldMode forcedMember={member} onComplete={() => setScreen('home')} />}
             {screen === 'leave' && <LeaveTab forcedMember={member} onComplete={() => setScreen('home')} />}
-            {screen === 'query' && <QueryTab forcedMember={member} />}
+            {screen === 'query' && <QueryTab forcedMember={member} defaultSection={queryDefault} />}
             {screen === 'visit' && <VisitTab forcedMember={member} onComplete={() => setScreen('home')} />}
+            {screen === 'more' && <MoreTab member={member} onLogout={logout} onExtHistory={() => setScreen('history-ext')} />}
+            {screen === 'history-ext' && (
+              <div className="ios-history-page">
+                <HistoryExtView agcode={member.agcode} />
+              </div>
+            )}
           </div>
         </>
       )}

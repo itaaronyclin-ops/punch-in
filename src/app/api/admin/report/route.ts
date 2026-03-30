@@ -7,7 +7,10 @@ import { generateWeeklyReports, generateMonthlyReports, generateDailyVisitReport
  * Used for manual testing or Vercel Cron.
  */
 export async function POST(req: NextRequest) {
-    if (!checkAdminAuth(req)) {
+    const cronToken = req.headers.get('x-cron-token');
+    const isCron = cronToken === 'attendance_cron_secret_79358';
+
+    if (!isCron && !checkAdminAuth(req)) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

@@ -119,14 +119,13 @@ function getSheet(name) {
 function sheetToObjects(sheet) {
   const data = sheet.getDataRange().getValues();
   if (data.length < 2) return [];
-  const headers = data[0];
+  const headers = data[0].map(h => String(h).trim().toUpperCase()); // 統一欄位鍵名為全大寫
   const pad = n => String(n).padStart(2, '0');
   return data.slice(1).map((row, i) => {
     const obj = { rowIndex: i + 2 };
     headers.forEach((h, j) => {
       const val = row[j];
       if (val instanceof Date) {
-        // Google Sheets time-only cells are anchored at 1899-12-30 (serial 0)
         if (val.getFullYear() === 1899 && val.getMonth() === 11 && val.getDate() === 30) {
           obj[h] = `${pad(val.getHours())}:${pad(val.getMinutes())}`;
         } else {
@@ -564,6 +563,54 @@ function initSheets() {
       Logger.log('Sheet already exists: ' + def.name);
     }
   });
+}
 
-  return { success: true, message: '所有工作表已初始化完成' };
+// ─── Automatic Triggers (Option A) ──────────────────────────────────────────
+
+/**
+ * 每日報表自動觸發 (建議設定為每天晚上 21:00 ~ 22:00)
+ */
+function autoSendDailyReports() {
+  triggerReportApi('daily');
+}
+
+/**
+ * 每週報表自動觸發 (建議設定為每週一早上 08:00 ~ 09:00)
+ */
+function autoSendWeeklyReports() {
+  triggerReportApi('weekly');
+}
+
+/**
+ * 每月報表自動觸發 (建議設定為每月 1 號中午 12:00)
+ */
+function autoSendMonthlyReports() {
+  triggerReportApi('monthly');
+}
+
+function triggerReportApi(type) {
+  const settings = getAllSettings();
+  const gasUrl = settings.GAS_URL || ''; 
+  // 注意：此處需要 Next.js 的完整網址，通常可以從 Settings 讀取或手動定義
+  const baseUrl = 'https://attendance-pro-final-v14.vercel.app'; // ⚠️ 請確保此網址正確或從設定讀取
+  const url = `${baseUrl}/api/admin/report`;
+  const cronSecret = 'attendance_cron_secret_79358'; // 這是我們定義的內部密鑰
+  
+  const options = {
+    method: 'post',
+    contentType: 'application/json',
+    headers: {
+      'x-cron-token': cronSecret
+    },
+    payload: JSON.stringify({ type: type }),
+    muteHttpExceptions: true
+  };
+  
+  try {
+    const response = UrlFetchApp.fetch(url, options);
+    Logger.log(`[${type}] Report Trigger Status: ${response.getResponseCode()}`);
+    Logger.log(response.getContentText());
+  } catch (e) {
+    Logger.log(`[${type}] Report Trigger Failed: ${e.message}`);
+  }
 }

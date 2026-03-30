@@ -2354,3 +2354,76 @@ code {
 }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideInUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+
+/* ─── IOS STYLE LIST & MORE PAGE ────────────────────────────────────────── */
+.ios-more-page, .ios-history-page {
+  animation: slideInRight 0.3s var(--ease);
+  padding-bottom: 40px;
+}
+
+.section-header {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  margin: 24px 0 8px 4px;
+  letter-spacing: 0.02em;
+}
+
+.ios-list {
+  background: var(--surface-card);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  box-shadow: var(--shadow-card);
+}
+
+.ios-list-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 14px;
+  gap: 14px;
+  cursor: pointer;
+  transition: background 0.2s var(--ease);
+  border-bottom: 0.5px solid var(--line);
+}
+
+.ios-list-item:active {
+  background: var(--gray-bg);
+}
+
+.ios-list-item:last-child {
+  border-bottom: none;
+}
+
+.ios-list-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  flex-shrink: 0;
+  color: white;
+}
+
+.ios-list-text {
+  flex: 1;
+}
+
+.ios-list-title {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.ios-list-desc {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 1px;
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(30px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
