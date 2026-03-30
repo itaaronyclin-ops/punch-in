@@ -437,125 +437,110 @@ function VisitTab({ forcedMember, onComplete }: { forcedMember?: Member; onCompl
 }
 
 // ─── Query Tab ────────────────────────────────────────────────────────────
-function QueryTab({ forcedMember, defaultSection }: { forcedMember?: Member; defaultSection?: 'attendance' | 'leaves' | 'history' | 'visit' }) {
-  const [agcode, setAgcode] = useState(forcedMember ? forcedMember.agcode : '');
-  const [member, setMember] = useState<Member | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [attendance, setAttendance] = useState<any[]>([]);
-  const [leaves, setLeaves] = useState<any[]>([]);
-  const [history, setHistory] = useState<any>(null);
+// ─── Query Tab Component ───────────────────────────────────────────────────
+function QueryTab({ 
+  forcedMember, 
+  title = '出勤紀錄',
+  type = 'attendance'
+}: { 
+  forcedMember: Member; 
+  title?: string;
+  type?: 'attendance' | 'visit';
+}) {
+  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [visits, setVisits] = useState<any[]>([]);
-  const [section, setSection] = useState<'attendance' | 'leaves' | 'history' | 'visit'>(defaultSection || 'attendance');
-  const [visitRange, setVisitRange] = useState(() => {
-    const d = new Date(); d.setDate(d.getDate() - 7);
-    return d.toISOString().split('T')[0];
-  });
-  const [loadingVisits, setLoadingVisits] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [dateRange, setDateRange] = useState(new Date().toISOString().split('T')[0]);
 
-  useEffect(() => {
-    if (forcedMember && agcode) {
-      document.getElementById('queryFormSubmit')?.click();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [forcedMember]);
-
-  const doQuery = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!agcode.trim()) return;
+  const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      const [mRes, aRes, lRes] = await Promise.all([
-        fetch(`/api/member?agcode=${agcode.toUpperCase()}`),
-        fetch(`/api/checkin?agcode=${agcode.toUpperCase()}`),
-        fetch(`/api/leave?agcode=${agcode.toUpperCase()}`),
-      ]);
-      if (mRes.ok) setMember((await mRes.json()).member);
-      if (aRes.ok) setAttendance((await aRes.json()).records);
-      if (lRes.ok) setLeaves((await lRes.json()).records);
-
-      // Fetch external history
-      try {
-        const hRes = await fetch(`/api/external-history?agcode=${agcode.toUpperCase()}`);
-        if (hRes.ok) setHistory(await hRes.json());
-      } catch { /* ignore external error */ }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadVisits = async () => {
-    if (!member) return;
-    setLoadingVisits(true);
-    try {
-      const res = await fetch(`/api/visit?agcode=${member.agcode}&startDate=${visitRange}`);
-      if (res.ok) {
+      if (type === 'attendance') {
+        const res = await fetch(`/api/checkin?agcode=${forcedMember.agcode}&startDate=${dateRange}`);
         const data = await res.json();
-        setVisits(data.records || []);
+        if (res.ok) setAttendance(data.records || []);
+      } else {
+        const res = await fetch(`/api/visit?agcode=${forcedMember.agcode}&startDate=${dateRange}`);
+        const data = await res.json();
+        if (res.ok) setVisits(data.records || []);
       }
     } catch { }
-    setLoadingVisits(false);
-  };
+    setLoading(false);
+  }, [forcedMember.agcode, dateRange, type]);
 
-  useEffect(() => {
-    if (section === 'visit' && visits.length === 0) loadVisits();
-  }, [section, member]);
-
-  const statusLabel = (s: string) => {
-    if (s === 'pending') return <span className="badge badge-yellow">待審核</span>;
-    if (s === 'approved') return <span className="badge badge-green">已核准</span>;
-    return <span className="badge badge-red">已拒絕</span>;
-  };
+  useEffect(() => { loadData(); }, [loadData]);
 
   return (
-    <div>
-      <form onSubmit={doQuery}>
-        <div className="form-group">
-          <label className="form-label">業務代號 AGCODE</label>
-          <input className="form-input" value={agcode} onChange={e => setAgcode(e.target.value.toUpperCase())} placeholder="請輸入業務代號" autoCapitalize="characters" />
+    <div className="ios-history-page">
+      <div className="member-card-flat" style={{ background: 'var(--surface-input)', padding: 16, borderRadius: 16, marginBottom: 20 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontSize: '1.2rem', fontWeight: 700 }}>{forcedMember.name}</div>
+            <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: 2 }}>{forcedMember.agcode} • {forcedMember.rank}</div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>單位/主管</div>
+            <div style={{ fontSize: '0.82rem', fontWeight: 500 }}>{forcedMember.group || '-'} / {forcedMember.supervisor || '-'}</div>
+          </div>
         </div>
-        <button id="queryFormSubmit" className="btn btn-primary btn-full" type="submit" disabled={loading || !agcode.trim()}>
-          {loading ? <span className="spinner" /> : null}
-          {loading ? '查詢中⋯' : '🔍 查詢紀錄'}
+      </div>
+
+      <div className="section-header">{title}</div>
+      <div style={{ padding: '0 0 16px 0', display: 'flex', gap: 8 }}>
+        <input 
+          type="date" 
+          className="form-input" 
+          style={{ flex: 1, padding: '0 12px' }} 
+          value={dateRange} 
+          onChange={e => setDateRange(e.target.value)} 
+        />
+        <button className="btn btn-primary" style={{ minWidth: 70 }} onClick={loadData} disabled={loading}>
+          {loading ? '...' : '查詢'}
         </button>
-      </form>
+      </div>
 
-      {member && (
-        <>
-          <MemberInfo member={member} onReset={() => { setMember(null); setAttendance([]); setLeaves([]); }} />
-          <div className="segmented" style={{ marginBottom: 16 }}>
-            <button className={`seg-btn ${section === 'attendance' ? 'active' : ''}`} onClick={() => setSection('attendance')}>
-              出席紀錄（{attendance.length}）
-            </button>
-            <button className={`seg-btn ${section === 'leaves' ? 'active' : ''}`} onClick={() => setSection('leaves')}>
-                </div>
-          )}
-
-          {section === 'visit' && (
-            <div className="visit-query-content">
-              <div style={{ padding: '0 0 16px 0', display: 'flex', gap: 8 }}>
-                <input type="date" className="form-input" style={{ flex: 1, padding: '0 12px' }} value={visitRange} onChange={e => setVisitRange(e.target.value)} />
-                <button className="btn btn-primary" style={{ minWidth: 70 }} onClick={loadVisits} disabled={loadingVisits}>
-                  {loadingVisits ? '...' : '查詢'}
-                </button>
-              </div>
-              {visits.length === 0 ? (
-                <div className="empty-state"><div className="empty-state-icon">📍</div><div className="empty-state-text">此區間內無拜訪紀錄</div></div>
-              ) : (
-                <div className="ios-list">
-                  {visits.map((v, i) => (
-                    <div key={i} className="ios-list-item" style={{ background: 'var(--surface-input)', marginBottom: 8, borderRadius: 12 }}>
-                      <div className="ios-list-text">
-                        <div className="ios-list-title" style={{ fontSize: '1rem' }}>{v.clientName}</div>
-                        <div className="ios-list-desc">{v.visitTime} • {v.purpose}</div>
-                        {v.notes && <div style={{ fontSize: '0.8rem', marginTop: 4, color: 'var(--text-primary)' }}>{v.notes}</div>}
+      {loading ? (
+        <div style={{ padding: '40px 0', textAlign: 'center' }}><span className="spinner" /></div>
+      ) : type === 'attendance' ? (
+        attendance.length === 0 ? (
+          <div className="empty-state"><div className="empty-state-icon">📅</div><div className="empty-state-text">無出勤紀錄</div></div>
+        ) : (
+          <div className="table-wrapper">
+            <table>
+              <thead><tr><th>狀態</th><th style={{ textAlign: 'center' }}>地點</th><th style={{ textAlign: 'right' }}>日期</th></tr></thead>
+              <tbody>
+                {attendance.map((a, i) => (
+                  <tr key={i}>
+                    <td>
+                      <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>{a.checkinTime}</div>
+                      <div style={{ fontSize: '0.7rem', color: a.type === 'field' ? 'var(--orange)' : 'var(--green)' }}>
+                        {a.type === 'field' ? '📍 外勤' : '🏢 辦公室'}
                       </div>
-                    </div>
-                  ))}
+                    </td>
+                    <td style={{ textAlign: 'center' }}><span style={{ fontSize: '0.75rem' }}>{a.notes || '-'}</span></td>
+                    <td style={{ textAlign: 'right', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>{a.date}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
+      ) : (
+        visits.length === 0 ? (
+          <div className="empty-state"><div className="empty-state-icon">📍</div><div className="empty-state-text">無拜訪紀錄</div></div>
+        ) : (
+          <div className="ios-list">
+            {visits.map((v, i) => (
+              <div key={i} className="ios-list-item" style={{ background: 'var(--surface-input)', marginBottom: 8, borderRadius: 12 }}>
+                <div className="ios-list-text">
+                  <div className="ios-list-title" style={{ fontSize: '1rem' }}>{v.clientName}</div>
+                  <div className="ios-list-desc">{v.visitTime} • {v.purpose}</div>
+                  {v.notes && <div style={{ fontSize: '0.8rem', marginTop: 4, color: 'var(--text-primary)' }}>{v.notes}</div>}
                 </div>
-              )}
-            </div>
-          )}
-        </>
+              </div>
+            ))}
+          </div>
+        )
       )}
     </div>
   );
