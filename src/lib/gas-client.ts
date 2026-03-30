@@ -289,3 +289,55 @@ export async function markNotificationRead(rowIndex: number) {
 export async function initializeSheets() {
     return gasPost('initSheets');
 }
+
+// ─── Profiles ─────────────────────────────────────────────────────────────
+
+export interface HRProfile {
+    id?: string;
+    agcode?: string;
+    idcard?: string;
+    name?: string;
+    birthday?: string;
+    gender?: string;
+    phone?: string;
+    email?: string;
+    addressContact?: string;
+    addressResident?: string;
+    emgName?: string;
+    emgRelation?: string;
+    emgPhone?: string;
+    eduLevel?: string;
+    eduSchool?: string;
+    prevIndustry?: string;
+    prevJob?: string;
+    groupName?: string;
+    certEthics?: string;
+    certLife?: string;
+    certProperty?: string;
+    certForeign?: string;
+    certInvestment?: string;
+    rank?: string;
+    createdAt?: string;
+    updatedAt?: string;
+    actionStatus?: 'candidate' | 'agent' | 'upgrade' | 'update';
+    oldAgcode?: string;
+    supervisor?: string;
+}
+
+export async function getProfile(agcodeOrIdcard: string): Promise<HRProfile | null> {
+    try {
+        const data = await gasGet<{ profile: HRProfile }>('getProfile', { agcodeOrIdcard });
+        return data.profile;
+    } catch {
+        return null; // Return null if not found
+    }
+}
+
+export async function getAllProfiles(): Promise<HRProfile[]> {
+    const data = await gasGet<{ records: HRProfile[] }>('getAllProfiles');
+    return data.records;
+}
+
+export async function saveProfile(profile: HRProfile): Promise<{ success: boolean; error?: string }> {
+    return gasPost('saveProfile', profile as unknown as Record<string, unknown>);
+}

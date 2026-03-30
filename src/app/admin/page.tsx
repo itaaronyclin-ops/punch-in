@@ -6,7 +6,7 @@ import {
     IconCalendar, IconSettings, IconMessageSquare, IconLogo,
     IconShield, IconLock, IconPlus, IconX, IconEdit, IconTrash,
     IconLogOut, IconDownload, IconAlertTriangle, IconCheck, IconDatabase,
-    IconCheckCircle, IconSend, IconClock,
+    IconCheckCircle, IconSend, IconClock, IconRefreshCw, IconRun,
     LoadingState, SkeletonRows,
 } from '@/components/Icons';
 import { confirmDialog, toast } from '@/components/GlobalUI';
@@ -139,7 +139,8 @@ type AdminSection =
     | 'required-days'
     | 'settings'
     | 'tg-settings'
-    | 'reports';
+    | 'reports'
+    | 'profiles';
 
 function useAdminAuth() {
     const [token, setToken] = useState('');
@@ -220,6 +221,7 @@ function LoginScreen({ onLogin }: { onLogin: (pw: string) => Promise<boolean> })
 const navItems: { key: AdminSection; icon: React.ReactNode; label: string; section: string }[] = [
     { key: 'overview', icon: <IconGrid size={16} />, label: '總覽', section: '主選單' },
     { key: 'members', icon: <IconUsers size={16} />, label: '人員維護', section: '主選單' },
+    { key: 'profiles', icon: <IconRun size={16} />, label: '基本資料庫 (HR)', section: '主選單' },
     { key: 'attendance', icon: <IconClipboard size={16} />, label: '出席紀錄', section: '紀錄查詢' },
     { key: 'visit', icon: <IconMapPin size={16} />, label: '拜訪紀錄', section: '紀錄查詢' },
     { key: 'leave', icon: <IconInbox size={16} />, label: '請假審核', section: '審核管理' },
@@ -1145,8 +1147,8 @@ function RequiredDaysSection({ token }: { token: string }) {
                     </div>
                 </div>
 
-                <form onSubmit={add}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr auto', gap: 16, alignItems: 'flex-end', marginTop: 16 }}>
+                <div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr auto', gap: 16, alignItems: 'flex-start', marginTop: 16 }}>
                         <div className="form-group" style={{ marginBottom: 0 }}>
                             <label className="form-label">日期選擇</label>
                             <div style={{ position: 'relative' }}>
@@ -1157,10 +1159,13 @@ function RequiredDaysSection({ token }: { token: string }) {
                                     value={form.dateInput}
                                     onChange={e => {
                                         const d = e.target.value;
-                                        if (d && !form.dates.includes(d)) {
-                                            setForm(f => ({ ...f, dates: [...f.dates, d].sort() }));
-                                        }
-                                        setForm(f => ({ ...f, dateInput: '' }));
+                                        setForm(f => {
+                                            const newForm = { ...f, dateInput: '' };
+                                            if (d && !f.dates.includes(d)) {
+                                                newForm.dates = [...f.dates, d].sort();
+                                            }
+                                            return newForm;
+                                        });
                                     }}
                                 />
                                 <div style={{ position: 'absolute', left: 12, top: 12, color: 'var(--text-secondary)' }}>
@@ -1171,7 +1176,7 @@ function RequiredDaysSection({ token }: { token: string }) {
                                 <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 8 }}>
                                     {form.dates.map(d => (
                                         <div key={d} style={{ background: 'var(--blue)', color: '#fff', padding: '2px 8px', borderRadius: 12, fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: 4 }}>
-                                            {d} <IconX size={12} style={{ cursor: 'pointer' }} onClick={() => setForm(f => ({ ...f, dates: f.dates.filter(x => x !== d) }))} />
+                                            {d} <span onClick={() => setForm(f => ({ ...f, dates: f.dates.filter(x => x !== d) }))} style={{ cursor: 'pointer', padding: '0 2px', display: 'inline-flex' }}><IconX size={12} color="#fff" /></span>
                                         </div>
                                     ))}
                                 </div>
@@ -1186,11 +1191,13 @@ function RequiredDaysSection({ token }: { token: string }) {
                                 onChange={e => setForm(f => ({ ...f, lateThreshold: e.target.value }))}
                             />
                         </div>
-                        <button className="btn btn-primary" type="submit" style={{ height: 42, minWidth: 100 }} disabled={saving || selectedAgcodes.length === 0 || form.dates.length === 0}>
-                            {saving ? <span className="spinner" /> : '即刻新增'}
-                        </button>
+                        <div style={{ paddingBottom: 6 }}>
+                            <button className="btn btn-primary" type="button" onClick={(e) => add(e as any)} style={{ height: 42, minWidth: 100 }} disabled={saving}>
+                                {saving ? <span className="spinner" /> : '即刻新增'}
+                            </button>
+                        </div>
                     </div>
-                </form>
+                </div>
             </div>
 
             <div className="table-wrapper">
@@ -1606,6 +1613,61 @@ function ReportsSection({ token }: { token: string }) {
     );
 }
 
+// ─── Profiles Section ───────────────────────────────────────────────────────
+function ProfilesSection({ token }: { token: string }) {
+    const [records, setRecords] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    const load = async () => {
+        setLoading(true);
+        try {
+            const h = { 'x-admin-token': token };
+            const r = await fetch('/api/admin/profiles', { headers: h }).then(res => res.json());
+            if (r.records) setRecords(r.records);
+        } catch {
+            // Ignored
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => { load(); }, []);
+
+    return (
+        <div>
+            <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div><h1 className="page-title">基本資料庫 (HR Profiles)</h1><p className="page-subtitle">管理準增員與業務員的詳細履歷及證照資訊</p></div>
+                <div style={{ display: 'flex', gap: 12 }}>
+                    <button className="btn btn-secondary" onClick={load}><IconRefreshCw size={14} /> 重新整理</button>
+                    <a href="/hr" target="_blank" rel="noreferrer" className="btn btn-primary" style={{ textDecoration: 'none' }}>
+                        前往 HR 建檔系統 (開啟新頁籤) →
+                    </a>
+                </div>
+            </div>
+
+            <div className="table-wrapper">
+                <table>
+                    <thead><tr><th>職級</th><th>AGCODE</th><th>身分證</th><th>姓名</th><th>電話</th><th>建立時間</th></tr></thead>
+                    <tbody>
+                        {loading ? <SkeletonRows cols={6} rows={5} /> : records.length === 0
+                            ? <tr><td colSpan={6}><div className="empty-state"><div className="empty-state-text">尚無基本資料記錄</div></div></td></tr>
+                            : records.map((r, i) => (
+                                <tr key={r.id || i}>
+                                    <td><span className={`badge ${r.rank === '準增員' ? 'badge-orange' : 'badge-blue'}`}>{r.rank || '未知'}</span></td>
+                                    <td><code style={{ fontFamily: 'var(--font-mono)' }}>{r.agcode}</code></td>
+                                    <td><code style={{ fontFamily: 'var(--font-mono)' }}>{r.idcard}</code></td>
+                                    <td style={{ fontWeight: 600 }}>{r.name}</td>
+                                    <td>{r.phone || '—'}</td>
+                                    <td><span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{r.createdAt?.substring(0, 16) || '—'}</span></td>
+                                </tr>
+                            ))}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+}
+
 // ─── Main Admin Page ───────────────────────────────────────────────────────
 export default function AdminPage() {
     const { token, authed, checking, login, logout } = useAdminAuth();
@@ -1631,6 +1693,7 @@ export default function AdminPage() {
         settings: <SettingsSection token={token} />,
         'tg-settings': <TGSettingsSection token={token} />,
         reports: <ReportsSection token={token} />,
+        profiles: <ProfilesSection token={token} />,
     };
 
     return (

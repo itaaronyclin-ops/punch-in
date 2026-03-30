@@ -16,6 +16,7 @@ const SHEET = {
   REQUIRED_DAYS: 'RequiredDays',
   TG_SETTINGS:   'TGSettings',
   NOTIFICATIONS: 'Notifications',
+  PROFILES:      'Profiles',
 };
 
 // ─── Entry Points ──────────────────────────────────────────────────────────
@@ -77,6 +78,11 @@ function handleRequest(e) {
       case 'addTGSetting':      result = addTGSetting(data);          break;
       case 'updateTGSetting':   result = updateTGSetting(data);       break;
       case 'deleteTGSetting':   result = deleteTGSetting(data.rowIndex); break;
+
+      // ── Profiles ──────────────────────────────────────────────────────────
+      case 'getProfile':        result = getProfile(data.agcodeOrIdcard); break;
+      case 'getAllProfiles':    result = getAllProfiles();            break;
+      case 'saveProfile':       result = saveProfile(data);           break;
 
       // ── Notifications ─────────────────────────────────────────────────────
       case 'getNotifications':  result = getNotifications(data); break;
@@ -575,6 +581,7 @@ function initSheets() {
     { name: SHEET.REQUIRED_DAYS, headers: ['AGCODE', 'Date', 'LateThreshold'] },
     { name: SHEET.TG_SETTINGS,   headers: ['AGCODE', 'ChatId', 'NotificationTypes', 'Role'] },
     { name: SHEET.NOTIFICATIONS, headers: ['ID', 'AGCODE', 'Type', 'Title', 'Content', 'CreatedAt', 'IsRead'] },
+    { name: SHEET.PROFILES,      headers: ['ID', 'AGCODE', 'IDCard', 'Name', 'Birthday', 'Gender', 'Phone', 'Email', 'AddressContact', 'AddressResident', 'EmgName', 'EmgRelation', 'EmgPhone', 'EduLevel', 'EduSchool', 'PrevIndustry', 'PrevJob', 'GroupName', 'CertEthics', 'CertLife', 'CertProperty', 'CertForeign', 'CertInvestment', 'Rank', 'CreatedAt', 'UpdatedAt'] },
   ];
 
   sheetDefs.forEach(def => {
@@ -593,6 +600,149 @@ function initSheets() {
       Logger.log('Sheet already exists: ' + def.name);
     }
   });
+}
+
+// ─── Profiles & HR Onboarding ───────────────────────────────────────────────
+
+function getProfile(agcodeOrIdcard) {
+  if (!agcodeOrIdcard) return { error: '參數不完整' };
+  const str = String(agcodeOrIdcard).toUpperCase();
+  const sheet = getSheet(SHEET.PROFILES);
+  const rows = sheetToObjects(sheet);
+  const profile = rows.find(r => r.agcode === str || r.idcard === str);
+  if (!profile) return { error: '查無資料', found: false };
+  return { success: true, profile };
+}
+
+function getAllProfiles() {
+  try {
+    const sheet = getSheet(SHEET.PROFILES);
+    const rows = sheetToObjects(sheet);
+    return { success: true, records: rows };
+  } catch (e) {
+    return { success: true, records: [] };
+  }
+}
+
+function saveProfile(data) {
+  try {
+    const { actionStatus, oldAgcode } = data;
+    let agcode = String(data.agcode || '').toUpperCase();
+    const idcard = String(data.idcard || '').toUpperCase();
+    if (!idcard) return { error: '身分證字號為必填' };
+    
+    // if candidate, agcode is idcard
+    if (actionStatus === 'candidate') {
+      agcode = idcard;
+      data.rank = '準增員';
+    } else if (actionStatus === 'upgrade') {
+      if (!agcode || agcode === idcard) return { error: '升級業務員需要有效的 AGCODE' };
+      data.rank = 'AG';
+    } else if (actionStatus === 'agent') {
+      if (!agcode) return { error: '新進業務員需要有效的 AGCODE' };
+      data.rank = data.rank || 'AG';
+    }
+
+    const sheet = getSheet(SHEET.PROFILES);
+    const dataRange = sheet.getDataRange();
+    const values = dataRange.getValues();
+    const headers = values[0];
+    
+    // Create row array
+    const now = nowStr();
+    const idIndex = headers.indexOf('ID');
+    const agcodeIdx = headers.indexOf('AGCODE');
+    const idcardIdx = headers.indexOf('IDCard');
+    
+    let targetRowIndex = -1;
+    let existingId = '';
+    const searchKey = actionStatus === 'upgrade' ? (oldAgcode || idcard).toUpperCase() : (agcode || idcard);
+    
+    for (let i = 1; i < values.length; i++) {
+      const rowAgcode = String(values[i][agcodeIdx]).toUpperCase();
+      const rowIdcard = String(values[i][idcardIdx]).toUpperCase();
+      if (rowAgcode === searchKey || rowIdcard === searchKey || rowIdcard === idcard) {
+        targetRowIndex = i + 1;
+        existingId = values[i][idIndex];
+        break;
+      }
+    }
+
+    const newRow = headers.map(h => {
+      const key = h.charAt(0).toLowerCase() + h.slice(1);
+      if (h === 'ID') return existingId || generateId();
+      if (h === 'AGCODE') return agcode;
+      if (h === 'IDCard') return idcard;
+      if (h === 'CreatedAt') return targetRowIndex > -1 ? values[targetRowIndex - 1][headers.indexOf('CreatedAt')] : now;
+      if (h === 'UpdatedAt') return now;
+      // Special mapping or direct match
+      return data[key] !== undefined ? data[key] : (targetRowIndex > -1 ? values[targetRowIndex - 1][headers.indexOf(h)] : '');
+    });
+
+    if (targetRowIndex > -1) {
+      sheet.getRange(targetRowIndex, 1, 1, newRow.length).setValues([newRow]);
+    } else {
+      sheet.appendRow(newRow);
+    }
+    
+    // Also create/update MEMBERS sheet
+    const memSheet = getSheet(SHEET.MEMBERS);
+    const memData = memSheet.getDataRange().getValues();
+    const memHeaders = memData[0];
+    const memAgcodeIdx = memHeaders.indexOf('AGCODE');
+    let memRowIndex = -1;
+    for (let i = 1; i < memData.length; i++) {
+      const memAg = String(memData[i][memAgcodeIdx]).toUpperCase();
+      if (memAg === searchKey || memAg === idcard) {
+        memRowIndex = i + 1;
+        break;
+      }
+    }
+    
+    const mName = data.name || (targetRowIndex > -1 ? newRow[headers.indexOf('Name')] : '');
+    const mRank = data.rank || (targetRowIndex > -1 ? newRow[headers.indexOf('Rank')] : '準增員');
+    const mGroup = data.groupName || (targetRowIndex > -1 ? newRow[headers.indexOf('GroupName')] : '');
+    const mSuper = data.supervisor || ''; // Need to extract or use existing
+    
+    if (memRowIndex > -1) {
+      const existingMemRow = memData[memRowIndex - 1];
+      const newMemRow = memHeaders.map((h, j) => {
+        if (h === 'AGCODE') return agcode;
+        if (h === 'Name') return mName;
+        if (h === 'Rank') return mRank;
+        if (h === 'Group') return mGroup || existingMemRow[j];
+        return existingMemRow[j];
+      });
+      memSheet.getRange(memRowIndex, 1, 1, newMemRow.length).setValues([newMemRow]);
+    } else {
+      memSheet.appendRow([agcode, mName, mRank, mGroup, mSuper, now]);
+    }
+    
+    // If upgrade, shift all old records to new AGCODE
+    if (actionStatus === 'upgrade' && oldAgcode && oldAgcode.toUpperCase() !== agcode) {
+      const oldStr = oldAgcode.toUpperCase();
+      const sheetsToUpdate = [SHEET.ATTENDANCE, SHEET.LEAVE, SHEET.VISIT, SHEET.REQUIRED_DAYS, SHEET.TG_SETTINGS, SHEET.NOTIFICATIONS];
+      sheetsToUpdate.forEach(sName => {
+        try {
+          const s = getSheet(sName);
+          const sData = s.getDataRange().getValues();
+          const sHeaders = sData[0];
+          const sAgcodeIdx = sHeaders.indexOf('AGCODE');
+          if (sAgcodeIdx === -1) return;
+          
+          for (let i = 1; i < sData.length; i++) {
+            if (String(sData[i][sAgcodeIdx]).toUpperCase() === oldStr) {
+              s.getRange(i + 1, sAgcodeIdx + 1).setValue(agcode);
+            }
+          }
+        } catch (e) {}
+      });
+    }
+
+    return { success: true };
+  } catch (e) {
+    return { error: '發生異常: ' + e.message };
+  }
 }
 
 // ─── Automatic Triggers (Option A) ──────────────────────────────────────────

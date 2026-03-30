@@ -909,7 +909,22 @@ function MoreTab({ member, onLogout, onExtHistory, onExtTrainingCheckin }: { mem
 type AppScreen = 'home' | 'checkin' | 'field' | 'leave' | 'visit' | 'query-attendance' | 'query-visit' | 'more' | 'history-ext' | 'external-training';
 
 export default function HomePage() {
-  const [screen, setScreen] = useState<AppScreen>('home');
+  const [_screen, _setScreen] = useState<AppScreen>('home');
+  const [blockAnim, setBlockAnim] = useState(false);
+  const screen = blockAnim ? 'home' : _screen;
+
+  const setScreen = (s: AppScreen) => {
+    if (member?.rank === '準增員') {
+      const allowed = ['home', 'checkin', 'field', 'leave', 'query-attendance'];
+      if (!allowed.includes(s)) {
+        setBlockAnim(true);
+        setTimeout(() => setBlockAnim(false), 2500);
+        return;
+      }
+    }
+    _setScreen(s);
+  };
+
   const [queryDefault, setQueryDefault] = useState<'attendance' | 'leaves' | 'history' | 'visit'>('attendance');
   const [member, setMember] = useState<Member | null>(null);
   const [loading, setLoading] = useState(false);
@@ -958,6 +973,18 @@ export default function HomePage() {
   // Authenticated App Shell
   return (
     <div className="app-frame">
+      {blockAnim && (
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
+          <div style={{ animation: 'popIn 0.4s cubic-bezier(0.16, 1, 0.3, 1)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,59,48,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}>
+                <IconAlertTriangle size={40} color="#FF3B30" />
+            </div>
+            <h2 style={{ fontSize: '1.6rem', fontWeight: 700, margin: 0 }}>無使用權限</h2>
+            <p style={{ marginTop: 12, color: 'rgba(255,255,255,0.7)', fontSize: '0.95rem' }}>此功能暫未對「準增員」開放使用</p>
+          </div>
+          <style>{`@keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }`}</style>
+        </div>
+      )}
       <div className="ios-body-scroll">
         {screen === 'home' ? (
           <>
