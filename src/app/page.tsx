@@ -593,7 +593,7 @@ function NotificationModal({
   };
 
   return (
-    <div className="ios-modal-overlay" onClick={onClose}>
+    <div className="ios-modal-overlay-bottom" onClick={onClose}>
       <div className="ios-modal" onClick={e => e.stopPropagation()}>
         <div className="ios-modal-header">
           <div className="ios-modal-title">系統通知</div>

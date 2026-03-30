@@ -41,6 +41,9 @@ export async function POST(req: NextRequest) {
 
 export async function GET(req: NextRequest) {
     const agcode = req.nextUrl.searchParams.get('agcode') || undefined;
-    const records = await getVisitRecords({ agcode });
+    const startDate = req.nextUrl.searchParams.get('startDate') || undefined;
+    const endDate = req.nextUrl.searchParams.get('endDate') || undefined;
+    const records = await getVisitRecords({ agcode, startDate, endDate });
     return NextResponse.json({ records });
 }
+

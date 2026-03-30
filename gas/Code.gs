@@ -121,6 +121,7 @@ function sheetToObjects(sheet) {
   if (data.length < 2) return [];
   const rawHeaders = data[0];
   const pad = n => String(n).padStart(2, '0');
+  
   return data.slice(1).map((row, i) => {
     const obj = { rowIndex: i + 2 };
     rawHeaders.forEach((h, j) => {
@@ -130,19 +131,24 @@ function sheetToObjects(sheet) {
         if (val.getFullYear() === 1899 && val.getMonth() === 11 && val.getDate() === 30) {
           value = `${pad(val.getHours())}:${pad(val.getMinutes())}`;
         } else {
-          value = `${val.getFullYear()}-${pad(val.getMonth()+1)}-${pad(val.getDate())}`;
+          // 格式化為 YYYY-MM-DD HH:mm:ss
+          const dateStr = `${val.getFullYear()}-${pad(val.getMonth()+1)}-${pad(val.getDate())}`;
+          const timeStr = `${pad(val.getHours())}:${pad(val.getMinutes())}:${pad(val.getSeconds())}`;
+          // 如果時間是 00:00:00，則只回傳日期
+          value = (timeStr === '00:00:00') ? dateStr : `${dateStr} ${timeStr}`;
         }
       } else {
         value = val !== undefined && val !== null ? String(val) : '';
       }
       
-      // 同時提供原始鍵名與全小寫鍵名，增加穩定性
-      obj[h] = value;
-      obj[String(h).trim().toLowerCase()] = value;
+      const k = String(h).trim();
+      obj[k] = value;
+      obj[k.toLowerCase()] = value;
     });
     return obj;
   });
 }
+
 
 
 function appendRow(sheetName, values) {

@@ -13,26 +13,28 @@ import { confirmDialog, toast } from '@/components/GlobalUI';
 
 function formatDateTime(str: string): { date: string; time: string } {
     if (!str) return { date: '—', time: '—' };
-    const d = new Date(str);
-    if (isNaN(d.getTime())) {
-        if (str.includes(' ')) {
-            const parts = str.split(' ');
-            return { date: parts[0], time: parts[1] };
-        }
-        return { date: str, time: '—' };
+    if (str.includes(' ')) {
+        const parts = str.split(' ');
+        return { 
+            date: parts[0].replace(/-/g, '/'), 
+            time: parts[1].length > 5 ? parts[1].substring(0, 5) : parts[1]
+        };
     }
+    const d = new Date(str);
+    if (isNaN(d.getTime())) return { date: str, time: '—' };
     const pad = (n: number) => String(n).padStart(2, '0');
     return {
         date: `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())}`,
-        time: `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`
+        time: `${pad(d.getHours())}:${pad(d.getMinutes())}`
     };
 }
 
 function normalizeDate(str: string): string {
-    const d = new Date(str);
-    if (!isNaN(d.getTime())) return d.toISOString().split('T')[0];
-    return str || '';
+    if (!str) return '';
+    if (str.includes(' ')) return str.split(' ')[0];
+    return str;
 }
+
 
 function generatePDFReport(title: string, dateRange: string, cols: string[], rows: (string | React.ReactNode)[][]) {
     const iframe = document.createElement('iframe');
@@ -909,7 +911,7 @@ function VisitSection({ token }: { token: string }) {
 
     const exportPDF = () => {
         const rows = filtered.map(r => {
-            const dt = formatDateTime(r.checkinTime);
+            const dt = formatDateTime(r.visitTime);
             return [normalizeDate(r.date), r.name, r.agcode, dt.time, r.purpose, r.clientName, r.notes, (r.lat && r.lng) ? '有打卡座標' : '—'];
         });
         generatePDFReport(

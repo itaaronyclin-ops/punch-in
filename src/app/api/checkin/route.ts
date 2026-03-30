@@ -170,9 +170,12 @@ export async function POST(req: NextRequest) {
 export async function GET(req: NextRequest) {
     try {
         const agcode = req.nextUrl.searchParams.get('agcode') || undefined;
-        const attendance = await getAttendance({ agcode });
+        const startDate = req.nextUrl.searchParams.get('startDate') || undefined;
+        const endDate = req.nextUrl.searchParams.get('endDate') || undefined;
+        const attendance = await getAttendance({ agcode, startDate, endDate });
         return NextResponse.json({ records: attendance });
     } catch (err: any) {
         return NextResponse.json({ error: err.message || '伺服器內部錯誤' }, { status: 500 });
     }
 }
+
