@@ -1850,8 +1850,8 @@ function PersonnelSection({ token }: { token: string }) {
                             <div style={{ background: 'rgba(255,255,255,0.2)', width: 64, height: 64, borderRadius: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
                                 <IconShieldCheck size={32} />
                             </div>
-                            <h2 style={{ fontSize: '1.4rem', fontWeight: 700, margin: 0 }}>HR 系統進入授權</h2>
-                            <p style={{ opacity: 0.9, fontSize: '0.9rem', marginTop: 8 }}>請使用手機掃描下方 QR Code 進行身分驗證</p>
+                            <h2 style={{ fontSize: '1.4rem', fontWeight: 700, margin: 0 }}>基本資料異動</h2>
+                            <p style={{ opacity: 0.9, fontSize: '0.9rem', marginTop: 8 }}>請使用手機掃描以開啟 HR 資料異動介面</p>
                         </div>
                         <div style={{ padding: '40px 32px', textAlign: 'center' }}>
                             <div style={{ 
@@ -1859,16 +1859,17 @@ function PersonnelSection({ token }: { token: string }) {
                                 display: 'inline-block', border: '1px solid var(--line)', 
                                 boxShadow: '0 8px 24px rgba(0,0,0,0.06)', marginBottom: 24 
                             }}>
-                                <QRCodeSVG value={`${window.location.origin}/hr`} size={200} />
+                                <QRCodeSVG value="https://punch-in-8h24.vercel.app/hr" size={200} />
                             </div>
-                            <div style={{ background: '#F2F2F7', padding: '16px 20px', borderRadius: 12, textAlign: 'left', marginBottom: 24 }}>
+                            <div style={{ background: '#F2F2F7', padding: '16px 20px', borderRadius: 12, textAlign: 'left', marginBottom: 8 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
                                     <IconInfo size={16} />
-                                    <span>請使用其他裝置掃描，直接開啟 HR 介面操作</span>
+                                    <span>掃描後開啟 HR 頁面，由授權者確認身份後即可操作</span>
                                 </div>
                             </div>
+                            <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 20 }}>punch-in-8h24.vercel.app/hr</p>
                             <button className="btn btn-ghost btn-full" onClick={() => { setShowHrQr(false); setHrSid(''); setHrStatus('IDLE'); }}>
-                                關閉並取消
+                                關閉
                             </button>
                         </div>
                     </div>
