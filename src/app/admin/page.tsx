@@ -179,64 +179,48 @@ import { QRCodeSVG } from 'qrcode.react';
 function LoginScreen({ onLogin }: { onLogin: (pw: string) => Promise<boolean> }) {
     const [pw, setPw] = useState('');
     const [loading, setLoading] = useState(false);
+    const [showPwForm, setShowPwForm] = useState(false);
     const [qrSessionId, setQrSessionId] = useState('');
     const [qrStatus, setQrStatus] = useState<'IDLE' | 'GENERATING' | 'WAITING' | 'SUCCESS' | 'ERROR'>('IDLE');
-    
-    // Poll for QR login completion
+
+    // Auto-generate QR on mount
+    useEffect(() => { generateQR(); }, []); // eslint-disable-line
+
+    // Poll for QR login
     useEffect(() => {
         if (!qrSessionId || qrStatus !== 'WAITING') return;
-        
-        const checkSession = async () => {
+        const check = async () => {
             try {
                 const res = await fetch(`/api/hr/auth?id=${qrSessionId}`);
                 const data = await res.json();
-                
-                if (data.session && data.session.status === 'approved') {
+                if (data.session?.status === 'approved') {
                     if (data.session.adminToken) {
                         setQrStatus('SUCCESS');
                         const ok = await onLogin(data.session.adminToken);
-                        if (!ok) {
-                            setQrStatus('ERROR');
-                            toast.error('無效的登入憑證');
-                        }
-                    } else {
-                        setQrStatus('ERROR');
-                        toast.error('非管理員權限');
-                    }
-                } else if (data.session && data.session.status === 'rejected') {
-                    setQrStatus('ERROR');
-                    toast.error('登入請求已被拒絕');
+                        if (!ok) { setQrStatus('ERROR'); toast.error('非管理員帳號'); }
+                    } else { setQrStatus('ERROR'); toast.error('非管理員權限'); }
+                } else if (data.session?.status === 'rejected') {
+                    setQrStatus('ERROR'); toast.error('登入請求已被拒絕');
                 }
-            } catch (err) {
-                console.error(err);
-            }
+            } catch { /* ignore */ }
         };
-
-        const interval = setInterval(checkSession, 2000);
-        return () => clearInterval(interval);
+        const t = setInterval(check, 2000);
+        return () => clearInterval(t);
     }, [qrSessionId, qrStatus, onLogin]);
 
-    const handleGenerateQR = async () => {
+    const generateQR = async () => {
         setQrStatus('GENERATING');
         const sid = Date.now().toString(36) + Math.random().toString(36).slice(2);
         try {
             const res = await fetch('/api/hr/auth', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'createAuthSession', id: sid })
+                body: JSON.stringify({ action: 'createAuthSession', id: sid }),
             });
             const data = await res.json();
-            if (data.success) {
-                setQrSessionId(sid);
-                setQrStatus('WAITING');
-            } else {
-                setQrStatus('ERROR');
-                toast.error('無法產生驗證碼');
-            }
-        } catch (err) {
-            setQrStatus('ERROR');
-            toast.error('網路錯誤');
-        }
+            if (data.success) { setQrSessionId(sid); setQrStatus('WAITING'); }
+            else { setQrStatus('ERROR'); toast.error('無法產生驗證碼'); }
+        } catch { setQrStatus('ERROR'); toast.error('網路錯誤'); }
     };
 
     const handleSubmit = async (e?: React.FormEvent) => {
@@ -252,61 +236,53 @@ function LoginScreen({ onLogin }: { onLogin: (pw: string) => Promise<boolean> })
             <div className="login-box">
                 <div className="login-icon-wrap"><IconLock size={32} /></div>
                 <h1 style={{ fontSize: '1.4rem', fontWeight: 700, letterSpacing: '-0.03em', marginBottom: 6 }}>後台管理</h1>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 32 }}>請登入系統以繼續</p>
-                
-                {qrStatus === 'WAITING' || qrStatus === 'GENERATING' ? (
-                    <div style={{ textAlign: 'center', margin: '20px 0' }}>
-                        {qrStatus === 'GENERATING' ? (
-                            <div style={{ padding: '60px 0', color: 'var(--text-secondary)' }}>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 28 }}>請使用手機掃描下方 QR Code 登入</p>
+
+                {showPwForm ? (
+                    <form onSubmit={handleSubmit}>
+                        <div className="form-group" style={{ textAlign: 'left' }}>
+                            <label className="form-label">管理員密碼</label>
+                            <input type="password" className="form-input" value={pw}
+                                onChange={e => setPw(e.target.value)} placeholder="••••••••" autoFocus />
+                        </div>
+                        <button type="submit" className="btn btn-primary btn-full" disabled={loading}>
+                            {loading ? <span className="spinner" /> : null}{loading ? '驗證中⋯' : '登入系統'}
+                        </button>
+                        <button type="button" className="btn btn-ghost btn-full" style={{ marginTop: 10 }} onClick={() => setShowPwForm(false)}>
+                            ← 使用 QR Code 登入
+                        </button>
+                    </form>
+                ) : (
+                    <div style={{ textAlign: 'center' }}>
+                        {qrStatus === 'GENERATING' && (
+                            <div style={{ padding: '50px 0', color: 'var(--text-secondary)' }}>
                                 <span className="spinner spinner-dark" style={{ marginBottom: 12, display: 'inline-block' }} /><br />
-                                產生專屬身分碼中⋯
+                                產生登入驗證碼中⋯
                             </div>
-                        ) : (
+                        )}
+                        {qrStatus === 'WAITING' && (
                             <>
-                                <p style={{ fontSize: '0.95rem', marginBottom: 20 }}>請使用手機開啟系統，點擊首頁<strong>「掃描授權」</strong>並掃描下方驗證碼。</p>
-                                <div style={{ background: '#fff', padding: 16, borderRadius: 16, display: 'inline-block', border: '1px solid var(--line)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-                                    <QRCodeSVG value={`${window.location.origin}/hr/authorize?id=${qrSessionId}`} size={180} />
+                                <div style={{ background: '#fff', padding: 16, borderRadius: 16, display: 'inline-block', border: '1px solid var(--line)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', marginBottom: 16 }}>
+                                    <QRCodeSVG value={`${window.location.origin}/hr/authorize?id=${qrSessionId}`} size={190} />
                                 </div>
-                                <div style={{ marginTop: 24 }}>
-                                    <button className="btn btn-ghost btn-sm" onClick={() => setQrStatus('IDLE')}>取消掃描</button>
-                                </div>
+                                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 16 }}>
+                                    手機開啟打卡首頁 → 點「掃描授權」→ 掃此碼
+                                </p>
+                                <button className="btn btn-ghost btn-sm" onClick={generateQR}>重新產生</button>
                             </>
                         )}
+                        {qrStatus === 'ERROR' && (
+                            <div style={{ padding: '20px 0' }}>
+                                <p style={{ color: 'var(--orange)', marginBottom: 16 }}>驗證失敗，請重試</p>
+                                <button className="btn btn-primary btn-full" onClick={generateQR}>重新產生 QR Code</button>
+                            </div>
+                        )}
+                        <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid var(--separator)' }}>
+                            <button className="btn-text" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }} onClick={() => setShowPwForm(true)}>使用密碼登入</button>
+                            &nbsp;·&nbsp;
+                            <a href="/" className="btn-text" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>← 返回首頁</a>
+                        </div>
                     </div>
-                ) : (
-                    <>
-                        <form onSubmit={handleSubmit}>
-                            <div className="form-group" style={{ textAlign: 'left' }}>
-                                <label className="form-label">管理員密碼</label>
-                                <input
-                                    type="password"
-                                    className="form-input"
-                                    value={pw}
-                                    onChange={e => setPw(e.target.value)}
-                                    placeholder="••••••••"
-                                    autoFocus
-                                />
-                            </div>
-                            <button type="submit" className="btn btn-primary btn-full" disabled={loading}>
-                                {loading ? <span className="spinner" /> : null}
-                                {loading ? '驗證中⋯' : '登入系統'}
-                            </button>
-                            
-                            <div style={{ margin: '20px 0', display: 'flex', alignItems: 'center', gap: 10 }}>
-                                <div style={{ flex: 1, height: 1, background: 'var(--separator)' }} />
-                                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>或使用</span>
-                                <div style={{ flex: 1, height: 1, background: 'var(--separator)' }} />
-                            </div>
-
-                            <button type="button" className="btn btn-secondary btn-full" onClick={handleGenerateQR}>
-                                <IconQrcode size={18} /> 使用手機掃描身分碼登入
-                            </button>
-
-                            <div style={{ marginTop: 24 }}>
-                                <a href="/" className="btn-text" style={{ fontSize: '0.85rem' }}>← 返回打卡首頁</a>
-                            </div>
-                        </form>
-                    </>
                 )}
             </div>
         </div>
@@ -1812,22 +1788,22 @@ function PersonnelSection({ token }: { token: string }) {
                         </div>
                     </div>
 
-                    <style jsx>{`
+                    <style>{`
                         .fullscreen-overlay { 
                             position: fixed; inset: 0; background: #F2F2F7; z-index: 1000; 
-                            display: flex; flexDirection: column; animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                            display: flex; flex-direction: column; animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                         }
                         @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
                         .fullscreen-header { 
-                            padding: 20px 40px; background: white; border-bottom: 1px solid #D1D1D6; 
-                            display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+                            padding: 16px 24px; background: white; border-bottom: 1px solid #D1D1D6; 
+                            display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06); position: relative;
                         }
-                        .fs-title-group { display: flex; align-items: center; gap: 16px; }
-                        .fs-title-group h2 { margin: 0; font-size: 1.4rem; font-weight: 700; color: #1C1C1E; }
-                        .fs-title-group p { margin: 4px 0 0; color: #8E8E93; font-size: 0.9rem; }
-                        .fs-close { background: #E5E5EA; border: none; width: 44px; height: 44px; border-radius: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-                        .fullscreen-body { flex: 1; overflow-y: auto; padding: 40px; }
-                        .profile-detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 24px; max-width: 1200px; margin: 0 auto; }
+                        .fs-title-group { display: flex; align-items: center; gap: 14px; }
+                        .fs-title-group h2 { margin: 0; font-size: 1.25rem; font-weight: 700; color: #1C1C1E; }
+                        .fs-title-group p { margin: 3px 0 0; color: #8E8E93; font-size: 0.85rem; }
+                        .fs-close { background: #E5E5EA; border: none; width: 36px; height: 36px; border-radius: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+                        .fullscreen-body { flex: 1; overflow-y: auto; padding: 28px 32px; }
+                        .profile-detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; max-width: 1200px; margin: 0 auto; }
                     `}</style>
                 </div>
             )}

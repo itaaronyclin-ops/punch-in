@@ -99,7 +99,7 @@ export default function HRPage() {
             });
             const data = await res.json();
             if (data.success) {
-                setStatusMsg({ type: 'success', title: '提交成功', content: '人事資料異動申請已完成處理。' });
+                setStatusMsg({ type: 'success', title: '提交成功', content: '資料異動申請已完成。' });
                 setStep('STATUS');
             } else {
                 alert(data.error || '提交失敗');
@@ -131,13 +131,33 @@ export default function HRPage() {
     const fi = (label: string, name: string, type = 'text', required = false) => (
         <div className="hr-input-group">
             <label>{label}{required && <span style={{ color: '#FF3B30' }}> *</span>}</label>
-            <input
-                name={name} type={type}
-                className="hr-form-input"
-                value={formData[name] || ''}
-                onChange={e => setFormData((p: any) => ({ ...p, [name]: e.target.value }))}
-                readOnly={step === 'REVIEW'}
-            />
+            {name === 'gender' ? (
+                <select
+                    name={name}
+                    className="hr-form-input"
+                    value={formData[name] || ''}
+                    onChange={e => setFormData((p: any) => ({ ...p, [name]: e.target.value }))}
+                    disabled={step === 'REVIEW'}
+                    style={{
+                        cursor: step === 'REVIEW' ? 'default' : 'pointer', appearance: 'none',
+                        backgroundImage: `url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%2386868b' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
+                        backgroundRepeat: 'no-repeat', backgroundPosition: 'right 14px center', paddingRight: 36
+                    }}
+                >
+                    <option value="">請選擇</option>
+                    <option value="男">男</option>
+                    <option value="女">女</option>
+                    <option value="其他">其他</option>
+                </select>
+            ) : (
+                <input
+                    name={name} type={type}
+                    className="hr-form-input"
+                    value={formData[name] || ''}
+                    onChange={e => setFormData((p: any) => ({ ...p, [name]: e.target.value }))}
+                    readOnly={step === 'REVIEW'}
+                />
+            )}
         </div>
     );
 
@@ -145,7 +165,7 @@ export default function HRPage() {
     return (
         <div className="hr-wrap">
             <header className="hr-header-bar">
-                <h1>人事資料異動申請</h1>
+                <h1>資料異動申請</h1>
             </header>
 
             <main className="hr-main">
@@ -162,12 +182,12 @@ export default function HRPage() {
                         <div className="hr-auth-icon" style={{ background: 'rgba(0,122,255,0.08)' }}>
                             <IconQrcode size={40} color="#007aff" />
                         </div>
-                        <h2>請主管掃碼授權</h2>
+                        <h2>請掃碼授權</h2>
                         <p style={{ color: '#86868b', margin: '12px 0 32px' }}>
-                            進入人事異動系統前，需主管以手機掃描 QR Code 授權
+                            進入異動系統前，需主管授權
                         </p>
                         <button className="hr-btn hr-btn-primary" onClick={() => startQrAuth('ENTRY')}>
-                            產生主管授權碼
+                            產生授權碼
                         </button>
                     </div>
                 )}
@@ -191,7 +211,7 @@ export default function HRPage() {
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: '#86868b', fontSize: '0.9rem', marginBottom: 28 }}>
                             <IconLoader2 size={18} style={{ animation: 'spin 1s linear infinite' }} />
-                            <span>等待主管授權中...</span>
+                            <span>等待授權中...</span>
                         </div>
                         <button className="hr-btn hr-btn-ghost" onClick={() => {
                             clearInterval(pollInterval.current);
@@ -214,10 +234,10 @@ export default function HRPage() {
                         <div className="hr-mode-grid">
                             {([
                                 { mode: 'candidate', label: '準增員建檔', icon: <IconUserPlus />, color: '#E3F2FD', iconColor: '#2196F3' },
-                                { mode: 'agent',     label: '新進業務員建檔', icon: <IconUserCheck />, color: '#E8F5E9', iconColor: '#4CAF50' },
-                                { mode: 'upgrade',   label: '準增員升級', icon: <IconUserEdit />, color: '#FFF3E0', iconColor: '#FF9800' },
-                                { mode: 'update',    label: '資料變更', icon: <IconSearch />, color: '#F3E5F5', iconColor: '#9C27B0' },
-                                { mode: 'delete',    label: '撤銷 / 刪除', icon: <IconTrash />, color: '#FFEBEE', iconColor: '#F44336' },
+                                { mode: 'agent', label: '新進業務員建檔', icon: <IconUserCheck />, color: '#E8F5E9', iconColor: '#4CAF50' },
+                                { mode: 'upgrade', label: '準增員轉業務員', icon: <IconUserEdit />, color: '#FFF3E0', iconColor: '#FF9800' },
+                                { mode: 'update', label: '資料變更', icon: <IconSearch />, color: '#F3E5F5', iconColor: '#9C27B0' },
+                                { mode: 'delete', label: '撤銷 / 刪除', icon: <IconTrash />, color: '#FFEBEE', iconColor: '#F44336' },
                             ] as { mode: HRMode, label: string, icon: React.ReactNode, color: string, iconColor: string }[]).map(item => (
                                 <button key={item.mode} className="hr-mode-card" onClick={() => {
                                     setMode(item.mode);
@@ -277,8 +297,8 @@ export default function HRPage() {
                             <h2>
                                 {mode === 'candidate' && '準增員建檔'}
                                 {mode === 'agent' && '新進業務員建檔'}
-                                {mode === 'upgrade' && '準增員升級'}
-                                {mode === 'update' && '人事資料變更'}
+                                {mode === 'upgrade' && '準增員轉業務員'}
+                                {mode === 'update' && '資料變更'}
                                 {mode === 'delete' && '撤銷登錄 / 刪除'}
                             </h2>
                             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -344,7 +364,7 @@ export default function HRPage() {
                                         <button className="hr-btn hr-btn-ghost" onClick={() => setStep('FILL_FORM')}>← 回上一步</button>
                                         <button className="hr-btn hr-btn-primary" onClick={() => startQrAuth('SUBMIT')}>
                                             <IconQrcode size={18} style={{ marginRight: 8 }} />
-                                            主管掃碼簽署提交
+                                            掃碼簽署提交
                                         </button>
                                     </>
                                 )}
