@@ -7,7 +7,7 @@ import {
     IconShield, IconLock, IconPlus, IconX, IconEdit, IconTrash,
     IconLogOut, IconDownload, IconAlertTriangle, IconCheck, IconDatabase,
     IconCheckCircle, IconSend, IconClock, IconRefreshCw, IconRun, IconQrcode, IconCamera, IconEye,
-    LoadingState, SkeletonRows,
+    IconUserEdit, IconShieldCheck, LoadingState, SkeletonRows,
 } from '@/components/Icons';
 import QRScanner from '@/components/QRScanner';
 import { confirmDialog, toast } from '@/components/GlobalUI';
@@ -234,7 +234,7 @@ function LoginScreen({ onLogin }: { onLogin: (pw: string) => Promise<boolean> })
     return (
         <div className="login-page">
             <div className="login-box">
-                <div className="login-icon-wrap"><IconLock size={32} /></div>
+                <div className="login-icon-wrap" style={{ background: 'rgba(0,122,255,0.1)', color: 'var(--blue)' }}><IconShieldCheck size={36} /></div>
                 <h1 style={{ fontSize: '1.4rem', fontWeight: 700, letterSpacing: '-0.03em', marginBottom: 6 }}>後台管理</h1>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 28 }}>請使用手機掃描下方 QR Code 登入</p>
 
@@ -1660,13 +1660,21 @@ function PersonnelSection({ token }: { token: string }) {
                                         {isAdmin ? <IconShield color="var(--blue)" size={18} /> : <span style={{ color: '#ccc' }}>—</span>}
                                     </td>
                                     <td>
-                                        {profile ? (
-                                            <button className="btn btn-ghost btn-sm" style={{ gap: 4 }} onClick={() => setSelectedProfile(profile)}>
-                                                <IconEye size={14} /> 查看詳情
+                                        <div style={{ display: 'flex', gap: 6 }}>
+                                            {profile ? (
+                                                <button className="btn btn-ghost btn-sm" style={{ gap: 4 }} onClick={() => setSelectedProfile(profile)}>
+                                                    <IconEye size={14} /> 查詳細履歷
+                                                </button>
+                                            ) : (
+                                                <span style={{ fontSize: '0.8rem', color: '#8E8E93', minWidth: 80, textAlign: 'center' }}>未填寫</span>
+                                            )}
+                                            <button className="btn btn-ghost btn-sm" style={{ gap: 4, color: 'var(--blue)' }} 
+                                                onClick={() => {
+                                                    window.open('/hr', '_blank');
+                                                }}>
+                                                <IconUserEdit size={14} /> 基本資料異動
                                             </button>
-                                        ) : (
-                                            <span style={{ fontSize: '0.8rem', color: '#8E8E93' }}>未填寫</span>
-                                        )}
+                                        </div>
                                     </td>
                                     <td>
                                         <div style={{ display: 'flex', gap: 6 }}>

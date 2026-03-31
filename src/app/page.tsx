@@ -114,25 +114,25 @@ function MemberInfo({ member, onReset }: { member: Member; onReset: () => void }
       </button>
 
       {showQr && (
-          <div className="modal-overlay" onClick={() => setShowQr(false)}>
-              <div className="modal" style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                  <div className="modal-header">
-                      <span className="modal-title">我的身分識別碼</span>
-                      <button className="modal-close" onClick={() => setShowQr(false)}>✕</button>
-                  </div>
-                  <div style={{ padding: '24px 0' }}>
-                      <div style={{ background: 'white', padding: 12, borderRadius: 20, display: 'inline-block', border: '1px solid #eee' }}>
-                          <img 
-                              src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(member.agcode)}&size=200x200`} 
-                              alt="My ID QR"
-                          />
-                      </div>
-                      <div style={{ marginTop: 16, fontWeight: 700, fontSize: '1.2rem' }}>{member.name}</div>
-                      <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{member.agcode}</div>
-                  </div>
-                  <button className="btn btn-primary btn-full" onClick={() => setShowQr(false)}>關閉</button>
+        <div className="modal-overlay" onClick={() => setShowQr(false)}>
+          <div className="modal" style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <span className="modal-title">我的身分識別碼</span>
+              <button className="modal-close" onClick={() => setShowQr(false)}>✕</button>
+            </div>
+            <div style={{ padding: '24px 0' }}>
+              <div style={{ background: 'white', padding: 12, borderRadius: 20, display: 'inline-block', border: '1px solid #eee' }}>
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(member.agcode)}&size=200x200`}
+                  alt="My ID QR"
+                />
               </div>
+              <div style={{ marginTop: 16, fontWeight: 700, fontSize: '1.2rem' }}>{member.name}</div>
+              <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{member.agcode}</div>
+            </div>
+            <button className="btn btn-primary btn-full" onClick={() => setShowQr(false)}>關閉</button>
           </div>
+        </div>
       )}
     </div>
   );
@@ -186,10 +186,10 @@ function CheckinTab({ fieldMode = false, forcedMember, onRequireFieldWork, onCom
       if (!fieldMode) {
         try {
           const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
-            navigator.geolocation.getCurrentPosition(resolve, reject, { 
-                enableHighAccuracy: true, 
-                timeout: 10000, 
-                maximumAge: 0 
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 0
             })
           );
           lat = pos.coords.latitude;
@@ -200,10 +200,10 @@ function CheckinTab({ fieldMode = false, forcedMember, onRequireFieldWork, onCom
       } else {
         try {
           const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
-            navigator.geolocation.getCurrentPosition(resolve, reject, { 
-                enableHighAccuracy: true, 
-                timeout: 10000, 
-                maximumAge: 0 
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 0
             })
           );
           lat = pos.coords.latitude;
@@ -409,10 +409,10 @@ function VisitTab({ forcedMember, onComplete }: { forcedMember?: Member; onCompl
     let lat: number | undefined, lng: number | undefined;
     try {
       const pos = await new Promise<GeolocationPosition>((resolve, reject) =>
-        navigator.geolocation.getCurrentPosition(resolve, reject, { 
-            enableHighAccuracy: true, 
-            timeout: 10000, 
-            maximumAge: 0 
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 0
         })
       );
       lat = pos.coords.latitude;
@@ -480,12 +480,12 @@ function VisitTab({ forcedMember, onComplete }: { forcedMember?: Member; onCompl
 
 // ─── Query Tab ────────────────────────────────────────────────────────────
 // ─── Query Tab Component ───────────────────────────────────────────────────
-function QueryTab({ 
-  forcedMember, 
+function QueryTab({
+  forcedMember,
   title = '出勤紀錄',
   type = 'attendance'
-}: { 
-  forcedMember: Member; 
+}: {
+  forcedMember: Member;
   title?: string;
   type?: 'attendance' | 'visit';
 }) {
@@ -529,12 +529,12 @@ function QueryTab({
 
       <div className="section-header">{title}</div>
       <div style={{ padding: '0 0 16px 0', display: 'flex', gap: 8 }}>
-        <input 
-          type="date" 
-          className="form-input" 
-          style={{ flex: 1, padding: '0 12px' }} 
-          value={dateRange} 
-          onChange={e => setDateRange(e.target.value)} 
+        <input
+          type="date"
+          className="form-input"
+          style={{ flex: 1, padding: '0 12px' }}
+          value={dateRange}
+          onChange={e => setDateRange(e.target.value)}
         />
         <button className="btn btn-primary" style={{ minWidth: 70 }} onClick={loadData} disabled={loading}>
           {loading ? '...' : '查詢'}
@@ -589,12 +589,12 @@ function QueryTab({
 }
 
 // ─── Notification Component ──────────────────────────────────────────────────
-function NotificationModal({ 
-  agcode, 
+function NotificationModal({
+  agcode,
   onClose,
   onRefreshCount
-}: { 
-  agcode: string; 
+}: {
+  agcode: string;
   onClose: () => void;
   onRefreshCount: () => void;
 }) {
@@ -606,7 +606,7 @@ function NotificationModal({
       const res = await fetch(`/api/notifications?agcode=${agcode}`);
       const data = await res.json();
       if (res.ok) setNotifs(data.records || []);
-    } catch {}
+    } catch { }
     setLoading(false);
   }, [agcode]);
 
@@ -621,7 +621,7 @@ function NotificationModal({
       });
       setNotifs(prev => prev.map(n => n.rowIndex === rowIndex ? { ...n, isRead: true } : n));
       onRefreshCount();
-    } catch {}
+    } catch { }
   };
 
   return (
@@ -738,7 +738,7 @@ function TrainingCheckinTab({ member, onComplete }: { member: Member; onComplete
   const [events, setEvents] = useState<any[]>([]);
   const [selectedEvent, setSelectedEvent] = useState('');
   const [locText, setLocText] = useState('📍 定位獲取中...');
-  const [userLoc, setUserLoc] = useState<{latitude: number, longitude: number} | null>(null);
+  const [userLoc, setUserLoc] = useState<{ latitude: number, longitude: number } | null>(null);
 
   const API_URL = 'https://script.google.com/macros/s/AKfycbz4kiWGCG96zZHAJgc-wOAaCxOkS7WXf5IriAEKk0StXYFNVlME7x2SjaSva3Rp8obX/exec';
 
@@ -766,7 +766,7 @@ function TrainingCheckinTab({ member, onComplete }: { member: Member; onComplete
         { enableHighAccuracy: true }
       );
     }
-    
+
     // Simulate connection delay for better UX and fetch events
     Promise.all([
       gasRun('getTrainingEvents', true),
@@ -790,7 +790,7 @@ function TrainingCheckinTab({ member, onComplete }: { member: Member; onComplete
   const handleCheckin = async () => {
     if (!userLoc) return alert('尚未獲取 GPS 定位，請稍候。');
     if (!selectedEvent) return alert('請選擇欲簽到的場次');
-    
+
     setLoading(true);
     try {
       const res = await gasRun('trainingCheckin', {
@@ -832,71 +832,71 @@ function TrainingCheckinTab({ member, onComplete }: { member: Member; onComplete
   return (
     <div className="ios-page p-4">
       <div className="ios-card" style={{ marginBottom: '1rem', background: 'var(--bg-secondary)', border: '1px solid var(--border)' }}>
-         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
-           <div className="ios-card-icon" style={{ background: 'var(--blue)', width: 44, height: 44, flexShrink: 0, borderRadius: '50%' }}><IconCheckCircle size={24} color="#fff" /></div>
-           <div>
-             <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: '1.1rem' }}>{member.name} {member.rank}</div>
-             <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{member.agcode} • {member.group}</div>
-           </div>
-         </div>
-         <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg)', padding: '8px 12px', borderRadius: 8 }}>
-            <span style={{ fontSize: '1.2rem' }}>📍</span> {locText}
-         </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+          <div className="ios-card-icon" style={{ background: 'var(--blue)', width: 44, height: 44, flexShrink: 0, borderRadius: '50%' }}><IconCheckCircle size={24} color="#fff" /></div>
+          <div>
+            <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: '1.1rem' }}>{member.name} {member.rank}</div>
+            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{member.agcode} • {member.group}</div>
+          </div>
+        </div>
+        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 6, background: 'var(--bg)', padding: '8px 12px', borderRadius: 8 }}>
+          <span style={{ fontSize: '1.2rem' }}>📍</span> {locText}
+        </div>
       </div>
 
       {events.length === 0 ? (
-         <div className="ios-card" style={{ textAlign: 'center', padding: '3rem 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', background: 'transparent', boxShadow: 'none' }}>
-           <div style={{ padding: '24px', background: 'var(--bg-secondary)', borderRadius: '50%', color: 'var(--blue)' }}>
-             <IconInfo size={48} />
-           </div>
-           <div>
-             <div style={{ fontWeight: 600, fontSize: '1.2rem', marginBottom: '0.5rem' }}>目前無進行中的活動</div>
-             <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>請確認報到時間，或稍後再返回查看。</div>
-           </div>
-         </div>
+        <div className="ios-card" style={{ textAlign: 'center', padding: '3rem 1rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', background: 'transparent', boxShadow: 'none' }}>
+          <div style={{ padding: '24px', background: 'var(--bg-secondary)', borderRadius: '50%', color: 'var(--blue)' }}>
+            <IconInfo size={48} />
+          </div>
+          <div>
+            <div style={{ fontWeight: 600, fontSize: '1.2rem', marginBottom: '0.5rem' }}>目前無進行中的活動</div>
+            <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>請確認報到時間，或稍後再返回查看。</div>
+          </div>
+        </div>
       ) : (
-         <div className="ios-card" style={{ padding: '1.5rem 1rem' }}>
-           <div style={{ fontWeight: 600, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: 6, fontSize: '1.1rem' }}>
-             <IconGrid size={20} color="var(--blue)" />
-             請選擇簽到場次
-           </div>
-           
-           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
-             {events.map((ev: any) => (
-               <div 
-                 key={ev.id} 
-                 onClick={() => setSelectedEvent(ev.id)}
-                 style={{ 
-                   padding: '1.25rem', 
-                   borderRadius: '16px', 
-                   border: selectedEvent === ev.id ? '2px solid var(--blue)' : '2px solid transparent', 
-                   background: selectedEvent === ev.id ? 'var(--blue-muted)' : 'var(--bg-secondary)',
-                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                   transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                   cursor: 'pointer'
-                 }}>
-                 <div style={{ fontWeight: selectedEvent === ev.id ? 600 : 500, color: selectedEvent === ev.id ? 'var(--blue)' : 'var(--text)' }}>
-                   {ev.title}
-                 </div>
-                 {selectedEvent === ev.id && (
-                   <div style={{ color: 'var(--blue)', animation: 'scaleIn 0.3s ease-out' }}>
-                     <IconCheckCircle size={24} />
-                   </div>
-                 )}
-               </div>
-             ))}
-           </div>
+        <div className="ios-card" style={{ padding: '1.5rem 1rem' }}>
+          <div style={{ fontWeight: 600, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: 6, fontSize: '1.1rem' }}>
+            <IconGrid size={20} color="var(--blue)" />
+            請選擇簽到場次
+          </div>
 
-           <button 
-             className="btn btn-primary btn-full" 
-             style={{ height: '3.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, background: loading ? '#ccc' : 'var(--blue)', border: 'none' }} 
-             onClick={handleCheckin}
-             disabled={loading}
-           >
-             {loading && <span className="spinner" style={{ width: 22, height: 22, borderWidth: 2 }} />}
-             <span style={{ fontSize: '1.2rem', fontWeight: 600 }}>{loading ? '處理中...' : '確認簽到'}</span>
-           </button>
-         </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
+            {events.map((ev: any) => (
+              <div
+                key={ev.id}
+                onClick={() => setSelectedEvent(ev.id)}
+                style={{
+                  padding: '1.25rem',
+                  borderRadius: '16px',
+                  border: selectedEvent === ev.id ? '2px solid var(--blue)' : '2px solid transparent',
+                  background: selectedEvent === ev.id ? 'var(--blue-muted)' : 'var(--bg-secondary)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  cursor: 'pointer'
+                }}>
+                <div style={{ fontWeight: selectedEvent === ev.id ? 600 : 500, color: selectedEvent === ev.id ? 'var(--blue)' : 'var(--text)' }}>
+                  {ev.title}
+                </div>
+                {selectedEvent === ev.id && (
+                  <div style={{ color: 'var(--blue)', animation: 'scaleIn 0.3s ease-out' }}>
+                    <IconCheckCircle size={24} />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <button
+            className="btn btn-primary btn-full"
+            style={{ height: '3.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, background: loading ? '#ccc' : 'var(--blue)', border: 'none' }}
+            onClick={handleCheckin}
+            disabled={loading}
+          >
+            {loading && <span className="spinner" style={{ width: 22, height: 22, borderWidth: 2 }} />}
+            <span style={{ fontSize: '1.2rem', fontWeight: 600 }}>{loading ? '處理中...' : '確認簽到'}</span>
+          </button>
+        </div>
       )}
     </div>
   );
@@ -904,37 +904,37 @@ function TrainingCheckinTab({ member, onComplete }: { member: Member; onComplete
 
 // ─── More Tab ──────────────────────────────────────────────────────────────
 function MoreTab({ member, onLogout, onExtHistory, onExtTrainingCheckin }: { member: Member; onLogout: () => void; onExtHistory: () => void; onExtTrainingCheckin: () => void }) {
-    return (
-        <div className="ios-history-page">
-            <div className="section-header" style={{ marginTop: 0 }}>系統與外部整合</div>
-            <div className="ios-list">
-                <div className="ios-list-item" onClick={onExtTrainingCheckin}>
-                    <div className="ios-list-icon" style={{ background: 'var(--blue)' }}><IconRun color="#fff" size={18} /></div>
-                    <div className="ios-list-text">
-                        <div className="ios-list-title">SEED PRO 課程簽到</div>
-                        <div className="ios-list-desc">參加區單位主辦之訓練與活動</div>
-                    </div>
-                </div>
-                <div className="ios-list-item" onClick={onExtHistory}>
-                    <div className="ios-list-icon" style={{ background: '#5856D6' }}>🎓</div>
-                    <div className="ios-list-text">
-                        <div className="ios-list-title">區單位訓練歷程</div>
-                        <div className="ios-list-desc">同步查詢 seed-pro 課程與證照紀錄</div>
-                    </div>
-                    <IconChevronRight size={16} color="var(--text-secondary)" />
-                </div>
-                <div className="ios-list-item" onClick={onLogout}>
-                    <div className="ios-list-icon" style={{ background: '#FF3B30' }}>
-                        <IconLogOut size={18} />
-                    </div>
-                    <div className="ios-list-text">
-                        <div className="ios-list-title" style={{ color: '#FF3B30' }}>登出系統</div>
-                        <div className="ios-list-desc">登出目前帳號並返回登入頁面</div>
-                    </div>
-                </div>
-            </div>
+  return (
+    <div className="ios-history-page">
+      <div className="section-header" style={{ marginTop: 0 }}>系統與外部整合</div>
+      <div className="ios-list">
+        <div className="ios-list-item" onClick={onExtTrainingCheckin}>
+          <div className="ios-list-icon" style={{ background: 'var(--blue)' }}><IconRun color="#fff" size={18} /></div>
+          <div className="ios-list-text">
+            <div className="ios-list-title">SEED PRO 課程簽到</div>
+            <div className="ios-list-desc">參加區單位主辦之訓練與活動</div>
+          </div>
         </div>
-    );
+        <div className="ios-list-item" onClick={onExtHistory}>
+          <div className="ios-list-icon" style={{ background: '#5856D6' }}>🎓</div>
+          <div className="ios-list-text">
+            <div className="ios-list-title">區單位訓練歷程</div>
+            <div className="ios-list-desc">同步查詢 seed-pro 課程與證照紀錄</div>
+          </div>
+          <IconChevronRight size={16} color="var(--text-secondary)" />
+        </div>
+        <div className="ios-list-item" onClick={onLogout}>
+          <div className="ios-list-icon" style={{ background: '#FF3B30' }}>
+            <IconLogOut size={18} />
+          </div>
+          <div className="ios-list-text">
+            <div className="ios-list-title" style={{ color: '#FF3B30' }}>登出系統</div>
+            <div className="ios-list-desc">登出目前帳號並返回登入頁面</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ─── Home Page (Main App) ────────────────────────────────────────────────────
@@ -1016,7 +1016,7 @@ export default function HomePage() {
         <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', zIndex: 9999, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#fff' }}>
           <div style={{ animation: 'popIn 0.4s cubic-bezier(0.16, 1, 0.3, 1)', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <div style={{ width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,59,48,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 24 }}>
-                <IconAlertTriangle size={40} color="#FF3B30" />
+              <IconAlertTriangle size={40} color="#FF3B30" />
             </div>
             <h2 style={{ fontSize: '1.6rem', fontWeight: 700, margin: 0 }}>無使用權限</h2>
             <p style={{ marginTop: 12, color: 'rgba(255,255,255,0.7)', fontSize: '0.95rem' }}>此功能暫未對「準增員」開放使用</p>
@@ -1033,12 +1033,12 @@ export default function HomePage() {
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>祝你有美好的一天</p>
               </div>
               <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                <button 
-                  className="avatar-btn" 
-                  onClick={() => setShowNotif(true)} 
-                  style={{ 
-                    position: 'relative', 
-                    background: 'var(--surface-card)', 
+                <button
+                  className="avatar-btn"
+                  onClick={() => setShowNotif(true)}
+                  style={{
+                    position: 'relative',
+                    background: 'var(--surface-card)',
                     boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
                     borderRadius: '50%',
                     width: 44,
@@ -1049,8 +1049,8 @@ export default function HomePage() {
                     border: '1px solid var(--line)'
                   }}
                 >
-                    <IconBell size={22} color="var(--blue)" />
-                    {unreadCount > 0 && <span className="notification-badge" style={{ top: 2, right: 2 }}>{unreadCount}</span>}
+                  <IconBell size={22} color="var(--blue)" />
+                  {unreadCount > 0 && <span className="notification-badge" style={{ top: 2, right: 2 }}>{unreadCount}</span>}
                 </button>
               </div>
             </div>
@@ -1091,7 +1091,7 @@ export default function HomePage() {
                 <button className="ios-giant-btn" onClick={() => setScreen('checkin')}>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
                     <IconCheckCircle size={52} />
-                    <span style={{ fontSize: '1.4rem', fontWeight: 600, letterSpacing: '-0.02em' }}>上班打卡</span>
+                    <span style={{ fontSize: '1.4rem', fontWeight: 600, letterSpacing: '-0.02em' }}>打卡</span>
                   </div>
                 </button>
               </div>
@@ -1147,21 +1147,21 @@ export default function HomePage() {
         <div className={`ios-tab-item ${screen === 'query-visit' ? 'active' : ''}`} onClick={() => setScreen('query-visit')}><IconMapPin size={22} /> 拜訪</div>
         <div className={`ios-tab-item ${screen === 'more' ? 'active' : ''}`} onClick={() => setScreen('more')}><IconGrid size={22} /> 其他</div>
       </div>
-      
+
       {showNotif && <NotificationModal agcode={member.agcode} onClose={() => setShowNotif(false)} onRefreshCount={fetchUnread} />}
 
       {showScanner && (
         <QRScanner
-            title="掃描授權碼"
-            onScan={(url) => {
-                setShowScanner(false);
-                if (url.includes('/hr/authorize')) {
-                    window.location.href = url;
-                } else {
-                    toast.error('無效的授權碼或已過期');
-                }
-            }}
-            onClose={() => setShowScanner(false)}
+          title="掃描授權碼"
+          onScan={(url) => {
+            setShowScanner(false);
+            if (url.includes('/hr/authorize')) {
+              window.location.href = url;
+            } else {
+              toast.error('無效的授權碼或已過期');
+            }
+          }}
+          onClose={() => setShowScanner(false)}
         />
       )}
     </div>

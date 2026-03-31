@@ -164,8 +164,14 @@ export default function HRPage() {
     // ─── Render ───────────────────────────────────────────────────────────────
     return (
         <div className="hr-wrap">
-            <header className="hr-header-bar">
+            <header className="hr-header-bar" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
                 <h1>資料異動申請</h1>
+                {supervisorInfo.supervisorName && (
+                    <div style={{ position: 'absolute', right: 24, fontSize: '0.85rem', color: '#86868b', display: 'flex', alignItems: 'center', gap: 6, background: '#f5f5f7', padding: '6px 12px', borderRadius: 20 }}>
+                        <div style={{ width: 6, height: 6, borderRadius: 3, background: '#34C759' }} />
+                        操作者：{supervisorInfo.supervisorName}
+                    </div>
+                )}
             </header>
 
             <main className="hr-main">
@@ -184,7 +190,7 @@ export default function HRPage() {
                         </div>
                         <h2>請掃碼授權</h2>
                         <p style={{ color: '#86868b', margin: '12px 0 32px' }}>
-                            進入異動系統前，需主管授權
+                            進入異動系統前，需授權
                         </p>
                         <button className="hr-btn hr-btn-primary" onClick={() => startQrAuth('ENTRY')}>
                             產生授權碼
@@ -196,7 +202,7 @@ export default function HRPage() {
                 {step === 'AUTH_QR' && (
                     <div className="hr-auth-card">
                         <h2 style={{ marginBottom: 8 }}>
-                            {authPhase === 'ENTRY' ? '主管驗證－進入授權' : '主管驗證－提交簽署'}
+                            {authPhase === 'ENTRY' ? '進入授權' : '提交簽署'}
                         </h2>
                         <p style={{ color: '#86868b', marginBottom: 28, fontSize: '0.9rem' }}>
                             請主管以手機開啟打卡首頁，點擊<strong>「掃描授權」</strong>，掃描下方 QR Code
@@ -226,11 +232,6 @@ export default function HRPage() {
                 {/* ── Step 2: 選擇功能 ── */}
                 {step === 'SELECT_MODE' && (
                     <div>
-                        {supervisorInfo.supervisorName && (
-                            <div style={{ textAlign: 'center', marginBottom: 24, color: '#34C759', fontWeight: 600 }}>
-                                ✅ 已由 {supervisorInfo.supervisorName}（{supervisorInfo.supervisorAgcode}）授權進入
-                            </div>
-                        )}
                         <div className="hr-mode-grid">
                             {([
                                 { mode: 'candidate', label: '準增員建檔', icon: <IconUserPlus />, color: '#E3F2FD', iconColor: '#2196F3' },
@@ -264,7 +265,7 @@ export default function HRPage() {
                             <IconSearch size={32} color="#007aff" />
                         </div>
                         <h2>人員查詢</h2>
-                        <p style={{ color: '#86868b', margin: '8px 0 24px' }}>請輸入要操作對象的身分證或業務代號</p>
+                        <p style={{ color: '#86868b', margin: '8px 0 24px' }}>請輸入身分證或業務代號</p>
                         <div style={{ display: 'flex', gap: 10 }}>
                             <input
                                 className="hr-form-input" style={{ flex: 1 }}
@@ -274,9 +275,6 @@ export default function HRPage() {
                                 autoFocus
                             />
                             <button className="hr-btn hr-btn-primary" onClick={() => loadProfile(queryId)}>搜尋</button>
-                            <button className="hr-btn hr-btn-ghost" style={{ padding: '0 16px' }} onClick={() => setShowScanner(true)}>
-                                <IconCamera size={20} />
-                            </button>
                         </div>
                         <button className="hr-btn hr-btn-ghost" style={{ marginTop: 20 }} onClick={() => setStep('SELECT_MODE')}>返回</button>
                     </div>

@@ -163,3 +163,11 @@ export function IconCamera({ size = 20, color = 'currentColor' }: { size?: numbe
 export function IconEye({ size = 20, color = 'currentColor' }: { size?: number; color?: string }) {
     return <svg {...props} width={size} height={size} stroke={color}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>;
 }
+
+export function IconShieldCheck({ size = 20, color = 'currentColor' }: { size?: number; color?: string }) {
+    return <svg {...props} width={size} height={size} stroke={color}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /><path d="M9 12l2 2 4-4" /></svg>;
+}
+
+export function IconUserEdit({ size = 20, color = 'currentColor' }: { size?: number; color?: string }) {
+    return <svg {...props} width={size} height={size} stroke={color}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /><path d="M18 10l3 3-5 5-2-2 4-6z" /></svg>;
+}
