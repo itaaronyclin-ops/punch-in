@@ -151,3 +151,12 @@ export function IconInfo({ size = 20, color = 'currentColor' }: { size?: number;
 export function IconRefreshCw({ size = 20, color = 'currentColor' }: { size?: number; color?: string }) {
     return <svg {...props} width={size} height={size} stroke={color}><polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>;
 }
+
+export function IconQrcode({ size = 20, color = 'currentColor' }: { size?: number; color?: string }) {
+    return <svg {...props} width={size} height={size} stroke={color}><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><path d="M14 14h3m3 0h0m0 3h-3m3 3h-3m0-3h-3m3 0v3m-3-3v3m3-6v3" /></svg>;
+}
+
+export function IconCamera({ size = 20, color = 'currentColor' }: { size?: number; color?: string }) {
+    return <svg {...props} width={size} height={size} stroke={color}><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="3" /></svg>;
+}
+

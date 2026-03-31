@@ -17,6 +17,7 @@ const SHEET = {
   TG_SETTINGS:   'TGSettings',
   NOTIFICATIONS: 'Notifications',
   PROFILES:      'Profiles',
+  AUTH:          'AuthSessions',
 };
 
 // ─── Entry Points ──────────────────────────────────────────────────────────
@@ -88,6 +89,11 @@ function handleRequest(e) {
       case 'getNotifications':  result = getNotifications(data); break;
       case 'addNotification':   result = addNotification(data);        break;
       case 'markNotificationRead': result = markNotificationRead(data.rowIndex); break;
+
+      // ── Auth Sessions ───────────────────────────────────────────────────
+      case 'createAuthSession':  result = createAuthSession(data);  break;
+      case 'approveAuthSession': result = approveAuthSession(data); break;
+      case 'getAuthSession':     result = getAuthSession(data.id);  break;
 
       // ── Init ──────────────────────────────────────────────────────────────
       case 'initSheets':        result = initSheets();                break;
@@ -209,6 +215,7 @@ function getMemberByAgcode(agcode) {
       rank: m.rank,
       group: m.group,
       supervisor: m.supervisor,
+      isAdmin: m.isadmin,
       createdAt: m.createdat,
       rowIndex: m.rowIndex,
     }
@@ -221,14 +228,14 @@ function addMember(data) {
   // 檢查重複
   const { members } = getMembers();
   if (members.find(m => m.AGCODE === agcode.toUpperCase())) return { error: '此 AGCODE 已存在' };
-  appendRow(SHEET.MEMBERS, [agcode.toUpperCase(), name, rank, group || '', supervisor || '', nowStr()]);
+  appendRow(SHEET.MEMBERS, [agcode.toUpperCase(), name, rank, group || '', supervisor || '', data.isAdmin ? 'TRUE' : 'FALSE', nowStr()]);
   return { success: true };
 }
 
 function updateMember(data) {
-  const { rowIndex, agcode, name, rank, group, supervisor, createdAt } = data;
+  const { rowIndex, agcode, name, rank, group, supervisor, isAdmin, createdAt } = data;
   if (!rowIndex) return { error: '參數不完整' };
-  updateRow(SHEET.MEMBERS, parseInt(rowIndex), [agcode || '', name || '', rank || '', group || '', supervisor || '', createdAt || '']);
+  updateRow(SHEET.MEMBERS, parseInt(rowIndex), [agcode || '', name || '', rank || '', group || '', supervisor || '', isAdmin ? 'TRUE' : 'FALSE', createdAt || '']);
   return { success: true };
 }
 
@@ -568,12 +575,42 @@ function markNotificationRead(rowIndex) {
   return { success: true };
 }
 
+// ─── Auth Sessions ─────────────────────────────────────────────────────────
+
+function createAuthSession(data) {
+  const { id } = data;
+  if (!id) return { error: 'id required' };
+  appendRow(SHEET.AUTH, [id, 'pending', '', '', '', '', nowStr(), nowStr()]);
+  return { success: true };
+}
+
+function approveAuthSession(data) {
+  const { id, supervisorAgcode, supervisorName } = data;
+  if (!id || !supervisorAgcode) return { error: 'params required' };
+  const sheet = getSheet(SHEET.AUTH);
+  const rows = sheetToObjects(sheet);
+  const session = rows.find(r => r.sessionid === id);
+  if (!session) return { error: 'session not found' };
+  
+  updateRow(SHEET.AUTH, session.rowIndex, [id, 'approved', supervisorAgcode, supervisorName || '', '', '', session.createdat, nowStr()]);
+  return { success: true };
+}
+
+function getAuthSession(id) {
+  if (!id) return { error: 'id required' };
+  const sheet = getSheet(SHEET.AUTH);
+  const rows = sheetToObjects(sheet);
+  const session = rows.find(r => r.sessionid === id);
+  if (!session) return { error: 'session not found' };
+  return { session };
+}
+
 // ─── Init Sheets ────────────────────────────────────────────────────────────
 
 function initSheets() {
   const ss = getSpreadsheet();
   const sheetDefs = [
-    { name: SHEET.MEMBERS,       headers: ['AGCODE', 'Name', 'Rank', 'Group', 'Supervisor', 'CreatedAt'] },
+    { name: SHEET.MEMBERS,       headers: ['AGCODE', 'Name', 'Rank', 'Group', 'Supervisor', 'IsAdmin', 'CreatedAt'] },
     { name: SHEET.ATTENDANCE,    headers: ['ID', 'AGCODE', 'Name', 'Type', 'CheckinTime', 'Date', 'IP', 'Lat', 'Lng', 'IsFieldWork', 'Notes'] },
     { name: SHEET.LEAVE,         headers: ['ID', 'AGCODE', 'Name', 'LeaveDate', 'Reason', 'Status', 'RequestTime', 'ReviewTime', 'Reviewer', 'Notes'] },
     { name: SHEET.VISIT,         headers: ['ID', 'AGCODE', 'Name', 'VisitTime', 'Date', 'Purpose', 'ClientName', 'Notes', 'Lat', 'Lng'] },
@@ -582,22 +619,26 @@ function initSheets() {
     { name: SHEET.TG_SETTINGS,   headers: ['AGCODE', 'ChatId', 'NotificationTypes', 'Role'] },
     { name: SHEET.NOTIFICATIONS, headers: ['ID', 'AGCODE', 'Type', 'Title', 'Content', 'CreatedAt', 'IsRead'] },
     { name: SHEET.PROFILES,      headers: ['ID', 'AGCODE', 'IDCard', 'Name', 'Birthday', 'Gender', 'Phone', 'Email', 'AddressContact', 'AddressResident', 'EmgName', 'EmgRelation', 'EmgPhone', 'EduLevel', 'EduSchool', 'PrevIndustry', 'PrevJob', 'GroupName', 'CertEthics', 'CertLife', 'CertProperty', 'CertForeign', 'CertInvestment', 'Rank', 'CreatedAt', 'UpdatedAt'] },
+    { name: SHEET.AUTH,          headers: ['SessionId', 'Status', 'SupervisorAgcode', 'SupervisorName', 'ApplicantAgcode', 'ApplicantName', 'CreatedAt', 'UpdatedAt'] },
   ];
 
   sheetDefs.forEach(def => {
-    let sheet = ss.getSheetByName(def.name);
-    if (!sheet) {
-      sheet = ss.insertSheet(def.name);
-      sheet.getRange(1, 1, 1, def.headers.length).setValues([def.headers]);
-      // 設定標題列格式
-      const headerRange = sheet.getRange(1, 1, 1, def.headers.length);
-      headerRange.setBackground('#4a4a4a');
-      headerRange.setFontColor('#ffffff');
-      headerRange.setFontWeight('bold');
-      sheet.setFrozenRows(1);
-      Logger.log('Created sheet: ' + def.name);
+    let s = ss.getSheetByName(def.name);
+    if (!s) {
+      s = ss.insertSheet(def.name);
+      s.getRange(1, 1, 1, def.headers.length).setValues([def.headers]);
+      const headerRange = s.getRange(1, 1, 1, def.headers.length);
+      headerRange.setBackground('#4a4a4a').setFontColor('#ffffff').setFontWeight('bold');
+      s.setFrozenRows(1);
     } else {
-      Logger.log('Sheet already exists: ' + def.name);
+      const lastCol = s.getLastColumn();
+      const existingHeaders = lastCol > 0 ? s.getRange(1, 1, 1, lastCol).getValues()[0] : [];
+      const missingHeaders = def.headers.filter(h => existingHeaders.indexOf(h) === -1);
+      if (missingHeaders.length > 0) {
+        s.getRange(1, lastCol + 1, 1, missingHeaders.length).setValues([missingHeaders]);
+        const newHeaderRange = s.getRange(1, lastCol + 1, 1, missingHeaders.length);
+        newHeaderRange.setBackground('#4a4a4a').setFontColor('#ffffff').setFontWeight('bold');
+      }
     }
   });
 }
@@ -642,6 +683,7 @@ function saveProfile(data) {
       if (!agcode) return { error: '新進業務員需要有效的 AGCODE' };
       data.rank = data.rank || 'AG';
     }
+    const searchKey = ((actionStatus === 'upgrade' || actionStatus === 'update' || actionStatus === 'delete') ? (oldAgcode || agcode || idcard) : (agcode || idcard)).toUpperCase();
 
     if (actionStatus === 'delete') {
       const sheet = getSheet(SHEET.PROFILES);
@@ -706,6 +748,10 @@ function saveProfile(data) {
       if (h === 'CreatedAt') return targetRowIndex > -1 ? values[targetRowIndex - 1][headers.indexOf('CreatedAt')] : now;
       if (h === 'UpdatedAt') return now;
       // Special mapping or direct match
+      if (h === 'Phone' || h === 'EmgPhone') {
+        let val = data[key] !== undefined ? data[key] : (targetRowIndex > -1 ? values[targetRowIndex - 1][headers.indexOf(h)] : '');
+        return val ? ("'" + String(val).replace(/^'/, "")) : '';
+      }
       return data[key] !== undefined ? data[key] : (targetRowIndex > -1 ? values[targetRowIndex - 1][headers.indexOf(h)] : '');
     });
 
@@ -740,13 +786,29 @@ function saveProfile(data) {
         if (h === 'AGCODE') return agcode;
         if (h === 'Name') return mName;
         if (h === 'Rank') return mRank;
-        if (h === 'Group') return mGroup || existingMemRow[j];
-        if (h === 'Supervisor') return mSuper || existingMemRow[j];
-        return existingMemRow[j];
+        if (h === 'Group') return mGroup || (memRowIndex > -1 ? memData[memRowIndex - 1][j] : '');
+        if (h === 'Supervisor') return mSuper || (memRowIndex > -1 ? memData[memRowIndex - 1][j] : '');
+        if (h === 'IsAdmin') return (memRowIndex > -1 ? memData[memRowIndex - 1][j] : 'FALSE');
+        return (memRowIndex > -1 ? memData[memRowIndex - 1][j] : '');
       });
-      memSheet.getRange(memRowIndex, 1, 1, newMemRow.length).setValues([newMemRow]);
+      if (memRowIndex > -1) {
+        memSheet.getRange(memRowIndex, 1, 1, newMemRow.length).setValues([newMemRow]);
+      } else {
+        memSheet.appendRow(newMemRow);
+      }
     } else {
-      memSheet.appendRow([agcode, mName, mRank, mGroup, mSuper, now]);
+      // Create new member row properly aligned with headers
+      const newMemRow = memHeaders.map(h => {
+        if (h === 'AGCODE') return agcode;
+        if (h === 'Name') return mName;
+        if (h === 'Rank') return mRank;
+        if (h === 'Group') return mGroup;
+        if (h === 'Supervisor') return mSuper;
+        if (h === 'IsAdmin') return 'FALSE';
+        if (h === 'CreatedAt') return now;
+        return '';
+      });
+      memSheet.appendRow(newMemRow);
     }
     
     // If upgrade, shift all old records to new AGCODE
@@ -800,12 +862,10 @@ function autoSendMonthlyReports() {
 }
 
 function triggerReportApi(type) {
-  const settings = getAllSettings();
-  const gasUrl = settings.GAS_URL || ''; 
-  // 注意：此處需要 Next.js 的完整網址，通常可以從 Settings 讀取或手動定義
-  const baseUrl = 'https://attendance-pro-final-v14.vercel.app'; // ⚠️ 請確保此網址正確或從設定讀取
+  const settings = getAllSettings().settings || {};
+  const baseUrl = settings.system_base_url || 'https://attendance-pro-final-v14.vercel.app'; 
   const url = `${baseUrl}/api/admin/report`;
-  const cronSecret = 'attendance_cron_secret_79358'; // 這是我們定義的內部密鑰
+  const cronSecret = 'attendance_cron_secret_79358';
   
   const options = {
     method: 'post',

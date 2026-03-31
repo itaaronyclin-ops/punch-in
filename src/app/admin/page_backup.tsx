@@ -6,10 +6,9 @@ import {
     IconCalendar, IconSettings, IconMessageSquare, IconLogo,
     IconShield, IconLock, IconPlus, IconX, IconEdit, IconTrash,
     IconLogOut, IconDownload, IconAlertTriangle, IconCheck, IconDatabase,
-    IconCheckCircle, IconSend, IconClock, IconRefreshCw, IconRun, IconQrcode, IconCamera, IconEye,
+    IconCheckCircle, IconSend, IconClock, IconRefreshCw, IconRun,
     LoadingState, SkeletonRows,
 } from '@/components/Icons';
-import QRScanner from '@/components/QRScanner';
 import { confirmDialog, toast } from '@/components/GlobalUI';
 
 function formatDateTime(str: string): { date: string; time: string } {
@@ -141,6 +140,7 @@ type AdminSection =
     | 'settings'
     | 'tg-settings'
     | 'reports'
+    | 'profiles';
 
 function useAdminAuth() {
     const [token, setToken] = useState('');
@@ -177,13 +177,12 @@ function useAdminAuth() {
 function LoginScreen({ onLogin }: { onLogin: (pw: string) => Promise<boolean> }) {
     const [pw, setPw] = useState('');
     const [loading, setLoading] = useState(false);
-    const [showScanner, setShowScanner] = useState(false);
 
-    const handleSubmit = async (e?: React.FormEvent) => {
-        if (e) e.preventDefault();
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
         setLoading(true);
         const ok = await onLogin(pw);
-        if (!ok) toast.error('密碼錯誤或權限不足');
+        if (!ok) toast.error('密碼錯誤，請再試一次');
         setLoading(false);
     };
 
@@ -192,7 +191,7 @@ function LoginScreen({ onLogin }: { onLogin: (pw: string) => Promise<boolean> })
             <div className="login-box">
                 <div className="login-icon-wrap"><IconLock size={32} /></div>
                 <h1 style={{ fontSize: '1.4rem', fontWeight: 700, letterSpacing: '-0.03em', marginBottom: 6 }}>後台管理</h1>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 32 }}>請登入系統以繼續</p>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 32 }}>請輸入管理員密碼以繼續</p>
                 <form onSubmit={handleSubmit}>
                     <div className="form-group" style={{ textAlign: 'left' }}>
                         <label className="form-label">管理員密碼</label>
@@ -209,34 +208,11 @@ function LoginScreen({ onLogin }: { onLogin: (pw: string) => Promise<boolean> })
                         {loading ? <span className="spinner" /> : null}
                         {loading ? '驗證中⋯' : '登入系統'}
                     </button>
-                    
-                    <div style={{ margin: '20px 0', display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{ flex: 1, height: 1, background: 'var(--separator)' }} />
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>或使用</span>
-                        <div style={{ flex: 1, height: 1, background: 'var(--separator)' }} />
-                    </div>
-
-                    <button type="button" className="btn btn-secondary btn-full" onClick={() => setShowScanner(true)}>
-                        <IconQrcode size={18} /> 掃描管理員身分碼登入
-                    </button>
-
                     <div style={{ marginTop: 24 }}>
                         <a href="/" className="btn-text" style={{ fontSize: '0.85rem' }}>← 返回打卡首頁</a>
                     </div>
                 </form>
             </div>
-
-            {showScanner && (
-                <QRScanner 
-                    title="管理員登入掃描"
-                    onScan={(val) => {
-                        setPw(val);
-                        setShowScanner(false);
-                        setTimeout(() => handleSubmit(), 200);
-                    }}
-                    onClose={() => setShowScanner(false)}
-                />
-            )}
         </div>
     );
 }
@@ -987,7 +963,7 @@ function RequiredDaysSection({ token }: { token: string }) {
 
             <div className="card" style={{ marginBottom: 24, padding: 20 }}>
                 <div className="card-header" style={{ marginBottom: 20 }}>
-                    <div className="card-icon green"><IconPlus size={22} /></div>
+                    <div className="card-icon green">➕</div>
                     <div><div className="card-title">批次新增必要出席日</div><div className="card-subtitle">選取多位同仁並指定日期與門檻</div></div>
                 </div>
 
@@ -1075,7 +1051,7 @@ function RequiredDaysSection({ token }: { token: string }) {
                     <thead><tr><th>AGCODE</th><th>日期</th><th>遲到時間</th><th>操作</th></tr></thead>
                     <tbody>
                         {loading ? <SkeletonRows cols={4} rows={4} /> : records.length === 0
-                            ? <tr><td colSpan={4}><div className="empty-state"><div className="empty-state-icon"><IconCalendar size={28} /></div><div className="empty-state-text">尚無設定</div></div></td></tr>
+                            ? <tr><td colSpan={4}><div className="empty-state"><div className="empty-state-icon">📅</div><div className="empty-state-text">尚無設定</div></div></td></tr>
                             : records.sort((a, b) => (b.date || '').localeCompare(a.date || '')).map((r, i) => (
                                 <tr key={i}>
                                     <td><code style={{ fontFamily: 'var(--font-mono)', fontSize: '0.85rem' }}>{r.agcode}</code></td>
@@ -1164,7 +1140,6 @@ function SettingsSection({ token }: { token: string }) {
         { key: 'checkin_lat', label: '簽到中心緯度', placeholder: '例：25.0330' },
         { key: 'checkin_lng', label: '簽到中心經度', placeholder: '例：121.5654' },
         { key: 'checkin_radius', label: '簽到半徑（公尺）', placeholder: '例：200' },
-        { key: 'system_base_url', label: '系統對外網址 (CRM/Cron)', placeholder: '例：https://myapp.vercel.app' },
     ];
 
     return (
@@ -1175,7 +1150,7 @@ function SettingsSection({ token }: { token: string }) {
                     <div className="card" style={{ marginBottom: 20 }}>
                         <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                             <div style={{ display: 'flex', gap: 12 }}>
-                                <div className="card-icon blue"><IconMapPin size={22} /></div>
+                                <div className="card-icon blue">📍</div>
                                 <div><div className="card-title">簽到位置設定</div><div className="card-subtitle">設定公司辦公室的 GPS 位置與範圍</div></div>
                             </div>
                             <button className="btn btn-ghost btn-sm" onClick={fetchCurrentLocation}>
@@ -1209,7 +1184,7 @@ function SettingsSection({ token }: { token: string }) {
 
                     <div className="card">
                         <div className="card-header">
-                            <div className="card-icon orange"><IconDatabase size={22} /></div>
+                            <div className="card-icon orange">🗂️</div>
                             <div><div className="card-title">Google Sheets 初始化</div><div className="card-subtitle">首次使用時，自動建立所有需要的工作表</div></div>
                         </div>
                         <button className="btn btn-primary" onClick={initSheets}>
@@ -1482,83 +1457,44 @@ function ReportsSection({ token }: { token: string }) {
     );
 }
 
-// ─── Personnel Section (Merged & Enhanced) ───────────────────────────────
+// ─── Personnel Section (Merged) ───────────────────────────────────────────
 function PersonnelSection({ token }: { token: string }) {
     const [records, setRecords] = useState<any[]>([]);
-    const [members, setMembers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
-    const [selectedProfile, setSelectedProfile] = useState<any>(null);
-    const [showEditModal, setShowEditModal] = useState(false);
-    const [editForm, setEditForm] = useState<any>(null);
-    const [saving, setSaving] = useState(false);
 
     const load = async () => {
         setLoading(true);
         try {
             const h = { 'x-admin-token': token };
-            const [pr, mr] = await Promise.all([
-                fetch('/api/admin/profiles', { headers: h }).then(res => res.json()),
-                fetch('/api/admin/members', { headers: h }).then(res => res.json())
-            ]);
-            if (pr.records) setRecords(pr.records);
-            if (mr.members) setMembers(mr.members);
+            const r = await fetch('/api/admin/profiles', { headers: h }).then(res => res.json());
+            if (r.records) setRecords(r.records);
         } catch { }
         setLoading(false);
     };
 
     useEffect(() => { load(); }, []);
 
-    const handleSaveMember = async () => {
-        setSaving(true);
-        try {
-            const res = await fetch('/api/admin/members', {
-                method: 'POST',
-                headers: { 'x-admin-token': token, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: editForm.rowIndex ? 'update' : 'add', ...editForm })
-            });
-            if (res.ok) {
-                toast.success('儲存成功');
-                setShowEditModal(false);
-                load();
-            } else { toast.error('儲存失敗'); }
-        } catch { toast.error('網路錯誤'); }
-        setSaving(false);
-    };
-
-    const handleDeleteMember = (r: any) => {
-        confirmDialog(`確定刪除 ${r.name} (${r.agcode}) 嗎？`, async () => {
-            await fetch('/api/admin/members', {
-                method: 'POST',
-                headers: { 'x-admin-token': token, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'delete', rowIndex: r.rowIndex })
-            });
-            toast.success('已刪除');
-            load();
-        });
-    };
-
-    const filtered = members.filter(m => 
-        (m.name || '').includes(search) || 
-        (m.agcode || '').toUpperCase().includes(search.toUpperCase())
+    const filtered = records.filter(r => 
+        (r.name || '').includes(search) || 
+        (r.agcode || '').toUpperCase().includes(search.toUpperCase()) ||
+        (r.idcard || '').toUpperCase().includes(search.toUpperCase())
     );
-
-    const getProfile = (agcode: string) => records.find(p => p.agcode === agcode);
 
     return (
         <div style={{ height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column' }}>
             <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexShrink: 0 }}>
                 <div>
-                    <h1 className="page-title">人員維護與資料庫</h1>
-                    <p className="page-subtitle">管理所有業務同仁基本資料、HR 詳細履歷及權限設定</p>
+                    <h1 className="page-title">人員資料維護</h1>
+                    <p className="page-subtitle">管理準增員與業務員的詳細履歷、證照及系統權限</p>
                 </div>
                 <div style={{ display: 'flex', gap: 12 }}>
                     <button className="btn btn-secondary" onClick={load} disabled={loading}>
                         {loading ? <span className="spinner" /> : <IconRefreshCw size={14} />} 重新整理
                     </button>
-                    <button className="btn btn-primary" onClick={() => { setEditForm({ agcode: '', name: '', rank: 'AG', group: '', supervisor: '', isAdmin: false }); setShowEditModal(true); }}>
-                        ＋ 新增人員
-                    </button>
+                    <a href="/hr" target="_blank" rel="noreferrer" className="btn btn-primary" style={{ textDecoration: 'none' }}>
+                        前往資料異動申請 →
+                    </a>
                 </div>
             </div>
 
@@ -1567,7 +1503,7 @@ function PersonnelSection({ token }: { token: string }) {
                     <input 
                         type="text" 
                         className="form-input" 
-                        placeholder="搜尋姓名、代號..." 
+                        placeholder="搜尋姓名、代號或身分證..." 
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                     />
@@ -1578,214 +1514,43 @@ function PersonnelSection({ token }: { token: string }) {
                 <table>
                     <thead style={{ position: 'sticky', top: 0, zIndex: 5 }}>
                         <tr>
-                            <th>狀態</th>
+                            <th>職級狀態</th>
                             <th>業務代號</th>
                             <th>姓名</th>
-                            <th>組別 / 主管</th>
-                            <th>管理員</th>
-                            <th>HR 詳細資料</th>
-                            <th>操作</th>
+                            <th>身分證</th>
+                            <th>手機號碼</th>
+                            <th>組別</th>
+                            <th>壽險證照</th>
+                            <th>更新時間</th>
                         </tr>
                     </thead>
                     <tbody>
                         {loading ? (
-                            <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40 }}><LoadingState label="讀取資料中..." /></td></tr>
+                            <tr><td colSpan={8} style={{ textAlign: 'center', padding: 40 }}><LoadingState label="讀取資料中..." /></td></tr>
                         ) : filtered.length === 0 ? (
-                            <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40, color: '#8E8E93' }}>查無相符資料</td></tr>
-                        ) : filtered.map((r, i) => {
-                            const profile = getProfile(r.agcode);
-                            const isAdmin = String(r.isadmin || '').toUpperCase() === 'TRUE';
-                            return (
-                                <tr key={r.agcode || i}>
-                                    <td>
-                                        <span className={`badge ${r.rank === '準增員' ? 'badge-orange' : 'badge-blue'}`} style={{ fontSize: '0.75rem' }}>
-                                            {r.rank}
-                                        </span>
-                                    </td>
-                                    <td><code style={{ background: '#F2F2F7', padding: '2px 4px', borderRadius: 4 }}>{r.agcode}</code></td>
-                                    <td style={{ fontWeight: 600 }}>{r.name}</td>
-                                    <td>
-                                        <div style={{ fontSize: '0.85rem' }}>{r.group || '—'}</div>
-                                        <div style={{ fontSize: '0.75rem', color: '#8E8E93' }}>{r.supervisor || '—'}</div>
-                                    </td>
-                                    <td>
-                                        {isAdmin ? <IconShield color="var(--blue)" size={18} /> : <span style={{ color: '#ccc' }}>—</span>}
-                                    </td>
-                                    <td>
-                                        {profile ? (
-                                            <button className="btn btn-ghost btn-sm" style={{ gap: 4 }} onClick={() => setSelectedProfile(profile)}>
-                                                <IconEye size={14} /> 查看詳情
-                                            </button>
-                                        ) : (
-                                            <span style={{ fontSize: '0.8rem', color: '#8E8E93' }}>未填寫</span>
-                                        )}
-                                    </td>
-                                    <td>
-                                        <div style={{ display: 'flex', gap: 6 }}>
-                                            <button className="btn btn-ghost btn-sm" onClick={() => { setEditForm({ ...r, isAdmin }); setShowEditModal(true); }}>編輯</button>
-                                            <button className="btn btn-danger btn-sm" onClick={() => handleDeleteMember(r)}>刪除</button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            );
-                        })}
+                            <tr><td colSpan={8} style={{ textAlign: 'center', padding: 40, color: '#8E8E93' }}>查無相符資料</td></tr>
+                        ) : filtered.map((r, i) => (
+                            <tr key={r.id || i}>
+                                <td>
+                                    <span className={`badge ${r.rank === '準增員' ? 'badge-orange' : 'badge-blue'}`} style={{ fontSize: '0.75rem' }}>
+                                        {r.rank}
+                                    </span>
+                                </td>
+                                <td><code style={{ background: '#F2F2F7', padding: '2px 4px', borderRadius: 4 }}>{r.agcode}</code></td>
+                                <td style={{ fontWeight: 600 }}>{r.name}</td>
+                                <td>{r.idcard}</td>
+                                <td>{r.phone}</td>
+                                <td>{r.groupName}</td>
+                                <td>{r.certLife ? '已取得' : '未登錄'}</td>
+                                <td style={{ fontSize: '0.8rem', color: '#8E8E93' }}>{r.updatedAt || r.createdAt}</td>
+                            </tr>
+                        ))}
                     </tbody>
                 </table>
             </div>
-
-            {/* Edit Modal */}
-            {showEditModal && (
-                <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
-                    <div className="modal" style={{ maxWidth: 480 }} onClick={e => e.stopPropagation()}>
-                        <div className="modal-header">
-                            <span className="modal-title">{editForm.rowIndex ? '編輯人員' : '新增人員'}</span>
-                            <button className="modal-close" onClick={() => setShowEditModal(false)}><IconX size={16} /></button>
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                            <div className="form-group">
-                                <label className="form-label">業務代號</label>
-                                <input className="form-input" value={editForm.agcode} onChange={e => setEditForm({ ...editForm, agcode: e.target.value.toUpperCase() })} placeholder="AGCODE" />
-                            </div>
-                            <div className="form-group">
-                                <label className="form-label">姓名</label>
-                                <input className="form-input" value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} placeholder="姓名" />
-                            </div>
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                            <div className="form-group">
-                                <label className="form-label">職級</label>
-                                <input className="form-input" value={editForm.rank} onChange={e => setEditForm({ ...editForm, rank: e.target.value })} placeholder="AG / ASA / UM..." />
-                            </div>
-                            <div className="form-group">
-                                <label className="form-label">組別</label>
-                                <input className="form-input" value={editForm.group} onChange={e => setEditForm({ ...editForm, group: e.target.value })} placeholder="組別名稱" />
-                            </div>
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label">主管 (AGCODE+名稱)</label>
-                            <input className="form-input" value={editForm.supervisor} onChange={e => setEditForm({ ...editForm, supervisor: e.target.value })} placeholder="例：200173798盛傑UM" />
-                        </div>
-                        <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: '#F2F2F7', borderRadius: 12 }}>
-                            <input 
-                                type="checkbox" 
-                                id="is-admin" 
-                                checked={editForm.isAdmin} 
-                                onChange={e => setEditForm({ ...editForm, isAdmin: e.target.checked })}
-                                style={{ width: 18, height: 18 }}
-                            />
-                            <label htmlFor="is-admin" style={{ fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer' }}>賦予管理員權限 (可用 QR Code 登入後台)</label>
-                        </div>
-                        <div className="action-row">
-                            <button className="btn btn-ghost" onClick={() => setShowEditModal(false)}>取消</button>
-                            <button className="btn btn-primary" onClick={handleSaveMember} disabled={saving || !editForm.agcode || !editForm.name}>
-                                {saving ? <span className="spinner" /> : null}
-                                {saving ? '儲存中⋯' : '確定位人員儲存'}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Full Screen HR Profile Detail */}
-            {selectedProfile && (
-                <div className="fullscreen-overlay">
-                    <div className="fullscreen-header">
-                        <div className="fs-title-group">
-                            <IconEye size={24} color="var(--blue)" />
-                            <div>
-                                <h2>{selectedProfile.name} 的詳細履歷</h2>
-                                <p>{selectedProfile.agcode} | {selectedProfile.idcard}</p>
-                            </div>
-                        </div>
-                        <button className="fs-close" onClick={() => setSelectedProfile(null)}><IconX size={24} /></button>
-                    </div>
-                    <div className="fullscreen-body">
-                        <div className="profile-detail-grid">
-                            <DetailCard title="基本身分" icon={<IconUsers size={20} />}>
-                                <DetailItem label="姓名" value={selectedProfile.name} />
-                                <DetailItem label="身分證" value={selectedProfile.idcard} />
-                                <DetailItem label="出生日期" value={selectedProfile.birthday} />
-                                <DetailItem label="性別" value={selectedProfile.gender} />
-                            </DetailCard>
-                            <DetailCard title="聯繫資訊" icon={<IconMessageSquare size={20} />}>
-                                <DetailItem label="手機" value={selectedProfile.phone} />
-                                <DetailItem label="Email" value={selectedProfile.email} />
-                                <DetailItem label="通訊地址" value={selectedProfile.addressContact} full />
-                                <DetailItem label="戶籍地址" value={selectedProfile.addressResident} full />
-                            </DetailCard>
-                            <DetailCard title="緊急聯絡" icon={<IconAlertTriangle size={20} />}>
-                                <DetailItem label="姓名" value={selectedProfile.emgName} />
-                                <DetailItem label="關係" value={selectedProfile.emgRelation} />
-                                <DetailItem label="電話" value={selectedProfile.emgPhone} full />
-                            </DetailCard>
-                            <DetailCard title="教育背景" icon={<IconDatabase size={20} />}>
-                                <DetailItem label="學歷" value={selectedProfile.eduLevel} />
-                                <DetailItem label="校名" value={selectedProfile.eduSchool} />
-                                <DetailItem label="前產業" value={selectedProfile.prevIndustry} />
-                                <DetailItem label="前職務" value={selectedProfile.prevJob} />
-                            </DetailCard>
-                            <DetailCard title="系統預設" icon={<IconSettings size={20} />}>
-                                <DetailItem label="職級" value={selectedProfile.rank} />
-                                <DetailItem label="組別" value={selectedProfile.groupName} />
-                                <DetailItem label="主管代號" value={selectedProfile.supervisorAgcode} />
-                                <DetailItem label="主管姓名" value={selectedProfile.supervisorName} />
-                            </DetailCard>
-                            <DetailCard title="證照持有" icon={<IconCheck size={20} />}>
-                                <DetailItem label="壽險" value={selectedProfile.certLife ? '✔️ 已取得' : '❌ 未登錄'} />
-                                <DetailItem label="道德" value={selectedProfile.certEthics ? '✔️ 已取得' : '❌ 未登錄'} />
-                                <DetailItem label="產險" value={selectedProfile.certProperty ? '✔️ 已取得' : '❌ 未登錄'} />
-                                <DetailItem label="外幣" value={selectedProfile.certForeign ? '✔️ 已取得' : '❌ 未登錄'} />
-                                <DetailItem label="投資型" value={selectedProfile.certInvestment ? '✔️ 已取得' : '❌ 未登錄'} />
-                            </DetailCard>
-                        </div>
-                    </div>
-
-                    <style jsx>{`
-                        .fullscreen-overlay { 
-                            position: fixed; inset: 0; background: #F2F2F7; z-index: 1000; 
-                            display: flex; flexDirection: column; animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                        }
-                        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
-                        .fullscreen-header { 
-                            padding: 20px 40px; background: white; border-bottom: 1px solid #D1D1D6; 
-                            display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-                        }
-                        .fs-title-group { display: flex; align-items: center; gap: 16px; }
-                        .fs-title-group h2 { margin: 0; font-size: 1.4rem; font-weight: 700; color: #1C1C1E; }
-                        .fs-title-group p { margin: 4px 0 0; color: #8E8E93; font-size: 0.9rem; }
-                        .fs-close { background: #E5E5EA; border: none; width: 44px; height: 44px; border-radius: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-                        .fullscreen-body { flex: 1; overflow-y: auto; padding: 40px; }
-                        .profile-detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 24px; max-width: 1200px; margin: 0 auto; }
-                    `}</style>
-                </div>
-            )}
         </div>
     );
 }
-
-function DetailCard({ title, icon, children }: { title: string, icon: React.ReactNode, children: React.ReactNode }) {
-    return (
-        <div className="card" style={{ padding: 24, height: 'fit-content' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, color: 'var(--blue)', borderBottom: '1px solid #F2F2F7', paddingBottom: 12 }}>
-                {icon}
-                <span style={{ fontWeight: 700, fontSize: '1rem' }}>{title}</span>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px 20px' }}>
-                {children}
-            </div>
-        </div>
-    );
-}
-
-function DetailItem({ label, value, full }: { label: string, value: any, full?: boolean }) {
-    return (
-        <div style={{ gridColumn: full ? 'span 2' : 'span 1' }}>
-            <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#8E8E93', marginBottom: 4 }}>{label}</div>
-            <div style={{ fontSize: '1rem', color: '#1C1C1E', fontWeight: 500 }}>{value || '—'}</div>
-        </div>
-    );
-}
-
 
 // ─── Main Admin Page ───────────────────────────────────────────────────────
 export default function AdminPage() {

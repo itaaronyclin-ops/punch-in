@@ -3,9 +3,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   IconCheckCircle, IconRun, IconInbox, IconMapPin, IconSearch,
-  IconLogo, IconChevronRight, IconAlertTriangle, IconClock, IconLogOut, IconBell, IconX, IconGrid, IconInfo
+  IconLogo, IconChevronRight, IconAlertTriangle, IconClock, IconLogOut, IconBell, IconX, IconGrid, IconInfo, IconQrcode
 } from '@/components/Icons';
 import { toast, confirmDialog, showAnimation } from '@/components/GlobalUI';
+import QRScanner from '@/components/QRScanner';
+
 
 type Tab = 'checkin' | 'field' | 'leave' | 'visit' | 'query';
 
@@ -91,9 +93,16 @@ function AgcodeLookup({
 
 // ─── Member Info Display ───────────────────────────────────────────────────
 function MemberInfo({ member, onReset }: { member: Member; onReset: () => void }) {
+  const [showQr, setShowQr] = useState(false);
+
   return (
     <div className="member-card">
-      <div className="member-name">{member.name}</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div className="member-name">{member.name}</div>
+        <button className="btn btn-ghost" style={{ padding: '8px', minWidth: 'auto', borderRadius: 12 }} onClick={() => setShowQr(true)}>
+          <IconQrcode size={20} />
+        </button>
+      </div>
       <div className="member-pills">
         <div className="member-pill">代號 <strong>{member.agcode}</strong></div>
         <div className="member-pill">職級 <strong>{member.rank}</strong></div>
@@ -103,9 +112,32 @@ function MemberInfo({ member, onReset }: { member: Member; onReset: () => void }
       <button className="member-reset" onClick={onReset}>
         ← 重新輸入
       </button>
+
+      {showQr && (
+          <div className="modal-overlay" onClick={() => setShowQr(false)}>
+              <div className="modal" style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                  <div className="modal-header">
+                      <span className="modal-title">我的身分識別碼</span>
+                      <button className="modal-close" onClick={() => setShowQr(false)}>✕</button>
+                  </div>
+                  <div style={{ padding: '24px 0' }}>
+                      <div style={{ background: 'white', padding: 12, borderRadius: 20, display: 'inline-block', border: '1px solid #eee' }}>
+                          <img 
+                              src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(member.agcode)}&size=200x200`} 
+                              alt="My ID QR"
+                          />
+                      </div>
+                      <div style={{ marginTop: 16, fontWeight: 700, fontSize: '1.2rem' }}>{member.name}</div>
+                      <div style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>{member.agcode}</div>
+                  </div>
+                  <button className="btn btn-primary btn-full" onClick={() => setShowQr(false)}>關閉</button>
+              </div>
+          </div>
+      )}
     </div>
   );
 }
+
 
 // ─── Clock ────────────────────────────────────────────────────────────────
 function LiveClock({ className = 'hero', style }: { className?: string, style?: React.CSSProperties }) {
@@ -856,13 +888,13 @@ function TrainingCheckinTab({ member, onComplete }: { member: Member; onComplete
            </div>
 
            <button 
-             className="ios-giant-btn" 
-             style={{ background: loading ? '#ccc' : 'var(--blue)', width: '100%', flexDirection: 'row', gap: 10, height: '3.5rem' }} 
+             className="btn btn-primary btn-full" 
+             style={{ height: '3.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, background: loading ? '#ccc' : 'var(--blue)', border: 'none' }} 
              onClick={handleCheckin}
              disabled={loading}
            >
              {loading && <span className="spinner" style={{ width: 22, height: 22, borderWidth: 2 }} />}
-             <span style={{ fontSize: '1.2rem' }}>{loading ? '處理中...' : '確認簽到'}</span>
+             <span style={{ fontSize: '1.2rem', fontWeight: 600 }}>{loading ? '處理中...' : '確認簽到'}</span>
            </button>
          </div>
       )}
