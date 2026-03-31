@@ -767,7 +767,7 @@ function TrainingCheckinTab({ member, onComplete }: { member: Member; onComplete
       );
     }
 
-    // Simulate connection delay for better UX and fetch events
+
     Promise.all([
       gasRun('getTrainingEvents', true),
       new Promise(resolve => setTimeout(resolve, 1500))
