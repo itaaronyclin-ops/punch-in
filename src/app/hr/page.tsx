@@ -12,7 +12,11 @@ import QRScanner from '@/components/QRScanner';
 type HRMode = 'candidate' | 'agent' | 'upgrade' | 'update' | 'delete';
 type HRStep = 'ENTRY_QR' | 'SELECT_MODE' | 'QUERY_ID' | 'FILL_FORM' | 'REVIEW' | 'AUTH_QR' | 'STATUS';
 
-export default function HRPage() {
+function IconShieldCheck({ size = 20, color = 'currentColor', style }: { size?: number; color?: string; style?: React.CSSProperties }) {
+    return <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={style}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>;
+}
+
+function HRPageContent() {
     const [step, setStep] = useState<HRStep>('ENTRY_QR');
     const [mode, setMode] = useState<HRMode | null>(null);
     const [queryId, setQueryId] = useState('');
@@ -20,7 +24,6 @@ export default function HRPage() {
     const [showScanner, setShowScanner] = useState(false);
     const [statusMsg, setStatusMsg] = useState({ type: 'success', title: '', content: '' });
 
-    // Auth session
     const [authSessionId, setAuthSessionId] = useState('');
     const [isPolling, setIsPolling] = useState(false);
     const [authPhase, setAuthPhase] = useState<'ENTRY' | 'SUBMIT' | null>(null);
@@ -37,7 +40,18 @@ export default function HRPage() {
         supervisorAgcode: '', supervisorName: '',
     });
 
-    // ─── QR Auth ─────────────────────────────────────────────────────────────
+    const searchParams = useSearchParams();
+
+    useEffect(() => {
+        const sid = searchParams.get('authSessionId');
+        const sName = searchParams.get('supervisorName');
+        const sAgcode = searchParams.get('supervisorAgcode');
+        if (sName && sAgcode) {
+            setSupervisorInfo({ supervisorName: sName, supervisorAgcode: sAgcode });
+            setStep('SELECT_MODE');
+        }
+    }, [searchParams]);
+
     const startQrAuth = async (phase: 'ENTRY' | 'SUBMIT') => {
         const sid = 'hr-' + Date.now().toString(36) + Math.random().toString(36).slice(2);
         setAuthSessionId(sid);
@@ -87,24 +101,8 @@ export default function HRPage() {
             } catch { /* ignore */ }
         }, 2500);
         return () => clearInterval(pollInterval.current);
-    }, [isPolling, authSessionId, authPhase]); // eslint-disable-line
+    }, [isPolling, authSessionId, authPhase]);
 
-    function HRContent() {
-        const searchParams = useSearchParams();
-        useEffect(() => {
-            const sid = searchParams.get('authSessionId');
-            const sName = searchParams.get('supervisorName');
-            const sAgcode = searchParams.get('supervisorAgcode');
-            if (sName && sAgcode) {
-                setSupervisorInfo({ supervisorName: sName, supervisorAgcode: sAgcode });
-                setStep('SELECT_MODE');
-            }
-        }, [searchParams]);
-        return null; 
-    }
-
-
-    // ─── Submit ───────────────────────────────────────────────────────────────
     const submitFinal = async (finalData = formData) => {
         setIsLoading(true);
         try {
@@ -129,7 +127,6 @@ export default function HRPage() {
         }
     };
 
-    // ─── Data ─────────────────────────────────────────────────────────────────
     const loadProfile = async (id: string) => {
         if (!id) { alert('請輸入代號或身分證'); return; }
         setIsLoading(true);
@@ -177,12 +174,10 @@ export default function HRPage() {
         </div>
     );
 
-    // ─── Render ───────────────────────────────────────────────────────────────
     return (
         <div className="hr-wrap">
             <header className="hr-header-bar" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
                 <h1>資料異動申請</h1>
-                <Suspense fallback={null}><HRContent /></Suspense>
                 {supervisorInfo.supervisorName && (
                     <div style={{ position: 'absolute', right: 24, fontSize: '0.85rem', color: '#86868b', display: 'flex', alignItems: 'center', gap: 6, background: '#f5f5f7', padding: '6px 12px', borderRadius: 20 }}>
                         <div style={{ width: 6, height: 6, borderRadius: 3, background: '#34C759' }} />
@@ -199,121 +194,91 @@ export default function HRPage() {
                     </div>
                 )}
 
-                {/* ── Step 1: 進入前掃碼 ── */}
                 {step === 'ENTRY_QR' && (
-                    <div className="hr-auth-card">
+                    <div className="hr-auth-card anim-fade-up">
                         <div className="hr-auth-icon" style={{ background: 'rgba(0,122,255,0.08)' }}>
                             <IconQrcode size={40} color="#007aff" />
                         </div>
-                        <h2>請掃碼授權</h2>
-                        <p style={{ color: '#86868b', margin: '12px 0 32px' }}>
-                            進入異動系統前，需授權
-                        </p>
-                        <button className="hr-btn hr-btn-primary" onClick={() => startQrAuth('ENTRY')}>
-                            產生授權碼
+                        <h2>主管授權進入</h2>
+                        <p style={{ color: '#86868b', marginBottom: 32 }}>請主管掃描 QR Code 授權開啟管理介面</p>
+                        <button className="hr-btn hr-btn-primary" style={{ padding: '16px 40px', borderRadius: 16 }} onClick={() => startQrAuth('ENTRY')}>
+                            產生授權 QR Code
                         </button>
                     </div>
                 )}
 
-                {/* ── Step: AUTH_QR 顯示 QR Code 等待主管掃描 ── */}
                 {step === 'AUTH_QR' && (
-                    <div className="hr-auth-card">
-                        <h2 style={{ marginBottom: 8 }}>
-                            {authPhase === 'ENTRY' ? '進入授權' : '提交簽署'}
-                        </h2>
-                        <p style={{ color: '#86868b', marginBottom: 28, fontSize: '0.9rem' }}>
-                            請主管以手機開啟打卡首頁，點擊<strong>「掃描授權」</strong>，掃描下方 QR Code
-                        </p>
-                        <div style={{ background: '#fff', border: '1px solid #e8e8e8', borderRadius: 20, padding: 20, display: 'inline-block', boxShadow: '0 4px 16px rgba(0,0,0,0.06)', marginBottom: 24 }}>
-                            {typeof window !== 'undefined' && (
-                                <QRCodeSVG
-                                    value={`${window.location.origin}/hr/authorize?id=${authSessionId}`}
-                                    size={200}
-                                />
-                            )}
+                    <div className="hr-auth-card anim-fade-up">
+                        <h2 style={{ marginBottom: 24 }}>身份驗證</h2>
+                        <div style={{ padding: 16, background: 'white', borderRadius: 20, display: 'inline-block', boxShadow: '0 8px 24px rgba(0,0,0,0.06)', border: '1px solid #f2f2f7' }}>
+                            <QRCodeSVG value={`${window.location.origin}/hr/authorize?authSessionId=${authSessionId}`} size={200} />
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, color: '#86868b', fontSize: '0.9rem', marginBottom: 28 }}>
-                            <IconLoader2 size={18} style={{ animation: 'spin 1s linear infinite' }} />
-                            <span>等待授權中...</span>
-                        </div>
-                        <button className="hr-btn hr-btn-ghost" onClick={() => {
-                            clearInterval(pollInterval.current);
-                            setIsPolling(false);
-                            setStep(authPhase === 'ENTRY' ? 'ENTRY_QR' : 'REVIEW');
-                        }}>
+                        <p style={{ marginTop: 24, color: '#86868b' }}>驗證完成後將自動跳轉</p>
+                        <button className="hr-btn hr-btn-ghost" style={{ marginTop: 24 }} onClick={() => { setIsPolling(false); setStep('ENTRY_QR'); }}>
                             取消
                         </button>
                     </div>
                 )}
 
-                {/* ── Step 2: 選擇功能 ── */}
                 {step === 'SELECT_MODE' && (
-                    <div>
+                    <div className="anim-fade-up">
+                        <div style={{ textAlign: 'center', marginBottom: 40 }}>
+                            <h2 style={{ fontSize: '1.8rem', fontWeight: 800, margin: 0 }}>請選擇異動類型</h2>
+                            <p style={{ color: '#86868b' }}>根據人員目前的身份選擇對應的操作</p>
+                        </div>
                         <div className="hr-mode-grid">
-                            {([
-                                { mode: 'candidate', label: '準增員建檔', icon: <IconUserPlus />, color: '#E3F2FD', iconColor: '#2196F3' },
-                                { mode: 'agent', label: '新進業務員建檔', icon: <IconUserCheck />, color: '#E8F5E9', iconColor: '#4CAF50' },
-                                { mode: 'upgrade', label: '準增員轉業務員', icon: <IconUserEdit />, color: '#FFF3E0', iconColor: '#FF9800' },
-                                { mode: 'update', label: '資料變更', icon: <IconSearch />, color: '#F3E5F5', iconColor: '#9C27B0' },
-                                { mode: 'delete', label: '撤銷 / 刪除', icon: <IconTrash />, color: '#FFEBEE', iconColor: '#F44336' },
-                            ] as { mode: HRMode, label: string, icon: React.ReactNode, color: string, iconColor: string }[]).map(item => (
-                                <button key={item.mode} className="hr-mode-card" onClick={() => {
-                                    setMode(item.mode);
-                                    if (item.mode === 'candidate') {
-                                        setStep('FILL_FORM');
-                                    } else {
-                                        setStep('QUERY_ID');
-                                    }
-                                }}>
-                                    <div className="hr-mode-icon" style={{ background: item.color }}>
-                                        {React.cloneElement(item.icon as React.ReactElement, { color: item.iconColor, size: 28 })}
-                                    </div>
-                                    <span>{item.label}</span>
-                                </button>
-                            ))}
+                            <button className="hr-mode-card" onClick={() => { setMode('candidate'); setStep('FILL_FORM'); }}>
+                                <div className="hr-mode-icon" style={{ background: '#5856D6' }}><IconUserPlus color="white" /></div>
+                                準增員登錄
+                            </button>
+                            <button className="hr-mode-card" onClick={() => { setMode('upgrade'); setStep('QUERY_ID'); }}>
+                                <div className="hr-mode-icon" style={{ background: '#FF9500' }}><IconUserCheck color="white" /></div>
+                                準增員轉正(升職)
+                            </button>
+                            <button className="hr-mode-card" onClick={() => { setMode('update'); setStep('QUERY_ID'); }}>
+                                <div className="hr-mode-icon" style={{ background: '#007AFF' }}><IconUserEdit color="white" /></div>
+                                資料修改 (現職同仁)
+                            </button>
+                            <button className="hr-mode-card" onClick={() => { setMode('delete'); setStep('QUERY_ID'); }}>
+                                <div className="hr-mode-icon" style={{ background: '#FF3B30' }}><IconTrash color="white" /></div>
+                                撤銷登錄 / 刪除
+                            </button>
                         </div>
                     </div>
                 )}
 
-                {/* ── Step: 查詢人員 ── */}
                 {step === 'QUERY_ID' && (
-                    <div className="hr-auth-card">
-                        <div className="hr-auth-icon" style={{ background: 'rgba(0,122,255,0.08)' }}>
-                            <IconSearch size={32} color="#007aff" />
-                        </div>
-                        <h2>人員查詢</h2>
-                        <p style={{ color: '#86868b', margin: '8px 0 24px' }}>請輸入身分證或業務代號</p>
-                        <div style={{ display: 'flex', gap: 10 }}>
+                    <div className="hr-auth-card anim-fade-up" style={{ maxWidth: 400 }}>
+                        <h2 style={{ marginBottom: 12 }}>身分確認</h2>
+                        <p style={{ color: '#86868b', marginBottom: 24 }}>請輸入要異動人員的「業務代號」或「身分證字號」</p>
+                        <div style={{ position: 'relative', marginBottom: 20 }}>
                             <input
-                                className="hr-form-input" style={{ flex: 1 }}
-                                placeholder="身分證 / AGCODE"
+                                className="hr-form-input"
+                                style={{ paddingRight: 40, height: 52 }}
+                                placeholder="AGCODE 或 身分證"
                                 value={queryId}
                                 onChange={e => setQueryId(e.target.value.toUpperCase())}
                                 autoFocus
                             />
-                            <button className="hr-btn hr-btn-primary" onClick={() => loadProfile(queryId)}>搜尋</button>
+                            <div style={{ position: 'absolute', right: 12, top: 14 }}>
+                                <IconSearch size={22} color="#86868b" />
+                            </div>
                         </div>
-                        <button className="hr-btn hr-btn-ghost" style={{ marginTop: 20 }} onClick={() => setStep('SELECT_MODE')}>返回</button>
+                        <div style={{ display: 'flex', gap: 10 }}>
+                            <button className="hr-btn hr-btn-ghost" style={{ flex: 1 }} onClick={() => setStep('SELECT_MODE')}>返回</button>
+                            <button className="hr-btn hr-btn-primary" style={{ flex: 1.5 }} onClick={() => loadProfile(queryId)}>執行查詢</button>
+                        </div>
                     </div>
                 )}
 
-                {showScanner && (
-                    <QRScanner
-                        title="掃描員工身分碼"
-                        onScan={val => { setShowScanner(false); setQueryId(val.toUpperCase()); loadProfile(val); }}
-                        onClose={() => setShowScanner(false)}
-                    />
-                )}
-
-                {/* ── Step: 填寫 / 校對表單 ── */}
                 {(step === 'FILL_FORM' || step === 'REVIEW') && (
-                    <div className="hr-form-card">
+                    <div className="hr-form-card anim-fade-up">
                         <div className="hr-form-top-bar">
-                            <h2>
-                                {mode === 'candidate' && '準增員建檔'}
-                                {mode === 'agent' && '新進業務員建檔'}
-                                {mode === 'upgrade' && '準增員轉業務員'}
-                                {mode === 'update' && '資料變更'}
+                            <h2 style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <IconUserEdit color="#007aff" />
+                                {mode === 'candidate' && '準增員登錄'}
+                                {mode === 'upgrade' && '準增員轉正'}
+                                {mode === 'update' && '資料修改'}
                                 {mode === 'delete' && '撤銷登錄 / 刪除'}
                             </h2>
                             <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -373,16 +338,6 @@ export default function HRPage() {
                                 </>
                             )}
 
-                            {mode === 'delete' && (
-                                <div style={{ background: '#FFF5F5', border: '1px solid #FFD0D0', borderRadius: 16, padding: 20, display: 'flex', gap: 12, alignItems: 'flex-start', marginTop: 16 }}>
-                                    <IconAlertTriangle color="#FF3B30" size={24} style={{ flexShrink: 0 }} />
-                                    <div>
-                                        <strong>確認撤銷此帳號？</strong>
-                                        <p style={{ margin: '4px 0 0', color: '#666', fontSize: '0.9rem' }}>此操作將永久移除該人員在系統中的所有登錄資訊。</p>
-                                    </div>
-                                </div>
-                            )}
-
                             <div className="hr-form-actions">
                                 {step === 'FILL_FORM' ? (
                                     <>
@@ -391,10 +346,9 @@ export default function HRPage() {
                                     </>
                                 ) : (
                                     <>
-                                        <button className="hr-btn hr-btn-ghost" onClick={() => setStep('FILL_FORM')}>← 回上一步</button>
-                                        <button className="hr-btn hr-btn-primary" onClick={() => startQrAuth('SUBMIT')}>
-                                            <IconQrcode size={18} style={{ marginRight: 8 }} />
-                                            掃碼簽署提交
+                                        <button className="hr-btn hr-btn-ghost" onClick={() => setStep('FILL_FORM')}>← 返回修改</button>
+                                        <button className="hr-btn hr-btn-primary" style={{ background: '#34C759' }} onClick={() => startQrAuth('SUBMIT')}>
+                                            <IconShieldCheck size={18} style={{ marginRight: 6 }} /> 確認並執行異動
                                         </button>
                                     </>
                                 )}
@@ -403,9 +357,8 @@ export default function HRPage() {
                     </div>
                 )}
 
-                {/* ── Step: 完成 ── */}
                 {step === 'STATUS' && (
-                    <div className="hr-status-screen">
+                    <div className="hr-status-screen anim-fade-up">
                         <div className={`hr-status-icon ${statusMsg.type}`}>
                             {statusMsg.type === 'success'
                                 ? <IconCheck size={48} color="white" />
@@ -431,9 +384,11 @@ export default function HRPage() {
                 .hr-auth-icon { width: 80px; height: 80px; border-radius: 40px; display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; }
 
                 .hr-mode-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
-                .hr-mode-card { background: white; border: none; border-radius: 20px; padding: 28px 20px; display: flex; flex-direction: column; align-items: center; gap: 12px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(0,0,0,0.06); font-size: 1rem; font-weight: 600; color: #1d1d1f; }
-                .hr-mode-card:hover { transform: translateY(-4px); box-shadow: 0 12px 28px rgba(0,0,0,0.1); }
-                .hr-mode-icon { width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; }
+                .hr-mode-card { background: white; border: none; border-radius: 20px; padding: 28px 20px; display: flex; flex-direction: column; align-items: center; gap: 12px; cursor: pointer; transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1); box-shadow: 0 4px 12px rgba(0,0,0,0.06); font-size: 1.1rem; font-weight: 700; color: #1d1d1f; border: 1px solid transparent; }
+                .hr-mode-card:hover { transform: translateY(-8px) scale(1.02); box-shadow: 0 25px 50px rgba(0,122,255,0.15); border: 1px solid rgba(0,122,255,0.1); }
+                .hr-mode-card:active { transform: translateY(-4px) scale(0.98); }
+                .hr-mode-icon { width: 64px; height: 64px; border-radius: 18px; display: flex; align-items: center; justify-content: center; transform: transition 0.4s; }
+                .hr-mode-card:hover .hr-mode-icon { transform: rotate(10deg); }
 
                 .hr-form-card { background: white; border-radius: 28px; box-shadow: 0 20px 60px rgba(0,0,0,0.08); overflow: hidden; }
                 .hr-form-top-bar { padding: 20px 28px; border-bottom: 1px solid #f2f2f7; display: flex; align-items: center; justify-content: space-between; background: white; position: sticky; top: 64px; z-index: 10; }
@@ -449,14 +404,14 @@ export default function HRPage() {
                 .hr-form-input:focus { border-color: #007aff; background: white; box-shadow: 0 0 0 4px rgba(0,122,255,0.1); outline: none; }
                 .hr-form-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 32px; padding-top: 20px; border-top: 1px solid #f2f2f7; }
                 
-                .hr-btn { padding: 12px 24px; border-radius: 12px; font-weight: 600; font-size: 0.97rem; cursor: pointer; border: none; transition: all 0.2s; display: inline-flex; align-items: center; }
+                .hr-btn { padding: 12px 24px; border-radius: 12px; font-weight: 600; font-size: 0.97rem; cursor: pointer; border: none; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); display: inline-flex; align-items: center; justify-content: center; }
                 .hr-btn-primary { background: #007aff; color: white; }
-                .hr-btn-primary:hover { background: #0062cc; }
+                .hr-btn-primary:hover { background: #0062cc; transform: translateY(-2px); box-shadow: 0 8px 15px rgba(0,122,255,0.2); }
                 .hr-btn-ghost { background: #F2F2F7; color: #1d1d1f; }
                 .hr-btn-ghost:hover { background: #e5e5e7; }
 
-                .hr-step-pill { padding: 4px 12px; border-radius: 20px; font-size: 0.82rem; font-weight: 600; background: #f2f2f7; color: #86868b; }
-                .hr-step-pill.active { background: #007aff; color: white; }
+                .hr-step-pill { padding: 4px 12px; border-radius: 20px; font-size: 0.82rem; font-weight: 600; background: #f2f2f7; color: #86868b; transition: all 0.3s; }
+                .hr-step-pill.active { background: #007aff; color: white; transform: scale(1.05); }
 
                 .hr-fullscreen-loader { position: fixed; inset: 0; background: rgba(255,255,255,0.85); backdrop-filter: blur(10px); z-index: 1000; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; }
                 .hr-fullscreen-loader p { font-weight: 600; color: #1d1d1f; }
@@ -467,6 +422,12 @@ export default function HRPage() {
                 .hr-status-icon.error { background: #FF3B30; box-shadow: 0 10px 30px rgba(255,59,48,0.3); }
 
                 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+                @keyframes fadeUp { 
+                    from { opacity: 0; transform: translateY(30px); filter: blur(4px); } 
+                    to { opacity: 1; transform: translateY(0); filter: blur(0); } 
+                }
+                .anim-fade-up { animation: fadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) both; }
+
                 @media (max-width: 600px) {
                     .hr-mode-grid { grid-template-columns: 1fr; }
                     .hr-grid-2 { grid-template-columns: 1fr; }
