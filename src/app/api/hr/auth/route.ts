@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { getMemberByAgcode } from '@/lib/gas-client';
 
 export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
@@ -11,6 +12,14 @@ export async function GET(req: NextRequest) {
     try {
         const res = await fetch(`${gasUrl}?action=getAuthSession&id=${id}`, { cache: 'no-store' });
         const data = await res.json();
+        
+        if (data.session && data.session.status === 'approved' && data.session.supervisorAgcode) {
+            const member = await getMemberByAgcode(data.session.supervisorAgcode) as any;
+            if (member && member.isAdmin) {
+                data.session.adminToken = process.env.ADMIN_PASSWORD;
+            }
+        }
+        
         return NextResponse.json(data);
     } catch (err: any) {
         return NextResponse.json({ error: err.message }, { status: 500 });
@@ -25,7 +34,9 @@ export async function POST(req: NextRequest) {
         const gasUrl = process.env.GAS_URL;
         if (!gasUrl) return NextResponse.json({ error: 'GAS_URL not configured' }, { status: 500 });
 
-        const res = await fetch(gasUrl, {
+        const fetchUrl = new URL(gasUrl);
+        if (action) fetchUrl.searchParams.set('action', action);
+        const res = await fetch(fetchUrl.toString(), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ action, ...body }),

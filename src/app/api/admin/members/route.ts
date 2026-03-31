@@ -23,12 +23,13 @@ export async function POST(req: NextRequest) {
             name: String(body.name),
             rank: String(body.rank),
             group: String(body.group || ''),
-            supervisor: String(body.supervisor || '')
-        });
+            supervisor: String(body.supervisor || ''),
+            isAdmin: body.isAdmin ? true : false,
+        } as any);
         return NextResponse.json({ success: true });
     }
 
-    if (action === 'edit') {
+    if (action === 'update' || action === 'edit') {
         await updateMember({
             rowIndex: Number(body.rowIndex),
             agcode: String(body.agcode).toUpperCase(),
@@ -36,8 +37,9 @@ export async function POST(req: NextRequest) {
             rank: String(body.rank),
             group: String(body.group || ''),
             supervisor: String(body.supervisor || ''),
+            isAdmin: body.isAdmin ? true : false,
             createdAt: String(body.createdAt || format(new Date(), 'yyyy-MM-dd HH:mm:ss'))
-        });
+        } as any);
         return NextResponse.json({ success: true });
     }
 

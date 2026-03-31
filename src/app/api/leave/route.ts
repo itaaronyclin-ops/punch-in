@@ -27,23 +27,36 @@ export async function POST(req: NextRequest) {
         name: member.name,
         leaveDate,
         reason
-    }) as { error?: string };
+    }) as { error?: string, status?: string, notes?: string, id?: string };
 
     if (result.error) {
         return NextResponse.json({ error: result.error }, { status: 400 });
     }
 
-    const msg = buildLeaveRequestMessage(member.name, member.agcode, leaveDate, reason);
-    await notifyByType('new_leave_request', msg);
+    if (result.status === 'approved' || result.status === 'rejected') {
+        const isApprove = result.status === 'approved';
+        const msg = buildLeaveResultMessage(member.name, member.agcode, leaveDate, isApprove ? '✅ 已核准' : '❌ 已退件', result.notes || '系統自動代理審核');
+        await notifyByType('leave_result', msg);
 
-    await addNotification({
-        agcode: member.agcode,
-        type: 'new_leave_request',
-        title: '📬 假單申請已送出',
-        content: `📅 您已送出 ${leaveDate} 的請假申請，目前狀態為待審核。`
-    });
+        await addNotification({
+            agcode: member.agcode,
+            type: 'leave_result',
+            title: isApprove ? '✅ 系統已自動核准假單' : '❌ 系統已代理退件',
+            content: `📅 您送出的 ${leaveDate} 請假申請，已被系統自動${isApprove ? '核准' : '退件'}。`
+        });
+    } else {
+        const msg = buildLeaveRequestMessage(member.name, member.agcode, leaveDate, reason);
+        await notifyByType('new_leave_request', msg);
 
-    return NextResponse.json({ success: true, id });
+        await addNotification({
+            agcode: member.agcode,
+            type: 'new_leave_request',
+            title: '📬 假單申請已送出',
+            content: `📅 您已送出 ${leaveDate} 的請假申請，目前狀態為待審核。`
+        });
+    }
+
+    return NextResponse.json({ success: true, id: result.id });
 }
 
 export async function GET(req: NextRequest) {

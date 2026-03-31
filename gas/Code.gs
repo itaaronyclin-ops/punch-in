@@ -365,7 +365,7 @@ function addLeaveRequest(data) {
 
   const id = generateId();
   appendRow(SHEET.LEAVE, [id, agcode.toUpperCase(), name || '', leaveDate, reason, status, nowStr(), reviewTime, reviewer, notes]);
-  return { success: true, id };
+  return { success: true, id, status, notes };
 }
 
 function updateLeaveRequest(data) {

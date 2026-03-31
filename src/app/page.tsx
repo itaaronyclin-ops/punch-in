@@ -7,6 +7,7 @@ import {
 } from '@/components/Icons';
 import { toast, confirmDialog, showAnimation } from '@/components/GlobalUI';
 import QRScanner from '@/components/QRScanner';
+import { QRCodeSVG } from 'qrcode.react';
 
 
 type Tab = 'checkin' | 'field' | 'leave' | 'visit' | 'query';
@@ -962,7 +963,8 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotif, setShowNotif] = useState(false);
-
+  const [showScanner, setShowScanner] = useState(false);
+  const [showMyQRCode, setShowMyQRCode] = useState(false);
   const fetchUnread = useCallback(async () => {
     if (!member) return;
     try {
@@ -1054,6 +1056,16 @@ export default function HomePage() {
                 <div style={{ fontWeight: 600 }}>個人出勤</div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>查看打卡紀錄</div>
               </div>
+              <div className="ios-card" onClick={() => setShowMyQRCode(true)}>
+                <div className="ios-card-icon" style={{ background: 'var(--orange)' }}><IconQrcode color="white" size={24} /></div>
+                <div style={{ fontWeight: 600 }}>我的身分碼</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>顯示專屬條碼</div>
+              </div>
+              <div className="ios-card" onClick={() => setShowScanner(true)}>
+                <div className="ios-card-icon" style={{ background: 'var(--blue-muted)' }}><IconQrcode color="var(--blue)" size={24} /></div>
+                <div style={{ fontWeight: 600 }}>掃描授權</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>HR 解鎖驗證</div>
+              </div>
               <div className="ios-card" onClick={() => setScreen('leave')}>
                 <div className="ios-card-icon"><IconInbox /></div>
                 <div style={{ fontWeight: 600 }}>請假申請</div>
@@ -1134,12 +1146,35 @@ export default function HomePage() {
         <div className={`ios-tab-item ${screen === 'more' ? 'active' : ''}`} onClick={() => setScreen('more')}><IconGrid size={22} /> 其他</div>
       </div>
       
-      {showNotif && member && (
-        <NotificationModal 
-          agcode={member.agcode} 
-          onClose={() => setShowNotif(false)} 
-          onRefreshCount={fetchUnread}
+      {showNotif && <NotificationModal agcode={member.agcode} onClose={() => setShowNotif(false)} onRefreshCount={fetchUnread} />}
+      
+      {showScanner && (
+        <QRScanner 
+            title="掃描驗證授權碼"
+            onScan={(url) => {
+                setShowScanner(false);
+                if(url.includes('/hr/authorize')) {
+                    window.location.href = url;
+                } else {
+                    toast.error('無效的驗證碼或已過期');
+                }
+            }}
+            onClose={() => setShowScanner(false)}
         />
+      )}
+
+      {showMyQRCode && member && (
+        <div className="scanner-overlay" onClick={() => setShowMyQRCode(false)}>
+            <div className="scanner-modal" style={{ textAlign: 'center', padding: '40px 20px' }} onClick={e => e.stopPropagation()}>
+                <h2 style={{ marginBottom: 10 }}>您的專屬身分碼</h2>
+                <p style={{ color: '#666', marginBottom: 30 }}>請出示此條碼以供掃描驗證</p>
+                <div style={{ background: '#fff', padding: 20, borderRadius: 16, display: 'inline-block', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                    <QRCodeSVG value={member.agcode} size={200} />
+                </div>
+                <h3 style={{ marginTop: 20, letterSpacing: '1px' }}>{member.agcode}</h3>
+                <button className="btn btn-secondary" style={{ marginTop: 30, width: '100%' }} onClick={() => setShowMyQRCode(false)}>關閉</button>
+            </div>
+        </div>
       )}
     </div>
   );

@@ -143,13 +143,14 @@ export interface NotificationRecord {
 
 // ─── Members ───────────────────────────────────────────────────────────────
 
-const normalizeMember = (m: any): Member => ({
+const normalizeMember = (m: any): Member & { isAdmin: boolean } => ({
     agcode: m.agcode || m.AGCODE || m.Agcode || '',
     name: m.name || m.NAME || m.Name || '',
     rank: m.rank || m.RANK || m.Rank || 'AG',
     group: m.group || m.GROUP || m.Group || '',
     supervisor: m.supervisor || m.SUPERVISOR || m.Supervisor || '',
     createdAt: m.createdAt || m.CREATEDAT || m.CreatedAt || '',
+    isAdmin: String(m.isAdmin || m.isadmin || '').toUpperCase() === 'TRUE',
     rowIndex: m.rowIndex
 });
 
