@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { IconShieldCheck, IconUserCheck, IconArrowLeft, IconAlertCircle, IconCamera } from '@tabler/icons-react';
 import QRScanner from '@/components/QRScanner';
 
-export default function AuthorizePage() {
+function AuthorizeContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const id = searchParams.get('id');
@@ -216,5 +216,13 @@ export default function AuthorizePage() {
                 @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
             `}</style>
         </div>
+    );
+}
+
+export default function AuthorizePage() {
+    return (
+        <Suspense fallback={<div style={{height:'100vh',display:'flex',alignItems:'center',justifyContent:'center'}}><span className="spinner"></span></div>}>
+            <AuthorizeContent />
+        </Suspense>
     );
 }
