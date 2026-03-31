@@ -15,10 +15,13 @@ export async function GET(req: NextRequest) {
         const data = await res.json() as any;
 
         // 若 session 已核准，檢查掃描者是否具有 isAdmin 權限 → 回傳 admin token
-        if (data.session?.status === 'approved' && data.session?.supervisorAgcode) {
-            const member = await getMemberByAgcode(data.session.supervisorAgcode) as any;
-            if (member?.isAdmin) {
-                data.session.adminToken = process.env.ADMIN_PASSWORD;
+        if (data.session?.status === 'approved') {
+            const supervisorAgcode = (data.session.supervisorAgcode || data.session.supervisoragcode || data.session.SupervisorAgcode || '').trim();
+            if (supervisorAgcode) {
+                const member = await getMemberByAgcode(supervisorAgcode) as any;
+                if (member?.isAdmin) {
+                    data.session.adminToken = process.env.ADMIN_PASSWORD;
+                }
             }
         }
 

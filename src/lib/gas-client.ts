@@ -150,7 +150,7 @@ const normalizeMember = (m: any): Member & { isAdmin: boolean } => ({
     group: m.group || m.GROUP || m.Group || '',
     supervisor: m.supervisor || m.SUPERVISOR || m.Supervisor || '',
     createdAt: m.createdAt || m.CREATEDAT || m.CreatedAt || '',
-    isAdmin: String(m.isAdmin || m.isadmin || '').toUpperCase() === 'TRUE',
+    isAdmin: String(m.isAdmin || m.isadmin || '').trim().toUpperCase() === 'TRUE',
     rowIndex: m.rowIndex
 });
 

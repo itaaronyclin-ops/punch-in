@@ -330,6 +330,21 @@ export default function HRPage() {
                                 <div className="hr-full-col">{fi('緊急聯絡電話', 'emgPhone')}</div>
                             </div>
 
+                            <div className="hr-section-title">教育背景</div>
+                            <div className="hr-grid-2">
+                                {fi('學歷', 'eduLevel')}
+                                {fi('學校', 'eduSchool')}
+                            </div>
+
+                            <div className="hr-section-title">證照持有</div>
+                            <div className="hr-grid-3">
+                                {fi('職業道德', 'certEthics')}
+                                {fi('人身保險', 'certLife')}
+                                {fi('財產保險', 'certProperty')}
+                                {fi('外幣保險', 'certForeign')}
+                                {fi('投資型', 'certInvestment')}
+                            </div>
+
                             {(mode === 'agent' || mode === 'upgrade' || mode === 'update') && (
                                 <>
                                     <div className="hr-section-title" style={{ color: '#B8860B' }}>系統配置</div>
