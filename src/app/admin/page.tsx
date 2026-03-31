@@ -265,9 +265,12 @@ function LoginScreen({ onLogin }: { onLogin: (pw: string) => Promise<boolean> })
                                 <div style={{ background: '#fff', padding: 16, borderRadius: 16, display: 'inline-block', border: '1px solid var(--line)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', marginBottom: 16 }}>
                                     <QRCodeSVG value={`${typeof window !== 'undefined' ? window.location.origin : ''}/hr/authorize?id=${qrSessionId}`} size={190} />
                                 </div>
-                                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 16 }}>
+                                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 8 }}>
                                     手機開啟打卡首頁 → 點「掃描授權」→ 掃此碼
                                 </p>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--orange)', background: 'rgba(255,149,0,0.1)', padding: '6px 12px', borderRadius: 8, marginBottom: 16 }}>
+                                    ⚠️ 若在電腦端 localhost 測試，請確保手機與電腦連接相同 WiFi，否則手機會顯示無法載入。建議部署至 Vercel 後測試。
+                                </div>
                                 <button className="btn btn-ghost btn-sm" onClick={generateQR}>重新產生</button>
                             </>
                         )}
@@ -1867,7 +1870,10 @@ function PersonnelSection({ token }: { token: string }) {
                                     <span>掃描後開啟 HR 頁面，由授權者確認身份後即可操作</span>
                                 </div>
                             </div>
-                            <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 20 }}>punch-in-8h24.vercel.app/hr</p>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--orange)', background: 'rgba(255,149,0,0.1)', padding: '6px 12px', borderRadius: 8, marginBottom: 16, textAlign: 'left' }}>
+                                ⚠️ 若在電腦端 localhost 測試，請確保手機與電腦連接相同 WiFi，否則手機會顯示無法載入。建議部署至 Vercel 後測試。
+                            </div>
+                            <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 20 }}>若是正式環境則會自動轉換為正確網域 ({typeof window !== 'undefined' ? window.location.host : ''})</p>
                             <button className="btn btn-ghost btn-full" onClick={() => { setShowHrQr(false); setHrSid(''); setHrStatus('IDLE'); }}>
                                 關閉
                             </button>

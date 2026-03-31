@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   IconCheckCircle, IconRun, IconInbox, IconMapPin, IconSearch,
   IconLogo, IconChevronRight, IconAlertTriangle, IconClock, IconLogOut, IconBell, IconX, IconGrid, IconInfo, IconQrcode
@@ -959,6 +960,7 @@ export default function HomePage() {
 
   const [queryDefault, setQueryDefault] = useState<'attendance' | 'leaves' | 'history' | 'visit'>('attendance');
   const [member, setMemberRaw] = useState<Member | null>(null);
+  const router = useRouter();
   const setMember = (m: Member | null) => {
     setMemberRaw(m);
     if (m) {
@@ -1175,8 +1177,8 @@ export default function HomePage() {
             
             // 情況 1: 掃描到純 HR 管理頁面（基本資料異動 QR）
             if (url.endsWith('/hr') || url.includes('/hr?')) {
-              // Always use relative navigation to prevent redirecting to localhost if the QR code is generated from a dev server
-              window.location.href = '/hr';
+              // Always use Next.js internal router to prevent WebView OS-level crashes
+              router.push('/hr');
               return;
             }
 
