@@ -439,3 +439,11 @@ function HRPageContent() {
         </div>
     );
 }
+
+export default function HRPage() {
+    return (
+        <Suspense fallback={<div className="hr-fullscreen-loader"><IconLoader2 size={48} color="#007aff" style={{ animation: 'spin 1s linear infinite' }} /><p>正在準備介面...</p></div>}>
+            <HRPageContent />
+        </Suspense>
+    );
+}
