@@ -982,7 +982,18 @@ export default function HomePage() {
     } catch { }
   }, [member]);
 
-  // Auto-login removed per request to avoid hard-coded persistence
+  useEffect(() => {
+    // 嘗試從 localStorage 恢復登入狀態
+    const savedAgcode = localStorage.getItem('agcode');
+    if (savedAgcode && !member) {
+      setLoading(true);
+      fetch(`/api/member?agcode=${savedAgcode}`)
+        .then(r => r.json())
+        .then(data => { if (data.member) setMemberRaw(data.member); })
+        .catch(() => { })
+        .finally(() => setLoading(false));
+    }
+  }, []); // eslint-disable-line
 
   useEffect(() => {
     if (member) {
@@ -1155,10 +1166,37 @@ export default function HomePage() {
       {showScanner && (
         <QRScanner
           title="掃描授權碼"
-          onScan={(url) => {
+          onScan={async (url) => {
             setShowScanner(false);
-            if (url.includes('/hr/authorize')) {
-              window.location.href = url;
+            if (url.includes('/hr/authorize') || url.includes('/hr/auth/verify')) {
+              let id = '';
+              try {
+                id = new URL(url).searchParams.get('id') || '';
+              } catch {
+                const parts = url.split('id=');
+                if (parts.length > 1) id = parts[1].split('&')[0];
+              }
+              if (id) {
+                confirmDialog('確定要透過您的主管身分授權開啟 HR 系統嗎？', async () => {
+                   try {
+                     const res = await fetch('/api/hr/auth', {
+                         method: 'POST',
+                         headers: { 'Content-Type': 'application/json' },
+                         body: JSON.stringify({ action: 'approveAuthSession', id, supervisorAgcode: member.agcode, supervisorName: member.name })
+                     });
+                     const data = await res.json();
+                     if (data.success) {
+                         toast.success('授權成功！裝置將自動開啟');
+                     } else {
+                         toast.error(data.error || '授權失敗');
+                     }
+                   } catch {
+                     toast.error('網路連線失敗，請稍後再試');
+                   }
+                });
+              } else {
+                toast.error('無法解析授權碼');
+              }
             } else {
               toast.error('無效的授權碼或已過期');
             }

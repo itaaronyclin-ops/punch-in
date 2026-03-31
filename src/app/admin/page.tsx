@@ -1563,48 +1563,10 @@ function PersonnelSection({ token }: { token: string }) {
 
     useEffect(() => { load(); }, []);
 
-    // Poll for HR QR entry approval
-    useEffect(() => {
-        if (!hrSid || hrStatus !== 'POLLING') return;
-        const check = async () => {
-            try {
-                const res = await fetch(`/api/hr/auth?id=${hrSid}`);
-                const data = await res.json();
-                if (data.session?.status === 'approved') {
-                    setHrStatus('SUCCESS');
-                    const supervisorName = data.session.supervisorName || data.session.supervisorname || '';
-                    const supervisorAgcode = data.session.supervisorAgcode || data.session.supervisoragcode || '';
-                    
-                    // Redirect to HR page with session info
-                    const url = `/hr?authSessionId=${hrSid}&supervisorName=${encodeURIComponent(supervisorName)}&supervisorAgcode=${supervisorAgcode}`;
-                    if (targetHrProfile) {
-                        // Optional: we could pass queryId to pre-load the profile
-                    }
-                    window.open(url, '_blank');
-                    setShowHrQr(false);
-                }
-            } catch { /* ignore */ }
-        };
-        const t = setInterval(check, 2500);
-        return () => clearInterval(t);
-    }, [hrSid, hrStatus, targetHrProfile]);
-
+    // HR validation happens locally on the frontend / HR page.
     const startHrQrAuth = async (p: any) => {
-        const sid = 'admin-hr-' + Date.now().toString(36) + Math.random().toString(36).slice(2);
-        try {
-            const res = await fetch('/api/hr/auth', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'createAuthSession', id: sid }),
-            });
-            const data = await res.json();
-            if (data.success) {
-                setHrSid(sid);
-                setHrStatus('POLLING');
-                setTargetHrProfile(p);
-                setShowHrQr(true);
-            } else { toast.error('系統忙碌中，請稍後再試'); }
-        } catch { toast.error('連線錯誤'); }
+        setTargetHrProfile(p);
+        setShowHrQr(true);
     };
 
     const handleSaveMember = async () => {
@@ -1897,12 +1859,12 @@ function PersonnelSection({ token }: { token: string }) {
                                 display: 'inline-block', border: '1px solid var(--line)', 
                                 boxShadow: '0 8px 24px rgba(0,0,0,0.06)', marginBottom: 24 
                             }}>
-                                <QRCodeSVG value={`${window.location.origin}/hr/authorize?id=${hrSid}`} size={200} />
+                                <QRCodeSVG value={`${window.location.origin}/hr`} size={200} />
                             </div>
                             <div style={{ background: '#F2F2F7', padding: '16px 20px', borderRadius: 12, textAlign: 'left', marginBottom: 24 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
                                     <IconInfo size={16} />
-                                    <span>驗證通過後會為您自動開啟 HR 管理介面</span>
+                                    <span>請使用其他裝置掃描，直接開啟 HR 介面操作</span>
                                 </div>
                             </div>
                             <button className="btn btn-ghost btn-full" onClick={() => { setShowHrQr(false); setHrSid(''); setHrStatus('IDLE'); }}>
