@@ -263,13 +263,13 @@ function LoginScreen({ onLogin }: { onLogin: (pw: string) => Promise<boolean> })
                         {qrStatus === 'WAITING' && (
                             <>
                                 <div style={{ background: '#fff', padding: 16, borderRadius: 16, display: 'inline-block', border: '1px solid var(--line)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', marginBottom: 16 }}>
-                                    <QRCodeSVG value={`${typeof window !== 'undefined' ? window.location.origin : ''}/hr/authorize?id=${qrSessionId}`} size={190} />
+                                    <QRCodeSVG value={JSON.stringify({ action: 'AUTH', id: qrSessionId })} size={190} />
                                 </div>
                                 <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 8 }}>
                                     手機開啟打卡首頁 → 點「掃描授權」→ 掃此碼
                                 </p>
-                                <div style={{ fontSize: '0.75rem', color: 'var(--orange)', background: 'rgba(255,149,0,0.1)', padding: '6px 12px', borderRadius: 8, marginBottom: 16 }}>
-                                    ⚠️ 若在電腦端 localhost 測試，請確保手機與電腦連接相同 WiFi，否則手機會顯示無法載入。建議部署至 Vercel 後測試。
+                                <div style={{ fontSize: '0.75rem', color: '#34C759', background: 'rgba(52,199,89,0.1)', padding: '6px 12px', borderRadius: 8, marginBottom: 16 }}>
+                                    ✨ V47 終極防護升級：QR Code 已轉為純資料模式，全面支援跨裝置/網域掃描，徹底杜絕 iOS 網頁崩潰。
                                 </div>
                                 <button className="btn btn-ghost btn-sm" onClick={generateQR}>重新產生</button>
                             </>
@@ -1862,7 +1862,7 @@ function PersonnelSection({ token }: { token: string }) {
                                 display: 'inline-block', border: '1px solid var(--line)', 
                                 boxShadow: '0 8px 24px rgba(0,0,0,0.06)', marginBottom: 24 
                             }}>
-                                <QRCodeSVG value={`${typeof window !== 'undefined' ? window.location.origin : ''}/hr`} size={200} />
+                                <QRCodeSVG value={JSON.stringify({ action: 'HR', id: hrSid })} size={200} />
                             </div>
                             <div style={{ background: '#F2F2F7', padding: '16px 20px', borderRadius: 12, textAlign: 'left', marginBottom: 8 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
@@ -1870,10 +1870,9 @@ function PersonnelSection({ token }: { token: string }) {
                                     <span>掃描後開啟 HR 頁面，由授權者確認身份後即可操作</span>
                                 </div>
                             </div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--orange)', background: 'rgba(255,149,0,0.1)', padding: '6px 12px', borderRadius: 8, marginBottom: 16, textAlign: 'left' }}>
-                                ⚠️ 若在電腦端 localhost 測試，請確保手機與電腦連接相同 WiFi，否則手機會顯示無法載入。建議部署至 Vercel 後測試。
+                            <div style={{ fontSize: '0.75rem', color: '#34C759', background: 'rgba(52,199,89,0.1)', padding: '6px 12px', borderRadius: 8, marginBottom: 20, textAlign: 'left' }}>
+                                ✨ V47 升級：QR Code 已轉為純資料模式，無懼網域不同，跨機台也能一秒完成。
                             </div>
-                            <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginBottom: 20 }}>若是正式環境則會自動轉換為正確網域 ({typeof window !== 'undefined' ? window.location.host : ''})</p>
                             <button className="btn btn-ghost btn-full" onClick={() => { setShowHrQr(false); setHrSid(''); setHrStatus('IDLE'); }}>
                                 關閉
                             </button>

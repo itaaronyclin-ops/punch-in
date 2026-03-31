@@ -1175,45 +1175,54 @@ export default function HomePage() {
           onScan={async (url) => {
             setShowScanner(false);
             
-            // 情況 1: 掃描到純 HR 管理頁面（基本資料異動 QR）
-            if (url.endsWith('/hr') || url.includes('/hr?')) {
-              // Always use Next.js internal router to prevent WebView OS-level crashes
+            // 解析 JSON Payload 架構，徹底捨棄 URL
+            let actionText = '';
+            let id = '';
+
+            try {
+              const payload = JSON.parse(url);
+              actionText = payload.action;
+              id = payload.id || '';
+            } catch {
+              // Backward compatibility for old URL-based QRs
+              if (url.endsWith('/hr') || url.includes('/hr?')) {
+                actionText = 'HR';
+              } else if (url.includes('/hr/authorize') || url.includes('/hr/auth/verify')) {
+                actionText = 'AUTH';
+                try {
+                  id = new URL(url).searchParams.get('id') || '';
+                } catch {
+                  const parts = url.split('id=');
+                  if (parts.length > 1) id = parts[1].split('&')[0];
+                }
+              }
+            }
+
+            if (actionText === 'HR') {
               router.push('/hr');
               return;
             }
 
-            // 情況 2: 掃描到授權 QR Code
-            if (url.includes('/hr/authorize') || url.includes('/hr/auth/verify')) {
-              let id = '';
-              try {
-                id = new URL(url).searchParams.get('id') || '';
-              } catch {
-                const parts = url.split('id=');
-                if (parts.length > 1) id = parts[1].split('&')[0];
-              }
-              if (id) {
-                confirmDialog('確定要透過您的主管身分授權開啟系統嗎？', async () => {
-                   try {
-                     const res = await fetch('/api/hr/auth', {
-                         method: 'POST',
-                         headers: { 'Content-Type': 'application/json' },
-                         body: JSON.stringify({ action: 'approveAuthSession', id, supervisorAgcode: member.agcode, supervisorName: member.name })
-                     });
-                     const data = await res.json();
-                     if (data.success) {
-                         toast.success('授權成功！裝置將自動開啟');
-                     } else {
-                         toast.error(data.error || '授權失敗');
-                     }
-                   } catch {
-                     toast.error('網路連線失敗，請稍後再試');
+            if ((actionText === 'AUTH' || actionText === 'HR_AUTH') && id) {
+              confirmDialog('確定要透過您的主管身分授權開啟系統嗎？', async () => {
+                 try {
+                   const res = await fetch('/api/hr/auth', {
+                       method: 'POST',
+                       headers: { 'Content-Type': 'application/json' },
+                       body: JSON.stringify({ action: 'approveAuthSession', id, supervisorAgcode: member.agcode, supervisorName: member.name })
+                   });
+                   const data = await res.json();
+                   if (data.success) {
+                       toast.success('授權成功！裝置將自動開啟');
+                   } else {
+                       toast.error(data.error || '授權失敗');
                    }
-                });
-              } else {
-                toast.error('無法解析授權碼');
-              }
+                 } catch {
+                   toast.error('網路連線失敗，請稍後再試');
+                 }
+              });
             } else {
-              toast.error('無效的授權碼或已過期');
+              toast.error('無效的授權碼或已過期，請重新產生 QR Code');
             }
           }}
           onClose={() => setShowScanner(false)}
