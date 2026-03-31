@@ -1157,6 +1157,14 @@ export default function HomePage() {
           title="掃描授權碼"
           onScan={async (url) => {
             setShowScanner(false);
+            
+            // 情況 1: 掃描到純 HR 管理頁面（基本資料異動 QR）
+            if (url.endsWith('/hr') || url.includes('/hr?')) {
+              window.location.href = url;
+              return;
+            }
+
+            // 情況 2: 掃描到授權 QR Code
             if (url.includes('/hr/authorize') || url.includes('/hr/auth/verify')) {
               let id = '';
               try {
@@ -1166,7 +1174,7 @@ export default function HomePage() {
                 if (parts.length > 1) id = parts[1].split('&')[0];
               }
               if (id) {
-                confirmDialog('確定要透過您的主管身分授權開啟 HR 系統嗎？', async () => {
+                confirmDialog('確定要透過您的主管身分授權開啟系統嗎？', async () => {
                    try {
                      const res = await fetch('/api/hr/auth', {
                          method: 'POST',

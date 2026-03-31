@@ -13,20 +13,16 @@ function AuthorizeContent() {
     const [status, setStatus] = useState<Status>('LOADING');
     const [errorMsg, setErrorMsg] = useState('');
     const [countdown, setCountdown] = useState(3);
+    const [agcodeInput, setAgcodeInput] = useState('');
 
-    // Read identity from localStorage (this only works if they opened it in the same browser where they are logged in)
     const agcode = typeof window !== 'undefined' ? (localStorage.getItem('agcode') || '') : '';
     const name   = typeof window !== 'undefined' ? (localStorage.getItem('userName') || '') : '';
+    const isCached = !!agcode;
 
     useEffect(() => {
         if (!sessionId) {
             setStatus('INVALID');
-            setErrorMsg('授權連結無效（缺少驗證碼），請由打卡系統的「掃描授權」功能重新掃描。');
-            return;
-        }
-        if (!agcode) {
-            setStatus('INVALID');
-            setErrorMsg('您尚未登入系統。請回到首頁完成登入後，使用首頁的「掃描授權」功能進行掃描。');
+            setErrorMsg('授權連結無效（缺少驗證碼），請重新掃描。');
             return;
         }
 
@@ -41,13 +37,16 @@ function AuthorizeContent() {
                     setStatus('SUCCESS');
                 } else {
                     setStatus('READY');
+                    if (isCached) {
+                        setAgcodeInput(agcode);
+                    }
                 }
             })
             .catch(() => {
                 setStatus('INVALID');
                 setErrorMsg('連線失敗，請確認網路後重試。');
             });
-    }, [sessionId, agcode]);
+    }, [sessionId, agcode, isCached]);
 
     // Auto-redirect countdown after SUCCESS
     useEffect(() => {
@@ -58,16 +57,32 @@ function AuthorizeContent() {
     }, [status, countdown, router]);
 
     const handleApprove = async () => {
+        const code = agcodeInput.trim().toUpperCase();
+        if (!code) return;
         setStatus('SUBMITTING');
+
         try {
+            // Verify AGCODE if not cached
+            let finalName = name;
+            if (!isCached || code !== agcode) {
+                const memberRes = await fetch(`/api/member?agcode=${code}`);
+                const memberData = await memberRes.json();
+                if (!memberData.member) {
+                    setStatus('READY');
+                    setErrorMsg('找不到此業務代號，請確認後重試。');
+                    return;
+                }
+                finalName = memberData.member.name;
+            }
+
             const res = await fetch('/api/hr/auth', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     action: 'approveAuthSession',
                     id: sessionId,
-                    supervisorAgcode: agcode,
-                    supervisorName: name,
+                    supervisorAgcode: code,
+                    supervisorName: finalName,
                 }),
             });
             const data = await res.json();
@@ -96,7 +111,10 @@ function AuthorizeContent() {
             }}>
                 {children}
             </div>
-            <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+            <style>{`
+                @keyframes spin { to { transform: rotate(360deg) } }
+                input { font-size: 16px; } /* prevent iOS zoom */
+            `}</style>
         </div>
     );
 
@@ -143,7 +161,7 @@ function AuthorizeContent() {
             <h2 style={{ margin: '0 0 12px', fontSize: '1.4rem', fontWeight: 700 }}>連結或狀態無效</h2>
             <p style={{ color: '#86868b', marginBottom: 32, lineHeight: 1.6 }}>{errorMsg}</p>
             <button onClick={() => router.replace('/')} style={{ width: '100%', padding: '13px', background: '#007aff', color: 'white', border: 'none', borderRadius: 12, fontWeight: 600, cursor: 'pointer' }}>
-                回到打卡首頁登入
+                回到首頁
             </button>
         </>
     );
@@ -157,8 +175,10 @@ function AuthorizeContent() {
                     <circle cx="12" cy="7" r="4"/><polyline points="16,11 18,13 22,9"/>
                 </svg>
             </div>
-            <h2 style={{ margin: '0 0 6px', fontSize: '1.4rem', fontWeight: 700 }}>主管授權確認</h2>
-            <p style={{ color: '#86868b', fontSize: '0.9rem', marginBottom: 28 }}>請確認以下授權者身分</p>
+            <h2 style={{ margin: '0 0 6px', fontSize: '1.4rem', fontWeight: 700 }}>主管身份確認</h2>
+            <p style={{ color: '#86868b', fontSize: '0.9rem', marginBottom: 28 }}>
+                {isCached ? '請確認是否以此身份進行授權' : '請輸入您的業務代號以進行授權'}
+            </p>
 
             {errorMsg && (
                 <div style={{ background: 'rgba(255,59,48,0.08)', border: '1px solid rgba(255,59,48,0.2)', borderRadius: 12, padding: '10px 14px', marginBottom: 16, fontSize: '0.85rem', color: '#FF3B30' }}>
@@ -166,16 +186,36 @@ function AuthorizeContent() {
                 </div>
             )}
 
-            <div style={{ background: '#f5f5f7', borderRadius: 16, padding: '20px', marginBottom: 28, textAlign: 'left' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-                    <span style={{ fontSize: '0.82rem', color: '#86868b', fontWeight: 600 }}>業務代號</span>
-                    <span style={{ fontWeight: 700, fontFamily: 'monospace', letterSpacing: '0.05em', color: '#1d1d1f' }}>{agcode}</span>
+            {isCached ? (
+                <div style={{ background: '#f5f5f7', borderRadius: 16, padding: '20px', marginBottom: 28, textAlign: 'left' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
+                        <span style={{ fontSize: '0.82rem', color: '#86868b', fontWeight: 600 }}>業務代號</span>
+                        <span style={{ fontWeight: 700, fontFamily: 'monospace', letterSpacing: '0.05em', color: '#1d1d1f' }}>{agcode}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '0.82rem', color: '#86868b', fontWeight: 600 }}>授權姓名</span>
+                        <span style={{ fontWeight: 600, color: '#1d1d1f' }}>{name || '—'}</span>
+                    </div>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: '0.82rem', color: '#86868b', fontWeight: 600 }}>授權姓名</span>
-                    <span style={{ fontWeight: 600, color: '#1d1d1f' }}>{name || '—'}</span>
-                </div>
-            </div>
+            ) : (
+                <input
+                    type="text"
+                    autoCapitalize="characters"
+                    autoFocus
+                    placeholder="請輸入業務代號 AGCODE"
+                    value={agcodeInput}
+                    onChange={e => { setAgcodeInput(e.target.value.toUpperCase()); setErrorMsg(''); }}
+                    onKeyDown={e => e.key === 'Enter' && handleApprove()}
+                    style={{
+                        width: '100%', boxSizing: 'border-box',
+                        padding: '14px 16px', borderRadius: 14,
+                        border: '1.5px solid #d2d2d7', background: '#fafafa',
+                        fontSize: '1rem', fontWeight: 600, letterSpacing: '0.05em',
+                        textAlign: 'center', marginBottom: 16, outline: 'none',
+                        fontFamily: 'monospace'
+                    }}
+                />
+            )}
 
             <div style={{ display: 'flex', gap: 12 }}>
                 <button onClick={() => router.replace('/')} style={{ flex: 1, padding: '14px', background: '#f2f2f7', color: '#1d1d1f', border: 'none', borderRadius: 14, fontWeight: 600, fontSize: '1rem', cursor: 'pointer' }}>
@@ -183,7 +223,8 @@ function AuthorizeContent() {
                 </button>
                 <button
                     onClick={handleApprove}
-                    style={{ flex: 2, padding: '14px', background: '#007aff', color: 'white', border: 'none', borderRadius: 14, fontWeight: 600, fontSize: '1rem', cursor: 'pointer', transition: 'background 0.2s' }}
+                    disabled={!agcodeInput.trim()}
+                    style={{ flex: 2, padding: '14px', background: agcodeInput.trim() ? '#007aff' : '#c7c7cc', color: 'white', border: 'none', borderRadius: 14, fontWeight: 600, fontSize: '1rem', cursor: agcodeInput.trim() ? 'pointer' : 'default', transition: 'background 0.2s' }}
                 >
                     確認授權 ✓
                 </button>
