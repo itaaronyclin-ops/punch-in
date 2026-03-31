@@ -982,18 +982,7 @@ export default function HomePage() {
     } catch { }
   }, [member]);
 
-  useEffect(() => {
-    // 嘗試從 localStorage 恢復登入狀態
-    const savedAgcode = localStorage.getItem('agcode');
-    if (savedAgcode && !member) {
-      setLoading(true);
-      fetch(`/api/member?agcode=${savedAgcode}`)
-        .then(r => r.json())
-        .then(data => { if (data.member) setMemberRaw(data.member); })
-        .catch(() => { })
-        .finally(() => setLoading(false));
-    }
-  }, []); // eslint-disable-line
+  // Auto-login removed per request to avoid hard-coded persistence
 
   useEffect(() => {
     if (member) {

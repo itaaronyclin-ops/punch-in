@@ -1897,7 +1897,7 @@ function PersonnelSection({ token }: { token: string }) {
                                 display: 'inline-block', border: '1px solid var(--line)', 
                                 boxShadow: '0 8px 24px rgba(0,0,0,0.06)', marginBottom: 24 
                             }}>
-                                <QRCodeSVG value="https://punch-in-8h24.vercel.app/page" size={200} />
+                                <QRCodeSVG value={`${window.location.origin}/hr/authorize?id=${hrSid}`} size={200} />
                             </div>
                             <div style={{ background: '#F2F2F7', padding: '16px 20px', borderRadius: 12, textAlign: 'left', marginBottom: 24 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
