@@ -263,7 +263,7 @@ function LoginScreen({ onLogin }: { onLogin: (pw: string) => Promise<boolean> })
                         {qrStatus === 'WAITING' && (
                             <>
                                 <div style={{ background: '#fff', padding: 16, borderRadius: 16, display: 'inline-block', border: '1px solid var(--line)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', marginBottom: 16 }}>
-                                    <QRCodeSVG value={`https://punch-in-8h24.vercel.app/hr/authorize?id=${qrSessionId}`} size={190} />
+                                    <QRCodeSVG value={`${typeof window !== 'undefined' ? window.location.origin : ''}/hr/authorize?id=${qrSessionId}`} size={190} />
                                 </div>
                                 <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 16 }}>
                                     手機開啟打卡首頁 → 點「掃描授權」→ 掃此碼
@@ -1859,7 +1859,7 @@ function PersonnelSection({ token }: { token: string }) {
                                 display: 'inline-block', border: '1px solid var(--line)', 
                                 boxShadow: '0 8px 24px rgba(0,0,0,0.06)', marginBottom: 24 
                             }}>
-                                <QRCodeSVG value="https://punch-in-8h24.vercel.app/hr" size={200} />
+                                <QRCodeSVG value={`${typeof window !== 'undefined' ? window.location.origin : ''}/hr`} size={200} />
                             </div>
                             <div style={{ background: '#F2F2F7', padding: '16px 20px', borderRadius: 12, textAlign: 'left', marginBottom: 8 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-secondary)', fontSize: '0.85rem' }}>

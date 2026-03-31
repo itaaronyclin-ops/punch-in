@@ -1175,7 +1175,8 @@ export default function HomePage() {
             
             // 情況 1: 掃描到純 HR 管理頁面（基本資料異動 QR）
             if (url.endsWith('/hr') || url.includes('/hr?')) {
-              window.location.href = url;
+              // Always use relative navigation to prevent redirecting to localhost if the QR code is generated from a dev server
+              window.location.href = '/hr';
               return;
             }
 
