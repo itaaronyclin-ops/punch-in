@@ -982,6 +982,21 @@ export default function HomePage() {
     } catch { }
   }, [member]);
 
+  // Restore the seamless login cache mechanism so the user doesn't have to keep logging in
+  useEffect(() => {
+    const savedAgcode = localStorage.getItem('agcode');
+    if (savedAgcode && !member) {
+      setLoading(true);
+      fetch(`/api/member?agcode=${savedAgcode}`)
+        .then(r => r.json())
+        .then(data => { if (data.member) setMemberRaw(data.member); })
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    }
+  }, []); // eslint-disable-line
+
+
+
 
 
   useEffect(() => {
