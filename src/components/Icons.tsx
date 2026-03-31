@@ -160,3 +160,6 @@ export function IconCamera({ size = 20, color = 'currentColor' }: { size?: numbe
     return <svg {...props} width={size} height={size} stroke={color}><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" /><circle cx="12" cy="13" r="3" /></svg>;
 }
 
+export function IconEye({ size = 20, color = 'currentColor' }: { size?: number; color?: string }) {
+    return <svg {...props} width={size} height={size} stroke={color}><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" /></svg>;
+}
