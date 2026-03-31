@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
     IconUserPlus, IconUserEdit, IconUserCheck, IconTrash,
     IconCheck, IconAlertTriangle, IconQrcode, IconLoader2, IconSearch, IconCamera, IconX
@@ -88,6 +89,21 @@ export default function HRPage() {
         return () => clearInterval(pollInterval.current);
     }, [isPolling, authSessionId, authPhase]); // eslint-disable-line
 
+    function HRContent() {
+        const searchParams = useSearchParams();
+        useEffect(() => {
+            const sid = searchParams.get('authSessionId');
+            const sName = searchParams.get('supervisorName');
+            const sAgcode = searchParams.get('supervisorAgcode');
+            if (sName && sAgcode) {
+                setSupervisorInfo({ supervisorName: sName, supervisorAgcode: sAgcode });
+                setStep('SELECT_MODE');
+            }
+        }, [searchParams]);
+        return null; 
+    }
+
+
     // ─── Submit ───────────────────────────────────────────────────────────────
     const submitFinal = async (finalData = formData) => {
         setIsLoading(true);
@@ -166,6 +182,7 @@ export default function HRPage() {
         <div className="hr-wrap">
             <header className="hr-header-bar" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
                 <h1>資料異動申請</h1>
+                <Suspense fallback={null}><HRContent /></Suspense>
                 {supervisorInfo.supervisorName && (
                     <div style={{ position: 'absolute', right: 24, fontSize: '0.85rem', color: '#86868b', display: 'flex', alignItems: 'center', gap: 6, background: '#f5f5f7', padding: '6px 12px', borderRadius: 20 }}>
                         <div style={{ width: 6, height: 6, borderRadius: 3, background: '#34C759' }} />

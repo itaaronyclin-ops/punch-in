@@ -6,7 +6,7 @@ import {
     IconCalendar, IconSettings, IconMessageSquare, IconLogo,
     IconShield, IconLock, IconPlus, IconX, IconEdit, IconTrash,
     IconLogOut, IconDownload, IconAlertTriangle, IconCheck, IconDatabase,
-    IconCheckCircle, IconSend, IconClock, IconRefreshCw, IconRun, IconQrcode, IconCamera, IconEye,
+    IconCheckCircle, IconSend, IconClock, IconRefreshCw, IconRun, IconQrcode, IconCamera, IconEye, IconInfo,
     IconUserEdit, IconShieldCheck, LoadingState, SkeletonRows,
 } from '@/components/Icons';
 import QRScanner from '@/components/QRScanner';
@@ -1540,6 +1540,12 @@ function PersonnelSection({ token }: { token: string }) {
     const [showEditModal, setShowEditModal] = useState(false);
     const [editForm, setEditForm] = useState<any>(null);
     const [saving, setSaving] = useState(false);
+    
+    // HR Entry QR Modal States
+    const [showHrQr, setShowHrQr] = useState(false);
+    const [hrSid, setHrSid] = useState('');
+    const [hrStatus, setHrStatus] = useState<'IDLE' | 'POLLING' | 'SUCCESS'>('IDLE');
+    const [targetHrProfile, setTargetHrProfile] = useState<any>(null);
 
     const load = async () => {
         setLoading(true);
@@ -1556,6 +1562,50 @@ function PersonnelSection({ token }: { token: string }) {
     };
 
     useEffect(() => { load(); }, []);
+
+    // Poll for HR QR entry approval
+    useEffect(() => {
+        if (!hrSid || hrStatus !== 'POLLING') return;
+        const check = async () => {
+            try {
+                const res = await fetch(`/api/hr/auth?id=${hrSid}`);
+                const data = await res.json();
+                if (data.session?.status === 'approved') {
+                    setHrStatus('SUCCESS');
+                    const supervisorName = data.session.supervisorName || data.session.supervisorname || '';
+                    const supervisorAgcode = data.session.supervisorAgcode || data.session.supervisoragcode || '';
+                    
+                    // Redirect to HR page with session info
+                    const url = `/hr?authSessionId=${hrSid}&supervisorName=${encodeURIComponent(supervisorName)}&supervisorAgcode=${supervisorAgcode}`;
+                    if (targetHrProfile) {
+                        // Optional: we could pass queryId to pre-load the profile
+                    }
+                    window.open(url, '_blank');
+                    setShowHrQr(false);
+                }
+            } catch { /* ignore */ }
+        };
+        const t = setInterval(check, 2500);
+        return () => clearInterval(t);
+    }, [hrSid, hrStatus, targetHrProfile]);
+
+    const startHrQrAuth = async (p: any) => {
+        const sid = 'admin-hr-' + Date.now().toString(36) + Math.random().toString(36).slice(2);
+        try {
+            const res = await fetch('/api/hr/auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'createAuthSession', id: sid }),
+            });
+            const data = await res.json();
+            if (data.success) {
+                setHrSid(sid);
+                setHrStatus('POLLING');
+                setTargetHrProfile(p);
+                setShowHrQr(true);
+            } else { toast.error('系統忙碌中，請稍後再試'); }
+        } catch { toast.error('連線錯誤'); }
+    };
 
     const handleSaveMember = async () => {
         setSaving(true);
@@ -1669,9 +1719,7 @@ function PersonnelSection({ token }: { token: string }) {
                                                 <span style={{ fontSize: '0.8rem', color: '#8E8E93', minWidth: 80, textAlign: 'center' }}>未填寫</span>
                                             )}
                                             <button className="btn btn-ghost btn-sm" style={{ gap: 4, color: 'var(--blue)' }} 
-                                                onClick={() => {
-                                                    window.open('/hr', '_blank');
-                                                }}>
+                                                onClick={() => startHrQrAuth(r)}>
                                                 <IconUserEdit size={14} /> 基本資料異動
                                             </button>
                                         </div>
@@ -1721,15 +1769,31 @@ function PersonnelSection({ token }: { token: string }) {
                             <label className="form-label">主管 (AGCODE+名稱)</label>
                             <input className="form-input" value={editForm.supervisor} onChange={e => setEditForm({ ...editForm, supervisor: e.target.value })} placeholder="例：200173798盛傑UM" />
                         </div>
-                        <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: '#F2F2F7', borderRadius: 12 }}>
-                            <input 
-                                type="checkbox" 
-                                id="is-admin" 
-                                checked={editForm.isAdmin} 
-                                onChange={e => setEditForm({ ...editForm, isAdmin: e.target.checked })}
-                                style={{ width: 18, height: 18 }}
-                            />
-                            <label htmlFor="is-admin" style={{ fontSize: '0.9rem', fontWeight: 600, cursor: 'pointer' }}>賦予管理員權限 (可用 QR Code 登入後台)</label>
+                        <div className="form-group" style={{ 
+                            display: 'flex', alignItems: 'center', justifyContent: 'space-between', 
+                            padding: '14px 18px', background: 'var(--surface-card)', 
+                            border: '1px solid var(--line)', borderRadius: 16, marginBottom: 20,
+                            cursor: 'pointer'
+                        }} onClick={() => setEditForm({ ...editForm, isAdmin: !editForm.isAdmin })}>
+                            <label style={{ fontSize: '0.95rem', fontWeight: 600, cursor: 'pointer', color: 'var(--text-primary)' }}>
+                                賦予管理員權限 (可用 QR Code 登入後台)
+                            </label>
+                            <div 
+                                className={`ios-toggle ${editForm.isAdmin ? 'active' : ''}`}
+                                style={{
+                                    width: 48, height: 26, borderRadius: 13, 
+                                    background: editForm.isAdmin ? 'var(--blue)' : '#E9E9EB',
+                                    position: 'relative', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                    boxShadow: editForm.isAdmin ? '0 4px 10px rgba(0,122,255,0.2)' : 'none'
+                                }}
+                            >
+                                <div style={{
+                                    position: 'absolute', top: 2, left: editForm.isAdmin ? 24 : 2,
+                                    width: 22, height: 22, borderRadius: 11, background: 'white',
+                                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                }} />
+                            </div>
                         </div>
                         <div className="action-row">
                             <button className="btn btn-ghost" onClick={() => setShowEditModal(false)}>取消</button>
@@ -1813,6 +1877,39 @@ function PersonnelSection({ token }: { token: string }) {
                         .fullscreen-body { flex: 1; overflow-y: auto; padding: 28px 32px; }
                         .profile-detail-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 20px; max-width: 1200px; margin: 0 auto; }
                     `}</style>
+                </div>
+            )}
+
+            {/* HR QR Entry Modal */}
+            {showHrQr && (
+                <div className="modal-overlay">
+                    <div className="modal" style={{ maxWidth: 440, padding: 0, overflow: 'hidden' }}>
+                        <div style={{ background: 'var(--blue)', color: 'white', padding: '32px 24px', textAlign: 'center' }}>
+                            <div style={{ background: 'rgba(255,255,255,0.2)', width: 64, height: 64, borderRadius: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                                <IconShieldCheck size={32} />
+                            </div>
+                            <h2 style={{ fontSize: '1.4rem', fontWeight: 700, margin: 0 }}>HR 系統進入授權</h2>
+                            <p style={{ opacity: 0.9, fontSize: '0.9rem', marginTop: 8 }}>請使用手機掃描下方 QR Code 進行身分驗證</p>
+                        </div>
+                        <div style={{ padding: '40px 32px', textAlign: 'center' }}>
+                            <div style={{ 
+                                background: '#fff', padding: 16, borderRadius: 20, 
+                                display: 'inline-block', border: '1px solid var(--line)', 
+                                boxShadow: '0 8px 24px rgba(0,0,0,0.06)', marginBottom: 24 
+                            }}>
+                                <QRCodeSVG value={`${window.location.origin}/hr/authorize?id=${hrSid}`} size={200} />
+                            </div>
+                            <div style={{ background: '#F2F2F7', padding: '16px 20px', borderRadius: 12, textAlign: 'left', marginBottom: 24 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                                    <IconInfo size={16} />
+                                    <span>驗證通過後會為您自動開啟 HR 管理介面</span>
+                                </div>
+                            </div>
+                            <button className="btn btn-ghost btn-full" onClick={() => { setShowHrQr(false); setHrSid(''); setHrStatus('IDLE'); }}>
+                                關閉並取消
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
