@@ -210,7 +210,8 @@ function LoginScreen({ onLogin }: { onLogin: (pw: string) => Promise<boolean> })
 
     const generateQR = async () => {
         setQrStatus('GENERATING');
-        const sid = Date.now().toString(36) + Math.random().toString(36).slice(2);
+        // V50: 6-Digit PIN Logic
+        const sid = Math.floor(100000 + Math.random() * 900000).toString();
         try {
             const res = await fetch('/api/hr/auth', {
                 method: 'POST',
@@ -263,13 +264,17 @@ function LoginScreen({ onLogin }: { onLogin: (pw: string) => Promise<boolean> })
                         {qrStatus === 'WAITING' && (
                             <>
                                 <div style={{ background: '#fff', padding: 16, borderRadius: 16, display: 'inline-block', border: '1px solid var(--line)', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', marginBottom: 16 }}>
-                                    <QRCodeSVG value={`https://punch-in-8h24.vercel.app/#auth=${qrSessionId}`} size={190} />
+                                    <QRCodeSVG value={qrSessionId} size={190} />
+                                    <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #f2f2f7', fontSize: '1.8rem', fontWeight: 800, letterSpacing: 4, color: '#1d1d1f' }}>
+                                        {qrSessionId}
+                                    </div>
+                                    <div style={{ fontSize: '0.85rem', color: '#86868b', marginTop: 4 }}>授權密碼 (5分鐘有效)</div>
                                 </div>
                                 <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 8 }}>
-                                    手機開啟打卡首頁 → 點「掃描授權」→ 掃此碼
+                                    手機開啟首頁 → 點「🔑 掃碼/輸入授權」→ 掃碼或打字
                                 </p>
                                 <div style={{ fontSize: '0.75rem', color: '#34C759', background: 'rgba(52,199,89,0.1)', padding: '6px 12px', borderRadius: 8, marginBottom: 16 }}>
-                                    ✨ V47 終極防護升級：QR Code 已轉為純資料模式，全面支援跨裝置/網域掃描，徹底杜絕 iOS 網頁崩潰。
+                                    ✨ 雙軌護航：不論是相機掃描 6 位數字，或是在手機手動輸入數字皆可無縫登入，免除所有跳轉崩潰。
                                 </div>
                                 <button className="btn btn-ghost btn-sm" onClick={generateQR}>重新產生</button>
                             </>
@@ -1547,7 +1552,7 @@ function PersonnelSection({ token }: { token: string }) {
     // HR Entry QR Modal States
     const [showHrQr, setShowHrQr] = useState(false);
     const [hrSid, setHrSid] = useState('');
-    const [hrStatus, setHrStatus] = useState<'IDLE' | 'POLLING' | 'SUCCESS'>('IDLE');
+    const [hrStatus, setHrStatus] = useState<'IDLE' | 'GENERATING' | 'POLLING' | 'SUCCESS'>('IDLE');
     const [targetHrProfile, setTargetHrProfile] = useState<any>(null);
 
     const load = async () => {
@@ -1566,9 +1571,10 @@ function PersonnelSection({ token }: { token: string }) {
 
     useEffect(() => { load(); }, []);
 
-    // HR validation happens locally on the frontend / HR page.
-    const startHrQrAuth = async (p: any) => {
+    // HR validation happens natively when navigating or submitting via PIN.
+    const generateHrQr = async (p: any) => {
         setTargetHrProfile(p);
+        setHrSid(p.agcode); // Employee's agcode is naturally a 6-digit PIN.
         setShowHrQr(true);
     };
 
@@ -1684,7 +1690,7 @@ function PersonnelSection({ token }: { token: string }) {
                                                 <span style={{ fontSize: '0.8rem', color: '#8E8E93', minWidth: 80, textAlign: 'center' }}>未填寫</span>
                                             )}
                                             <button className="btn btn-ghost btn-sm" style={{ gap: 4, color: 'var(--blue)' }} 
-                                                onClick={() => startHrQrAuth(r)}>
+                                                onClick={() => generateHrQr(r)}>
                                                 <IconUserEdit size={14} /> 基本資料異動
                                             </button>
                                         </div>
@@ -1862,7 +1868,11 @@ function PersonnelSection({ token }: { token: string }) {
                                 display: 'inline-block', border: '1px solid var(--line)', 
                                 boxShadow: '0 8px 24px rgba(0,0,0,0.06)', marginBottom: 24 
                             }}>
-                                <QRCodeSVG value={`https://punch-in-8h24.vercel.app/#hr=${hrSid}`} size={200} />
+                                <QRCodeSVG value={hrSid} size={200} />
+                                <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #f2f2f7', fontSize: '2rem', fontWeight: 800, letterSpacing: 6, color: '#1d1d1f' }}>
+                                    {hrSid}
+                                </div>
+                                <div style={{ fontSize: '0.85rem', color: '#86868b', marginTop: 4 }}>此員工之人事代碼</div>
                             </div>
                             <div style={{ background: '#F2F2F7', padding: '16px 20px', borderRadius: 12, textAlign: 'left', marginBottom: 8 }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
@@ -1871,7 +1881,7 @@ function PersonnelSection({ token }: { token: string }) {
                                 </div>
                             </div>
                             <div style={{ fontSize: '0.75rem', color: '#34C759', background: 'rgba(52,199,89,0.1)', padding: '6px 12px', borderRadius: 8, marginBottom: 20, textAlign: 'left' }}>
-                                ✨ V47 升級：QR Code 已轉為純資料模式，無懼網域不同，跨機台也能一秒完成。
+                                ✨ 雙軌護航：相機若無法啟動，請主管直接於手機點選「輸入授權」並輸入上述 6 位代碼即可秒開通。
                             </div>
                             <button className="btn btn-ghost btn-full" onClick={() => { setShowHrQr(false); setHrSid(''); setHrStatus('IDLE'); }}>
                                 關閉

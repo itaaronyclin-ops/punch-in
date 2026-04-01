@@ -7,7 +7,7 @@ import {
   IconLogo, IconChevronRight, IconAlertTriangle, IconClock, IconLogOut, IconBell, IconX, IconGrid, IconInfo, IconQrcode
 } from '@/components/Icons';
 import { toast, confirmDialog, showAnimation } from '@/components/GlobalUI';
-import QRScanner from '@/components/QRScanner';
+import AuthScanner from '@/components/AuthScanner';
 
 
 type Tab = 'checkin' | 'field' | 'leave' | 'visit' | 'query';
@@ -1116,7 +1116,7 @@ export default function HomePage() {
               {member?.rank !== '準增員' && (
                 <div className="ios-card" onClick={() => setShowScanner(true)}>
                   <div className="ios-card-icon" style={{ background: 'var(--blue-muted)' }}><IconQrcode color="var(--blue)" size={24} /></div>
-                  <div style={{ fontWeight: 600 }}>掃描授權</div>
+                  <div style={{ fontWeight: 600 }}>🔑 掃碼/輸入授權</div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>授權 HR 驗證</div>
                 </div>
               )}
@@ -1203,39 +1203,38 @@ export default function HomePage() {
       {showNotif && <NotificationModal agcode={member.agcode} onClose={() => setShowNotif(false)} onRefreshCount={fetchUnread} />}
 
       {showScanner && (
-        <QRScanner
-          title="掃描授權碼"
-          onScan={async (url) => {
+        <AuthScanner
+          title="🔑 授權驗證器"
+          onCodeSubmited={async (code) => {
             setShowScanner(false);
             
             let actionText = '';
             let id = '';
 
-            // 支援 V49: https://punch-in-.../#auth=xyz （Hash 路由）
-            // 支援 V47: {"action":"AUTH","id":"xyz"} （JSON Payload）
-            // 支援古董版本: url.includes('/hr/authorize?id=xyz')
-            try {
-              if (url.includes('#')) {
-                 const hashParams = new URL(url).hash.substring(1);
-                 const [action, val] = hashParams.split('=');
-                 if (action === 'auth' || action === 'hrauth') actionText = 'AUTH';
-                 if (action === 'hr') actionText = 'HR';
-                 id = val || '';
-              } else if (url.startsWith('{')) {
-                 const payload = JSON.parse(url);
-                 actionText = payload.action;
-                 id = payload.id || '';
-              } else {
-                 if (url.endsWith('/hr') || url.includes('/hr?')) {
-                   actionText = 'HR';
-                 } else if (url.includes('/hr/authorize') || url.includes('/hr/auth/verify')) {
-                   actionText = 'AUTH';
-                   id = new URL(url).searchParams.get('id') || url.split('id=')[1]?.split('&')[0] || '';
-                 }
-              }
-            } catch {
-                 // Fallback
-                 if (url.includes('/hr')) actionText = 'HR';
+            const cleanCode = code.trim();
+
+            // 支援 V50 純數字 6 位密碼
+            if (cleanCode.length === 6 && /^\d+$/.test(cleanCode)) {
+                actionText = 'AUTH';
+                id = cleanCode;
+            } else if (cleanCode === 'ACTION:GOTO_HR' || cleanCode.includes('#hr=')) {
+                router.push('/hr');
+                return;
+            } else {
+                // Fallback for V49 Hash URLs
+                try {
+                  if (cleanCode.includes('#')) {
+                     const hashParams = new URL(cleanCode).hash.substring(1);
+                     const [action, val] = hashParams.split('=');
+                     if (action === 'auth' || action === 'hrauth') actionText = 'AUTH';
+                     if (action === 'hr') actionText = 'HR';
+                     id = val || '';
+                  } else if (cleanCode.startsWith('{')) {
+                     const payload = JSON.parse(cleanCode);
+                     actionText = payload.action;
+                     id = payload.id || '';
+                  }
+                } catch { }
             }
 
             if (actionText === 'HR') {
@@ -1244,7 +1243,7 @@ export default function HomePage() {
             }
 
             if ((actionText === 'AUTH' || actionText === 'HR_AUTH') && id) {
-              confirmDialog('確定要透過您的主管身分授權開啟系統嗎？', async () => {
+              confirmDialog(`確定要針對授權碼 ${id} 進行核准嗎？`, async () => {
                  try {
                    const res = await fetch('/api/hr/auth', {
                        method: 'POST',
@@ -1255,14 +1254,16 @@ export default function HomePage() {
                    if (data.success) {
                        toast.success('授權成功！裝置將自動開啟');
                    } else {
-                       toast.error(data.error || '授權失敗');
+                       toast.error(data.error || '授權失敗，此密碼不正確或已過期');
                    }
                  } catch {
                    toast.error('網路連線失敗，請稍後再試');
                  }
               });
             } else {
-              toast.error('無效的授權碼或已過期，請重新產生 QR Code');
+              if (actionText === '') {
+                  toast.error('無效的代碼形式，請重新產生 6 位數授權碼');
+              }
             }
           }}
           onClose={() => setShowScanner(false)}
