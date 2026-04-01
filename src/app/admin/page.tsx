@@ -273,9 +273,6 @@ function LoginScreen({ onLogin }: { onLogin: (pw: string) => Promise<boolean> })
                                 <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 8 }}>
                                     手機開啟首頁 → 點「🔑 掃碼/輸入授權」→ 掃碼或打字
                                 </p>
-                                <div style={{ fontSize: '0.75rem', color: '#34C759', background: 'rgba(52,199,89,0.1)', padding: '6px 12px', borderRadius: 8, marginBottom: 16 }}>
-                                    ✨ 雙軌護航：不論是相機掃描 6 位數字，或是在手機手動輸入數字皆可無縫登入，免除所有跳轉崩潰。
-                                </div>
                                 <button className="btn btn-ghost btn-sm" onClick={generateQR}>重新產生</button>
                             </>
                         )}
