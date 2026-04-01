@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
-import { IconX, IconCamera, IconQrcode } from '@/components/Icons';
+import React, { useEffect, useRef, useState, FormEvent } from 'react';
+import jsQR from 'jsqr';
+import { IconX, IconQrcode } from '@/components/Icons';
 
 interface AuthScannerProps {
     onCodeSubmited: (code: string) => void;
@@ -10,47 +10,90 @@ interface AuthScannerProps {
     title?: string;
 }
 
-const SCANNER_ID = 'qr-camera-reader';
-
 export default function AuthScanner({ onCodeSubmited, onClose, title = '🔑 掃碼 / 輸入授權' }: AuthScannerProps) {
     const [error, setError] = useState<string | null>(null);
     const [manualCode, setManualCode] = useState('');
-    const scannerRef = useRef<Html5Qrcode | null>(null);
-    const runningRef = useRef(false);
+    
+    // Custom scanner references
+    const videoRef = useRef<HTMLVideoElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const streamRef = useRef<MediaStream | null>(null);
+    const animFrameRef = useRef<number | null>(null);
+    const isScanningRef = useRef(true);
+
+    // Stop all media tracks and cancel loops
+    const cleanupCamera = () => {
+        isScanningRef.current = false;
+        if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+        if (streamRef.current) {
+            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current = null;
+        }
+    };
 
     useEffect(() => {
-        if (runningRef.current) return;
-        runningRef.current = true;
+        let isMounted = true;
 
-        const scanner = new Html5Qrcode(SCANNER_ID);
-        scannerRef.current = scanner;
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+            .then(stream => {
+                if (!isMounted) {
+                    stream.getTracks().forEach(t => t.stop());
+                    return;
+                }
+                streamRef.current = stream;
+                if (videoRef.current) {
+                    videoRef.current.srcObject = stream;
+                    videoRef.current.setAttribute('playsinline', 'true'); // necessary for iOS Safari
+                    videoRef.current.play().catch(() => {});
+                }
 
-        scanner.start(
-            { facingMode: 'environment' },
-            { fps: 10, qrbox: { width: 240, height: 240 } },
-            (decoded) => {
-                scanner.stop().catch(() => {});
-                onCodeSubmited(decoded);
-            },
-            () => { /* ignore per-frame errors */ }
-        ).catch((e: Error) => {
-            const isNotAllowed = e?.name === 'NotAllowedError' || e?.message?.includes('NotAllowedError');
-            if (isNotAllowed) {
-                setError('系統阻擋了相機。請直接在下方輸入數字！');
-            } else {
-                setError('相機無法存取，請直接使用下方輸入框輸入授權碼！');
-            }
-        });
+                const tick = () => {
+                    if (!isScanningRef.current || !isMounted) return;
+                    const video = videoRef.current;
+                    const canvas = canvasRef.current;
+                    if (video && canvas && video.readyState === video.HAVE_ENOUGH_DATA) {
+                        // Dynamically adjust canvas to match video internal resolution
+                        canvas.height = video.videoHeight;
+                        canvas.width = video.videoWidth;
+                        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+                        if (ctx) {
+                            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                            // Pure JS payload processing
+                            const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                                inversionAttempts: 'dontInvert'
+                            });
+                            
+                            if (code && code.data) {
+                                cleanupCamera();
+                                onCodeSubmited(code.data);
+                                return; 
+                            }
+                        }
+                    }
+                    animFrameRef.current = requestAnimationFrame(tick);
+                };
+                animFrameRef.current = requestAnimationFrame(tick);
+            })
+            .catch((e: Error) => {
+                if (!isMounted) return;
+                console.warn("Camera init failed:", e);
+                // Graceful fallback purely to UI keyboard layout
+                setError('無法存取相機，或您處於封閉瀏覽器中。請直接使用下方輸入框輸入打字！');
+            });
 
         return () => {
-            scanner.stop().catch(() => {});
+            isMounted = false;
+            cleanupCamera();
         };
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    const handleManualSubmit = (e: React.FormEvent) => {
+    const handleManualSubmit = (e: FormEvent) => {
         e.preventDefault();
-        if (manualCode.trim().length === 6 || manualCode.trim() !== '') {
-            onCodeSubmited(manualCode.trim());
+        const clean = manualCode.trim();
+        if (clean.length > 0) {
+            cleanupCamera();
+            onCodeSubmited(clean);
         }
     };
 
@@ -61,19 +104,21 @@ export default function AuthScanner({ onCodeSubmited, onClose, title = '🔑 掃
             backdropFilter: 'blur(6px)',
             zIndex: 2000,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: 20,
+            padding: 16, // Use tighter padding for SE displays
         }}>
             <div style={{
                 background: '#f2f2f7', borderRadius: 24,
                 width: '100%', maxWidth: 420,
-                overflow: 'hidden',
+                // Critical responsive bounds layout to ensure button never runs off 
+                maxHeight: '85vh',
+                overflowY: 'auto',
                 boxShadow: '0 30px 60px rgba(0,0,0,0.25)',
                 animation: 'qrPop 0.3s cubic-bezier(0.34,1.56,0.64,1)',
                 display: 'flex', flexDirection: 'column'
             }}>
                 {/* Header */}
                 <div style={{
-                    padding: '16px 20px',
+                    padding: '16px 20px', flexShrink: 0,
                     display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                     background: '#fff', borderBottom: '1px solid #e5e5ea',
                 }}>
@@ -82,7 +127,7 @@ export default function AuthScanner({ onCodeSubmited, onClose, title = '🔑 掃
                         <span style={{ fontWeight: 800, fontSize: '1.05rem', color: '#1d1d1f' }}>{title}</span>
                     </div>
                     <button
-                        onClick={onClose}
+                        onClick={() => { cleanupCamera(); onClose(); }}
                         style={{
                             background: '#f2f2f7', border: 'none',
                             width: 32, height: 32, borderRadius: 16,
@@ -94,42 +139,59 @@ export default function AuthScanner({ onCodeSubmited, onClose, title = '🔑 掃
                     </button>
                 </div>
 
-                {/* Body: Camera Section (Top) */}
-                <div style={{ background: '#000', position: 'relative' }}>
+                {/* Body: Native Camera UI (Top) */}
+                <div style={{ 
+                    background: '#000', position: 'relative', flexShrink: 0,
+                    // Lock height to prevent vertical expansion and off-screen buttons
+                    width: '100%', height: '240px', overflow: 'hidden'
+                 }}>
                     {error ? (
-                        <div style={{ padding: '32px 20px', textAlign: 'center', background: '#fff' }}>
-                            <div style={{ fontSize: '3rem', marginBottom: 12 }}>🚫</div>
-                            <p style={{ fontWeight: 800, fontSize: '1.2rem', color: '#ff3b30', marginBottom: 16 }}>相機無法啟動</p>
-                            <p style={{ fontSize: '0.9rem', color: '#d70015', margin: 0, lineHeight: 1.6, fontWeight: 600 }}>{error}</p>
+                        <div style={{ padding: '32px 20px', textAlign: 'center', background: '#fff', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                            <div style={{ fontSize: '2.5rem', marginBottom: 8 }}>🚫</div>
+                            <p style={{ fontWeight: 800, fontSize: '1.2rem', color: '#ff3b30', marginBottom: 12 }}>相機無法啟動</p>
+                            <p style={{ fontSize: '0.85rem', color: '#d70015', margin: 0, lineHeight: 1.5, fontWeight: 600 }}>{error}</p>
                         </div>
                     ) : (
                         <>
-                            <div id={SCANNER_ID} style={{ width: '100%', minHeight: 280 }} />
+                            {/* Hidden canvas for computing standard frame sizes independent of layout shape */}
+                            <canvas ref={canvasRef} style={{ display: 'none' }} />
+                            
+                            {/* Object-fit automatically handles dynamic CSS vs standard pixel dimension mapping */}
+                            <video 
+                                ref={videoRef} 
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                                autoPlay playsInline muted 
+                            />
+                            
                             <div style={{ 
                                 position: 'absolute', bottom: 12, left: 0, right: 0, 
-                                textAlign: 'center', color: '#fff', fontSize: '0.88rem', textShadow: '0 1px 4px rgba(0,0,0,0.5)' 
+                                textAlign: 'center', color: '#fff', fontSize: '0.85rem', textShadow: '0 1px 4px rgba(0,0,0,0.6)',
+                                fontWeight: 500
                             }}>
-                                將 QR Code 對準鏡頭即可自動授權
+                                聚焦並對準條碼即可自動填寫
                             </div>
                         </>
                     )}
                 </div>
 
                 {/* Body: Manual Input Section (Bottom) */}
-                <div style={{ padding: '24px 20px', background: '#fff' }}>
+                <div style={{ padding: '24px 20px', background: '#fff', flexShrink: 0 }}>
                     <div style={{ textAlign: 'center', marginBottom: 16 }}>
-                        <span style={{ fontSize: '0.85rem', color: '#86868b', fontWeight: 600, letterSpacing: 1 }}>或者手動輸入授權碼</span>
+                        <span style={{ fontSize: '0.85rem', color: '#86868b', fontWeight: 600, letterSpacing: 1 }}>或者手動輸入代碼 (不限網路)</span>
                         <div style={{ height: 1, background: '#f2f2f7', marginTop: 12 }}></div>
                     </div>
                     <form onSubmit={handleManualSubmit} style={{ display: 'flex', gap: 12 }}>
                         <input 
-                            type="number"
+                            type="text"
+                            inputMode="numeric"
                             placeholder="輸入 6 位數字" 
                             value={manualCode}
                             onChange={(e) => setManualCode(e.target.value)}
                             style={{
                                 flex: 1, padding: '14px 16px', borderRadius: 12, border: '1px solid #d1d1d6',
-                                fontSize: '1.2rem', fontWeight: 600, letterSpacing: 2, textAlign: 'center', outline: 'none'
+                                fontSize: '1.2rem', fontWeight: 600, letterSpacing: 2, textAlign: 'center', outline: 'none',
+                                // explicitly force zero margin and safe borders 
+                                margin: 0, boxSizing: 'border-box'
                             }}
                             autoFocus={!!error}
                         />
@@ -140,7 +202,7 @@ export default function AuthScanner({ onCodeSubmited, onClose, title = '🔑 掃
                                 background: manualCode.trim().length > 0 ? '#007aff' : '#d1d1d6',
                                 color: '#fff', border: 'none', borderRadius: 12, padding: '0 24px',
                                 fontWeight: 700, fontSize: '1rem', cursor: manualCode.trim().length > 0 ? 'pointer' : 'not-allowed',
-                                transition: '0.2s'
+                                transition: '0.2s', margin: 0, flexShrink: 0
                             }}
                         >
                             確認
