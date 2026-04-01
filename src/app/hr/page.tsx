@@ -211,7 +211,7 @@ function HRPageContent() {
                     <div className="hr-auth-card anim-fade-up">
                         <h2 style={{ marginBottom: 24 }}>身份驗證</h2>
                         <div style={{ padding: 16, background: 'white', borderRadius: 20, display: 'inline-block', boxShadow: '0 8px 24px rgba(0,0,0,0.06)', border: '1px solid #f2f2f7' }}>
-                            <QRCodeSVG value={JSON.stringify({ action: 'HR_AUTH', id: authSessionId })} size={200} />
+                            <QRCodeSVG value={`https://punch-in-8h24.vercel.app/#hrauth=${authSessionId}`} size={200} />
                         </div>
                         <p style={{ marginTop: 24, color: '#86868b' }}>驗證完成後將自動跳轉</p>
                         <button className="hr-btn hr-btn-ghost" style={{ marginTop: 24 }} onClick={() => { setIsPolling(false); setStep('ENTRY_QR'); }}>

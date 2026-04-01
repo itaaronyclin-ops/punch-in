@@ -997,7 +997,40 @@ export default function HomePage() {
     }
   }, []); // eslint-disable-line
 
-
+  // 支援 V49 透過手機內建相機掃描網址，利用 Hash 傳遞 id 避免跳轉問題
+  useEffect(() => {
+    if (!member) return;
+    const hash = window.location.hash.substring(1);
+    if (hash) {
+      const [action, ...rest] = hash.split('=');
+      const id = rest.join('=');
+      if (action === 'auth' || action === 'hrauth') {
+        // 清除 hash 避免重新整理時重複觸發
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        
+        confirmDialog('確定要透過您的主管身分授權開啟系統嗎？', async () => {
+           try {
+             const res = await fetch('/api/hr/auth', {
+                 method: 'POST',
+                 headers: { 'Content-Type': 'application/json' },
+                 body: JSON.stringify({ action: 'approveAuthSession', id, supervisorAgcode: member.agcode, supervisorName: member.name })
+             });
+             const data = await res.json();
+             if (data.success) {
+                 toast.success('授權成功！裝置將自動開啟');
+             } else {
+                 toast.error(data.error || '授權失敗');
+             }
+           } catch {
+             toast.error('網路連線失敗，請稍後再試');
+           }
+        });
+      } else if (action === 'hr') {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        router.push('/hr');
+      }
+    }
+  }, [member, router]);
 
 
 
@@ -1175,27 +1208,34 @@ export default function HomePage() {
           onScan={async (url) => {
             setShowScanner(false);
             
-            // 解析 JSON Payload 架構，徹底捨棄 URL
             let actionText = '';
             let id = '';
 
+            // 支援 V49: https://punch-in-.../#auth=xyz （Hash 路由）
+            // 支援 V47: {"action":"AUTH","id":"xyz"} （JSON Payload）
+            // 支援古董版本: url.includes('/hr/authorize?id=xyz')
             try {
-              const payload = JSON.parse(url);
-              actionText = payload.action;
-              id = payload.id || '';
-            } catch {
-              // Backward compatibility for old URL-based QRs
-              if (url.endsWith('/hr') || url.includes('/hr?')) {
-                actionText = 'HR';
-              } else if (url.includes('/hr/authorize') || url.includes('/hr/auth/verify')) {
-                actionText = 'AUTH';
-                try {
-                  id = new URL(url).searchParams.get('id') || '';
-                } catch {
-                  const parts = url.split('id=');
-                  if (parts.length > 1) id = parts[1].split('&')[0];
-                }
+              if (url.includes('#')) {
+                 const hashParams = new URL(url).hash.substring(1);
+                 const [action, val] = hashParams.split('=');
+                 if (action === 'auth' || action === 'hrauth') actionText = 'AUTH';
+                 if (action === 'hr') actionText = 'HR';
+                 id = val || '';
+              } else if (url.startsWith('{')) {
+                 const payload = JSON.parse(url);
+                 actionText = payload.action;
+                 id = payload.id || '';
+              } else {
+                 if (url.endsWith('/hr') || url.includes('/hr?')) {
+                   actionText = 'HR';
+                 } else if (url.includes('/hr/authorize') || url.includes('/hr/auth/verify')) {
+                   actionText = 'AUTH';
+                   id = new URL(url).searchParams.get('id') || url.split('id=')[1]?.split('&')[0] || '';
+                 }
               }
+            } catch {
+                 // Fallback
+                 if (url.includes('/hr')) actionText = 'HR';
             }
 
             if (actionText === 'HR') {
