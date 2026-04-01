@@ -1256,7 +1256,7 @@ export default function HomePage() {
                    });
                    const data = await res.json();
                    if (data.success) {
-                       toast.success('授權成功！裝置將自動開啟');
+                       showAnimation('auth-success', '授權驗證成功！\n裝置將自動開啟');
                    } else {
                        toast.error(data.error || '授權失敗，此密碼不正確或已過期');
                    }

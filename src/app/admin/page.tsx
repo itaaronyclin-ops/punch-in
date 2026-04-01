@@ -1863,9 +1863,9 @@ function PersonnelSection({ token }: { token: string }) {
                                     border: '1px solid var(--line)', 
                                     boxShadow: '0 8px 20px rgba(0,0,0,0.04)'
                                 }}>
-                                    <QRCodeSVG value={`https://punch-in-8h24.vercel.app/#hr=${hrSid}`} size={140} />
-                                    <div style={{ fontSize: '0.85rem', color: '#1d1d1f', fontWeight: 700, marginTop: 12 }}>系統掃描</div>
-                                    <div style={{ fontSize: '0.75rem', color: '#86868b', marginTop: 4 }}>(原生相機)</div>
+                                    <QRCodeSVG value="https://punch-in-8h24.vercel.app/hr" size={140} />
+                                    <div style={{ fontSize: '0.85rem', color: '#1d1d1f', fontWeight: 700, marginTop: 12 }}>系統跳轉</div>
+                                    <div style={{ fontSize: '0.75rem', color: '#86868b', marginTop: 4 }}>掃描開啟網頁</div>
                                 </div>
                                 {/* 2. HR 內部掃描器專用純代碼 */}
                                 <div style={{ 
