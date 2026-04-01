@@ -32,8 +32,16 @@ export async function POST(req: NextRequest) {
         if (!member) return NextResponse.json({ error: '找不到此業務代號' }, { status: 404 });
 
         const now = new Date();
-        const today = format(now, 'yyyy-MM-dd');
-        const timeStr = format(now, 'yyyy-MM-dd HH:mm:ss');
+        // Always use Taiwan time (UTC+8) regardless of server timezone
+        const twFormatter = new Intl.DateTimeFormat('zh-TW', {
+            timeZone: 'Asia/Taipei',
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', second: '2-digit',
+            hour12: false
+        });
+        const parts = Object.fromEntries(twFormatter.formatToParts(now).map(p => [p.type, p.value]));
+        const today = `${parts.year}-${parts.month}-${parts.day}`;
+        const timeStr = `${parts.year}-${parts.month}-${parts.day} ${parts.hour}:${parts.minute}:${parts.second}`;
 
         // Check if already checked in today
         const myLogs = await getAttendance({ agcode: member.agcode });

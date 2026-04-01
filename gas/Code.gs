@@ -173,6 +173,10 @@ function sheetToObjects(sheet) {
       const k = String(h).trim();
       obj[k] = value;
       obj[k.toLowerCase()] = value;
+      // Also set camelCase key (e.g. AddressContact -> addressContact)
+      // so TypeScript frontend can read profile.addressContact directly
+      const camel = k.charAt(0).toLowerCase() + k.slice(1);
+      obj[camel] = value;
     });
     return obj;
   });
@@ -664,13 +668,47 @@ function initSheets() {
 
 function getProfile(agcodeOrIdcard) {
   if (!agcodeOrIdcard) return { error: '參數不完整' };
-  const str = String(agcodeOrIdcard).toUpperCase();
+  const str = String(agcodeOrIdcard).toUpperCase().trim();
   const sheet = getSheet(SHEET.PROFILES);
   const rows = sheetToObjects(sheet);
-  const profile = rows.find(r => r.agcode === str || r.idcard === str);
-  if (!profile) return { error: '查無資料', found: false };
-  return { success: true, profile };
+  const profile = rows.find(r =>
+    String(r.agcode || r.AGCODE || '').toUpperCase() === str ||
+    String(r.idcard || r.IDCard || '').toUpperCase() === str
+  );
+  if (profile) return { success: true, profile };
+
+  // --- Fallback: search Members sheet for basic info ---
+  try {
+    const memSheet = getSheet(SHEET.MEMBERS);
+    const members = sheetToObjects(memSheet);
+    const member = members.find(m =>
+      String(m.agcode || m.AGCODE || '').toUpperCase() === str
+    );
+    if (member) {
+      // Return a partial profile built from Members data
+      const partial = {
+        agcode:         String(member.agcode || member.AGCODE || '').toUpperCase(),
+        name:           member.name || member.Name || '',
+        rank:           member.rank || member.Rank || '',
+        groupName:      member.group || member.Group || '',
+        supervisor:     member.supervisor || member.Supervisor || '',
+        supervisorAgcode: '',
+        supervisorName: '',
+        // All other fields default empty — HR fills them in
+        idcard: '', birthday: '', gender: '', phone: '', email: '',
+        addressContact: '', addressResident: '',
+        emgName: '', emgRelation: '', emgPhone: '',
+        eduLevel: '', eduSchool: '', prevIndustry: '', prevJob: '',
+        certEthics: '', certLife: '', certProperty: '', certForeign: '', certInvestment: '',
+        _fromMembers: true,  // flag so frontend can show a hint
+      };
+      return { success: true, profile: partial, fromMembers: true };
+    }
+  } catch (e) {}
+
+  return { error: '查無資料', found: false };
 }
+
 
 function getAllProfiles() {
   try {

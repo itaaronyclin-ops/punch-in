@@ -19,8 +19,10 @@ export async function POST(req: NextRequest) {
     if (!member) return NextResponse.json({ error: '找不到此業務代號' }, { status: 404 });
 
     const now = new Date();
-    const timeStr = format(now, 'yyyy-MM-dd HH:mm:ss');
-    const today = format(now, 'yyyy-MM-dd');
+    const twFmt = new Intl.DateTimeFormat('zh-TW', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+    const tp = Object.fromEntries(twFmt.formatToParts(now).map(p => [p.type, p.value]));
+    const timeStr = `${tp.year}-${tp.month}-${tp.day} ${tp.hour}:${tp.minute}:${tp.second}`;
+    const today = `${tp.year}-${tp.month}-${tp.day}`;
     const id = generateId();
 
     await addVisitRecord({

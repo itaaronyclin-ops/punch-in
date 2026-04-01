@@ -1116,8 +1116,8 @@ export default function HomePage() {
               {member?.rank !== '準增員' && (
                 <div className="ios-card" onClick={() => setShowScanner(true)}>
                   <div className="ios-card-icon" style={{ background: 'var(--blue-muted)' }}><IconQrcode color="var(--blue)" size={24} /></div>
-                  <div style={{ fontWeight: 600 }}>授權簽署</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>授權驗證</div>
+                  <div style={{ fontWeight: 600 }}>🔑 驗證/授權</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>授權 HR 驗證</div>
                 </div>
               )}
               <div className="ios-card" onClick={() => setScreen('leave')}>

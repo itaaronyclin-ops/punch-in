@@ -19,7 +19,9 @@ export async function POST(req: NextRequest) {
     const member = await getMemberByAgcode(agcode.trim().toUpperCase());
     if (!member) return NextResponse.json({ error: '找不到此業務代號' }, { status: 404 });
 
-    const now = format(new Date(), 'yyyy-MM-dd HH:mm:ss');
+    const twFmt = new Intl.DateTimeFormat('zh-TW', { timeZone: 'Asia/Taipei', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+    const tp = Object.fromEntries(twFmt.formatToParts(new Date()).map(p => [p.type, p.value]));
+    const now = `${tp.year}-${tp.month}-${tp.day} ${tp.hour}:${tp.minute}:${tp.second}`;
     const id = generateId();
 
     const result = await addLeaveRequest({
