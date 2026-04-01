@@ -982,8 +982,8 @@ function MoreTab({ member, onLogout, onExtHistory, onExtTrainingCheckin, onVLink
         <div className="ios-list-item" onClick={onVLinkSSO}>
           <div className="ios-list-icon" style={{ background: 'var(--blue)' }}><IconQrcode color="#fff" size={18} /></div>
           <div className="ios-list-text">
-            <div className="ios-list-title">V-Link SSO 掃碼登入</div>
-            <div className="ios-list-desc">掃描電腦版 QR Code 直接登入</div>
+            <div className="ios-list-title">V-Link SSO 驗證</div>
+            <div className="ios-list-desc">掃描 QR Code 驗證</div>
           </div>
           <IconChevronRight size={16} color="var(--text-secondary)" />
         </div>
@@ -1305,7 +1305,7 @@ export default function HomePage() {
 
       {showScanner && (
         <AuthScanner
-          title="🔑 授權驗證器"
+          title="授權驗證"
           onCodeSubmited={async (code) => {
             setShowScanner(false);
 
