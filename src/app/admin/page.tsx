@@ -461,6 +461,8 @@ function OverviewSection({ token }: { token: string }) {
 // ─── Attendance Report ─────────────────────────────────────────────────────
 function AttendanceSection({ token }: { token: string }) {
     const [records, setRecords] = useState<any[]>([]);
+    const [requiredDays, setRequiredDays] = useState<any[]>([]);
+    const [leaves, setLeaves] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [filterGroup, setFilterGroup] = useState('');
     const [filterName, setFilterName] = useState('');
@@ -474,16 +476,15 @@ function AttendanceSection({ token }: { token: string }) {
         (async () => {
             setLoading(true);
             try {
-                const res = await fetch(`/api/checkin?startDate=${filterStart}&endDate=${filterEnd}`, { headers: { 'x-admin-token': token } });
-                if (res.ok) {
-                    const data = await res.json();
-                    setRecords(data.records || []);
-                } else {
-                    console.error('Failed to load checkin, status:', res.status);
-                }
-            } catch (err) {
-                console.error(err);
-            }
+                const [attRes, rdRes, lvRes] = await Promise.all([
+                    fetch(`/api/checkin?startDate=${filterStart}&endDate=${filterEnd}`, { headers: { 'x-admin-token': token } }),
+                    fetch(`/api/required-days`, { headers: { 'x-admin-token': token } }),
+                    fetch(`/api/leave`, { headers: { 'x-admin-token': token } }),
+                ]);
+                if (attRes.ok) { const d = await attRes.json(); setRecords(d.records || []); }
+                if (rdRes.ok) { const d = await rdRes.json(); setRequiredDays(d.records || []); }
+                if (lvRes.ok) { const d = await lvRes.json(); setLeaves(d.records || []); }
+            } catch (err) { console.error(err); }
             setLoading(false);
         })();
     }, [token, filterStart, filterEnd]);
@@ -495,12 +496,44 @@ function AttendanceSection({ token }: { token: string }) {
         return inDate && inName;
     });
 
+    // Badge helper
+    const badgeInline = (color: string, text: string) => (
+        <span style={{ display: 'inline-block', padding: '1px 6px', borderRadius: 12, fontSize: '0.72rem', fontWeight: 700, background: color + '22', color, marginLeft: 6 }}>{text}</span>
+    );
+
+    // Check if a record is late
+    const isLate = (r: any): boolean => {
+        const rd = requiredDays.find(d => (d.agcode === r.agcode || d.agcode === 'ALL') && d.date === normalizeDate(r.date));
+        if (!rd || !rd.lateThreshold) return false;
+        const timeOnly = (r.checkinTime || '').split(' ')[1] || '';
+        return timeOnly > rd.lateThreshold;
+    };
+
+    // Get absent required days for a filtered agcode
+    const getMissingRows = (): { agcode: string; name: string; date: string; hasLeave: boolean }[] => {
+        if (!filterName) return []; // only show missing rows when filtered to a specific user
+        const checkedDates = new Set(filtered.map(r => normalizeDate(r.date)));
+        return requiredDays
+            .filter(rd =>
+                (rd.agcode === filtered[0]?.agcode || rd.agcode === 'ALL') &&
+                rd.date >= filterStart && rd.date <= filterEnd &&
+                !checkedDates.has(rd.date)
+            )
+            .map(rd => ({
+                agcode: filtered[0]?.agcode || '',
+                name: filtered[0]?.name || '',
+                date: rd.date,
+                hasLeave: leaves.some(l => l.agcode === filtered[0]?.agcode && l.leaveDate === rd.date && l.status === 'approved')
+            }))
+            .sort((a, b) => b.date.localeCompare(a.date));
+    };
+
     const exportCSV = () => {
-        const rows = [['日期', '姓名', 'AGCODE', '簽到時間', '類型', 'IP', '緯度', '經度']];
+        const rows = [['日期', '姓名', 'AGCODE', '簽到時間', '類型', '遲到', 'IP', '緯度', '經度']];
         filtered.forEach(r => {
             const dt = formatDateTime(r.checkinTime);
             const isField = r.type === 'field' || String(r.isFieldWork).toLowerCase() === 'true';
-            rows.push([normalizeDate(r.date), r.name, r.agcode, `${dt.date} ${dt.time}`, isField ? '外勤' : '一般', r.ip, r.lat || '', r.lng || '']);
+            rows.push([normalizeDate(r.date), r.name, r.agcode, `${dt.date} ${dt.time}`, isField ? '外勤' : '一般', isLate(r) ? '是' : '', r.ip, r.lat || '', r.lng || '']);
         });
         const csv = rows.map(r => r.join(',')).join('\n');
         const a = document.createElement('a');
@@ -522,6 +555,8 @@ function AttendanceSection({ token }: { token: string }) {
             rows
         );
     };
+
+    const missingRows = getMissingRows();
 
     return (
         <div className="printable-page">
@@ -558,25 +593,43 @@ function AttendanceSection({ token }: { token: string }) {
                 <table>
                     <thead><tr><th>日期</th><th>姓名</th><th>AGCODE</th><th>時間</th><th>類型</th><th style={{ textAlign: 'center' }}>位置</th><th>IP</th></tr></thead>
                     <tbody>
-                        {loading ? <SkeletonRows cols={7} rows={5} /> : filtered.length === 0
+                        {loading ? <SkeletonRows cols={7} rows={5} /> : filtered.length === 0 && missingRows.length === 0
                             ? <tr><td colSpan={7}><div className="empty-state"><div className="empty-state-icon">📋</div><div className="empty-state-text">無符合的紀錄</div></div></td></tr>
-                            : filtered.sort((a, b) => normalizeDate(b.date).localeCompare(normalizeDate(a.date))).map((r, i) => {
-                                const checkinDt = formatDateTime(r.checkinTime);
-                                const isField = r.type === 'field' || String(r.isFieldWork).toLowerCase() === 'true';
-                                return (
-                                    <tr key={i}>
-                                        <td style={{ fontVariantNumeric: 'tabular-nums' }}>{formatDateTime(r.date).date}</td>
-                                        <td style={{ fontWeight: 600 }}>{r.name}</td>
-                                        <td><code style={{ fontFamily: 'var(--font-mono)', fontSize: '0.82rem' }}>{r.agcode}</code></td>
-                                        <td style={{ fontVariantNumeric: 'tabular-nums' }}>{checkinDt.time}</td>
-                                        <td>{isField ? <span className="badge badge-yellow">外勤</span> : <span className="badge badge-green">一般</span>}</td>
-                                        <td style={{ textAlign: 'center' }}>
-                                            <AddressCell lat={r.lat} lng={r.lng} />
-                                        </td>
-                                        <td><span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{r.ip}</span></td>
+                            : <>
+                                {filtered.sort((a, b) => normalizeDate(b.date).localeCompare(normalizeDate(a.date))).map((r, i) => {
+                                    const checkinDt = formatDateTime(r.checkinTime);
+                                    const isField = r.type === 'field' || String(r.isFieldWork).toLowerCase() === 'true';
+                                    const late = isLate(r);
+                                    return (
+                                        <tr key={i}>
+                                            <td style={{ fontVariantNumeric: 'tabular-nums' }}>{formatDateTime(r.date).date}</td>
+                                            <td style={{ fontWeight: 600 }}>{r.name}</td>
+                                            <td><code style={{ fontFamily: 'var(--font-mono)', fontSize: '0.82rem' }}>{r.agcode}</code></td>
+                                            <td style={{ fontVariantNumeric: 'tabular-nums' }}>
+                                                {checkinDt.time}
+                                                {late && badgeInline('#FF9500', '⏰ 遲到')}
+                                            </td>
+                                            <td>{isField ? <span className="badge badge-yellow">外勤</span> : <span className="badge badge-green">一般</span>}</td>
+                                            <td style={{ textAlign: 'center' }}>
+                                                <AddressCell lat={r.lat} lng={r.lng} />
+                                            </td>
+                                            <td><span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{r.ip}</span></td>
+                                        </tr>
+                                    );
+                                })}
+                                {missingRows.map((m, i) => (
+                                    <tr key={`miss-${i}`} style={{ background: m.hasLeave ? 'rgba(52,199,89,0.05)' : 'rgba(255,59,48,0.05)' }}>
+                                        <td style={{ fontVariantNumeric: 'tabular-nums', color: m.hasLeave ? '#34C759' : '#FF3B30', fontWeight: 600 }}>{m.date}</td>
+                                        <td style={{ fontWeight: 600 }}>{m.name}</td>
+                                        <td><code style={{ fontFamily: 'var(--font-mono)', fontSize: '0.82rem' }}>{m.agcode}</code></td>
+                                        <td>—</td>
+                                        <td>{m.hasLeave ? badgeInline('#34C759', '🏖️ 請假') : badgeInline('#FF3B30', '❌ 必要出席日缺席')}</td>
+                                        <td>—</td>
+                                        <td>—</td>
                                     </tr>
-                                );
-                            })}
+                                ))}
+                            </>
+                        }
                     </tbody>
                 </table>
             </div>

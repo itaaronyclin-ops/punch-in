@@ -508,7 +508,7 @@ function QueryTab({
       if (type === 'attendance') {
         const [attRes, rdRes, lvRes] = await Promise.all([
           fetch(`/api/checkin?agcode=${forcedMember.agcode}&startDate=${startDate}&endDate=${endDate}`),
-          fetch(`/api/required-days`),
+          fetch(`/api/required-days?agcode=${forcedMember.agcode}`),
           fetch(`/api/leave?agcode=${forcedMember.agcode}`),
         ]);
         const [attData, rdData, lvData] = await Promise.all([attRes.json(), rdRes.json(), lvRes.json()]);
