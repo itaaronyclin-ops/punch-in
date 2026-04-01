@@ -1877,9 +1877,6 @@ function PersonnelSection({ token }: { token: string }) {
                                     <span>掃描後開啟 HR 頁面，由授權者確認身份後即可操作</span>
                                 </div>
                             </div>
-                            <div style={{ fontSize: '0.75rem', color: '#34C759', background: 'rgba(52,199,89,0.1)', padding: '6px 12px', borderRadius: 8, marginBottom: 20, textAlign: 'left' }}>
-                                ✨ 雙軌護航：相機若無法啟動，請主管直接於手機點選「輸入授權」並輸入上述 6 位代碼即可秒開通。
-                            </div>
                             <button className="btn btn-ghost btn-full" onClick={() => { setShowHrQr(false); setHrSid(''); setHrStatus('IDLE'); }}>
                                 關閉
                             </button>
