@@ -180,7 +180,7 @@ export default function AuthScanner({ onCodeSubmited, onClose, title = '🔑 掃
                         <span style={{ fontSize: '0.85rem', color: '#86868b', fontWeight: 600, letterSpacing: 1 }}>或者手動輸入代碼 (不限網路)</span>
                         <div style={{ height: 1, background: '#f2f2f7', marginTop: 12 }}></div>
                     </div>
-                    <form onSubmit={handleManualSubmit} style={{ display: 'flex', gap: 12 }}>
+                    <form onSubmit={handleManualSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                         <input 
                             type="text"
                             inputMode="numeric"
@@ -188,10 +188,9 @@ export default function AuthScanner({ onCodeSubmited, onClose, title = '🔑 掃
                             value={manualCode}
                             onChange={(e) => setManualCode(e.target.value)}
                             style={{
-                                flex: 1, padding: '14px 16px', borderRadius: 12, border: '1px solid #d1d1d6',
-                                fontSize: '1.2rem', fontWeight: 600, letterSpacing: 2, textAlign: 'center', outline: 'none',
-                                // explicitly force zero margin and safe borders 
-                                margin: 0, boxSizing: 'border-box'
+                                width: '100%', padding: '16px', borderRadius: 12, border: '1px solid #d1d1d6',
+                                fontSize: '1.4rem', fontWeight: 700, letterSpacing: 4, textAlign: 'center', outline: 'none',
+                                background: '#f9f9fb', color: '#1d1d1f', margin: 0, boxSizing: 'border-box'
                             }}
                             autoFocus={!!error}
                         />
@@ -199,10 +198,10 @@ export default function AuthScanner({ onCodeSubmited, onClose, title = '🔑 掃
                             type="submit" 
                             disabled={manualCode.trim().length === 0}
                             style={{
-                                background: manualCode.trim().length > 0 ? '#007aff' : '#d1d1d6',
-                                color: '#fff', border: 'none', borderRadius: 12, padding: '0 24px',
-                                fontWeight: 700, fontSize: '1rem', cursor: manualCode.trim().length > 0 ? 'pointer' : 'not-allowed',
-                                transition: '0.2s', margin: 0, flexShrink: 0
+                                width: '100%', background: manualCode.trim().length > 0 ? '#007aff' : '#d1d1d6',
+                                color: '#fff', border: 'none', borderRadius: 12, padding: '16px',
+                                fontWeight: 700, fontSize: '1.05rem', cursor: manualCode.trim().length > 0 ? 'pointer' : 'not-allowed',
+                                transition: '0.2s', margin: 0
                             }}
                         >
                             確認

@@ -1145,7 +1145,7 @@ export default function HomePage() {
             <div className="ios-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <h1 style={{ fontSize: '1.8rem', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 2 }}>
-                  Hello! {member.name} <span style={{ fontSize: '0.7rem', fontWeight: 400, opacity: 0.5, verticalAlign: 'middle' }}>V.63.0</span>
+                  Hello! {member.name} <span style={{ fontSize: '0.7rem', fontWeight: 400, opacity: 0.5, verticalAlign: 'middle' }}>V.64.0</span>
                 </h1>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>祝你有美好的一天</p>
               </div>

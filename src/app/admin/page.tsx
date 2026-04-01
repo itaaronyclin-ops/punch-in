@@ -235,7 +235,7 @@ function LoginScreen({ onLogin }: { onLogin: (pw: string) => Promise<boolean> })
         <div className="login-page">
             <div className="login-box">
                 <div className="login-icon-wrap" style={{ background: 'rgba(0,122,255,0.1)', color: 'var(--blue)' }}><IconShieldCheck size={36} /></div>
-                <h1 style={{ fontSize: '1.4rem', fontWeight: 700, letterSpacing: '-0.03em', marginBottom: 6 }}>後台管理 <span style={{fontSize: '0.8rem', fontWeight: 400, opacity: 0.5}}>V.63.0</span></h1>
+                <h1 style={{ fontSize: '1.4rem', fontWeight: 700, letterSpacing: '-0.03em', marginBottom: 6 }}>後台管理 <span style={{fontSize: '0.8rem', fontWeight: 400, opacity: 0.5}}>V.64.0</span></h1>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 28 }}>請使用手機掃描下方 QR Code 登入</p>
 
                 {showPwForm ? (
