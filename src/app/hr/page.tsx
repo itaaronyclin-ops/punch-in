@@ -39,6 +39,11 @@ function HRPageContent() {
         certForeign: '', certInvestment: '', rank: '',
         supervisorAgcode: '', supervisorName: '',
     });
+    // Ref to always access the latest formData inside async callbacks (avoids stale closure)
+    const formDataRef = useRef<any>({});
+
+    // Keep ref in sync with state so async callbacks always see the latest data
+    useEffect(() => { formDataRef.current = formData; }, [formData]);
 
     const searchParams = useSearchParams();
 
@@ -102,8 +107,10 @@ function HRPageContent() {
                     if (authPhase === 'ENTRY') {
                         setStep('SELECT_MODE');
                     } else if (authPhase === 'SUBMIT') {
-                        setFormData((p: any) => ({ ...p, ...info }));
-                        submitFinal({ ...formData, ...info });
+                        // Use ref to get the LATEST formData — avoids React stale closure bug
+                        const latestData = { ...formDataRef.current, ...info };
+                        setFormData(latestData);
+                        submitFinal(latestData);
                     }
                 }
             } catch { /* ignore */ }
@@ -111,7 +118,7 @@ function HRPageContent() {
         return () => clearInterval(pollInterval.current);
     }, [isPolling, authSessionId, authPhase]);
 
-    const submitFinal = async (finalData = formData) => {
+    const submitFinal = async (finalData = formDataRef.current) => {
         setIsLoading(true);
         try {
             const res = await fetch('/api/hr', {
@@ -124,11 +131,13 @@ function HRPageContent() {
                 setStatusMsg({ type: 'success', title: '提交成功', content: '資料異動申請已完成。' });
                 setStep('STATUS');
             } else {
-                alert(data.error || '提交失敗');
+                const errMsg = data.error || '提交失敗，請確認必填欄位均已填寫';
+                alert('⚠️ ' + errMsg);
                 setStep('REVIEW');
             }
-        } catch {
-            alert('伺服器無回應');
+        } catch (e: any) {
+            const msg = e?.message || '未知網路錯誤';
+            alert('❌ 伺服器連線失敗：' + msg + '。請稍後再試或檢查網路狀態。');
             setStep('REVIEW');
         } finally {
             setIsLoading(false);

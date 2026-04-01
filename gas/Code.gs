@@ -121,10 +121,27 @@ function getSpreadsheet() {
   return SpreadsheetApp.openById('1YjR1d4o84GHFV-CehMxVSI50TvOYdnxBBFaBWjndXj0');
 }
 
+// PROFILES sheet column headers \u2014 must match saveProfile mapping logic
+const PROFILES_HEADERS = [
+  'ID','AGCODE','IDCard','Name','Birthday','Gender','Phone','Email',
+  'AddressContact','AddressResident','EmgName','EmgRelation','EmgPhone',
+  'EduLevel','EduSchool','PrevIndustry','PrevJob','GroupName',
+  'CertEthics','CertLife','CertProperty','CertForeign','CertInvestment',
+  'Rank','SupervisorAgcode','SupervisorName','CreatedAt','UpdatedAt'
+];
+
 function getSheet(name) {
   const ss = getSpreadsheet();
   let sheet = ss.getSheetByName(name);
-  if (!sheet) throw new Error('Sheet not found: ' + name);
+  if (!sheet) {
+    // Auto-create sheet with correct headers instead of throwing
+    sheet = ss.insertSheet(name);
+    if (name === 'Profiles') {
+      sheet.appendRow(PROFILES_HEADERS);
+      sheet.getRange(1, 1, 1, PROFILES_HEADERS.length)
+        .setBackground('#4a4a4a').setFontColor('#ffffff').setFontWeight('bold');
+    }
+  }
   return sheet;
 }
 
