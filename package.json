@@ -1,6 +1,6 @@
 {
   "name": "attendance-pro",
-  "version": "64.0.0",
+  "version": "65.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",

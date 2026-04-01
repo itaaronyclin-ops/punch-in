@@ -967,7 +967,7 @@ function TrainingCheckinTab({ member, onComplete }: { member: Member; onComplete
 }
 
 // ─── More Tab ──────────────────────────────────────────────────────────────
-function MoreTab({ member, onLogout, onExtHistory, onExtTrainingCheckin }: { member: Member; onLogout: () => void; onExtHistory: () => void; onExtTrainingCheckin: () => void }) {
+function MoreTab({ member, onLogout, onExtHistory, onExtTrainingCheckin, onVLinkSSO }: { member: Member; onLogout: () => void; onExtHistory: () => void; onExtTrainingCheckin: () => void; onVLinkSSO: () => void }) {
   return (
     <div className="ios-history-page">
       <div className="section-header" style={{ marginTop: 0 }}>系統與外部整合</div>
@@ -978,6 +978,14 @@ function MoreTab({ member, onLogout, onExtHistory, onExtTrainingCheckin }: { mem
             <div className="ios-list-title">SEED PRO 課程簽到</div>
             <div className="ios-list-desc">參加區單位主辦之訓練與活動</div>
           </div>
+        </div>
+        <div className="ios-list-item" onClick={onVLinkSSO}>
+          <div className="ios-list-icon" style={{ background: 'var(--blue)' }}><IconQrcode color="#fff" size={18} /></div>
+          <div className="ios-list-text">
+            <div className="ios-list-title">V-Link SSO 掃碼登入</div>
+            <div className="ios-list-desc">掃描電腦版 QR Code 直接登入</div>
+          </div>
+          <IconChevronRight size={16} color="var(--text-secondary)" />
         </div>
         <div className="ios-list-item" onClick={onExtHistory}>
           <div className="ios-list-icon" style={{ background: '#5856D6' }}>🎓</div>
@@ -1035,6 +1043,7 @@ export default function HomePage() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotif, setShowNotif] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const [showVLinkScanner, setShowVLinkScanner] = useState(false);
   const fetchUnread = useCallback(async () => {
     if (!member) return;
     try {
@@ -1094,6 +1103,33 @@ export default function HomePage() {
       }
     }
   }, [member, router]);
+ 
+  // V-Link SSO Scan Handler
+  const handleVLinkSSO = async (code: string) => {
+    if (!member) return;
+    const cleanToken = code.trim();
+    if (!cleanToken) return;
+
+    setShowVLinkScanner(false);
+    toast.info('正在進行 SSO 授權...');
+
+    try {
+      const apiBase = process.env.NEXT_PUBLIC_VLINK_SSO_API || 'https://script.google.com/macros/s/AKfycbz28ylx9RPLCRtkRIUCHbr5XHKpECXa7UnifbBDCKFs4ODCDvQImB1UWUV3KFY5JrtedA/exec';
+      const targetUrl = `${apiBase}?agcode=${member.agcode}&token=${encodeURIComponent(cleanToken)}`;
+      
+      // We use a simple fetch. Since it's a GAS Web App, it might redirect, 
+      // but usually for SSO triggers, a simple ping is enough or it returns JSON.
+      const res = await fetch(targetUrl, { mode: 'no-cors' }); 
+      
+      // Note: 'no-cors' will always return an opaque response, 
+      // but the request will still reach the server.
+      toast.success('SSO 登入請求已送出');
+    } catch (err) {
+      console.error('SSO Error:', err);
+      toast.error('SSO 授權失敗，請檢查網路連線');
+    }
+  };
+
 
 
 
@@ -1244,7 +1280,7 @@ export default function HomePage() {
               {screen === 'query-attendance' && <QueryTab forcedMember={member} title="個人出勤紀錄" type="attendance" />}
               {screen === 'query-visit' && <QueryTab forcedMember={member} title="客戶拜訪查詢" type="visit" />}
               {screen === 'visit' && <VisitTab forcedMember={member} onComplete={() => setScreen('home')} />}
-              {screen === 'more' && <MoreTab member={member} onLogout={logout} onExtHistory={() => setScreen('history-ext')} onExtTrainingCheckin={() => setScreen('external-training')} />}
+              {screen === 'more' && <MoreTab member={member} onLogout={logout} onExtHistory={() => setScreen('history-ext')} onExtTrainingCheckin={() => setScreen('external-training')} onVLinkSSO={() => setShowVLinkScanner(true)} />}
               {screen === 'history-ext' && (
                 <div className="ios-history-page">
                   <HistoryExtView agcode={member.agcode} />
@@ -1336,6 +1372,13 @@ export default function HomePage() {
             }
           }}
           onClose={() => setShowScanner(false)}
+        />
+      )}
+      {showVLinkScanner && (
+        <AuthScanner
+          title="🔑 V-Link SSO 登入授權"
+          onClose={() => setShowVLinkScanner(false)}
+          onCodeSubmited={handleVLinkSSO}
         />
       )}
     </div>

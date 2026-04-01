@@ -32,13 +32,8 @@ export default function QRScanner({ onScan, onClose, title = '掃描 QR Code' }:
                 onScan(decoded);
             },
             () => { /* ignore per-frame errors */ }
-        ).catch((e: Error) => {
-            const isNotAllowed = e?.name === 'NotAllowedError' || e?.message?.includes('NotAllowedError');
-            if (isNotAllowed) {
-                setError('系統阻擋了相機權限！若您在 LINE 或無痕模式中，請點選右上角「以 Safari 開啟」並允許相機權限。');
-            } else {
-                setError('無法存取相機，請確認已授予權限，且不在封閉的 App 內建瀏覽器中。');
-            }
+        ).catch(() => {
+            setError('無法存取相機，請確認已授予相機權限。');
         });
 
         return () => {
@@ -87,22 +82,15 @@ export default function QRScanner({ onScan, onClose, title = '掃描 QR Code' }:
 
                 {/* Body */}
                 {error ? (
-                    <div style={{ padding: '32px 20px', textAlign: 'center' }}>
-                        <div style={{ fontSize: '3rem', marginBottom: 12 }}>📷</div>
-                        <p style={{ fontWeight: 800, fontSize: '1.2rem', color: '#ff3b30', marginBottom: 16 }}>相機無法啟動</p>
-                        <div style={{ background: '#fff0f0', borderRadius: 12, padding: '16px', border: '1px solid #ffcccc', textAlign: 'left', marginBottom: 20 }}>
-                            <p style={{ fontSize: '0.9rem', color: '#d70015', margin: 0, lineHeight: 1.6, fontWeight: 600 }}>{error}</p>
-                            <p style={{ fontSize: '0.85rem', color: '#86868b', margin: '12px 0 0 0', lineHeight: 1.5 }}>
-                                • LINE/FB 等內建網頁<b>無法</b>使用相機<br/>
-                                • Safari <b>無痕模式</b>可能強制封鎖相機<br/>
-                                • 請改用一般模式的 Safari 或 Chrome 打開
-                            </p>
-                        </div>
+                    <div style={{ padding: '40px 20px', textAlign: 'center' }}>
+                        <div style={{ fontSize: '2.5rem', marginBottom: 12 }}>📷</div>
+                        <p style={{ fontWeight: 600, color: '#ff3b30', marginBottom: 8 }}>相機無法啟動</p>
+                        <p style={{ fontSize: '0.85rem', color: '#86868b' }}>{error}</p>
                         <button
                             className="btn btn-secondary"
-                            style={{ width: '100%', padding: 14, borderRadius: 12 }}
+                            style={{ marginTop: 20 }}
                             onClick={onClose}
-                        >關閉掃描器</button>
+                        >關閉</button>
                     </div>
                 ) : (
                     <>
