@@ -9,7 +9,6 @@ import {
     IconCheckCircle, IconSend, IconClock, IconRefreshCw, IconRun, IconQrcode, IconCamera, IconEye, IconInfo,
     IconUserEdit, IconShieldCheck, LoadingState, SkeletonRows,
 } from '@/components/Icons';
-import QRScanner from '@/components/QRScanner';
 import { confirmDialog, toast } from '@/components/GlobalUI';
 
 function formatDateTime(str: string): { date: string; time: string } {
@@ -1856,17 +1855,32 @@ function PersonnelSection({ token }: { token: string }) {
                             <h2 style={{ fontSize: '1.4rem', fontWeight: 700, margin: 0 }}>基本資料異動</h2>
                             <p style={{ opacity: 0.9, fontSize: '0.9rem', marginTop: 8 }}>請使用手機掃描以開啟 HR 資料異動介面</p>
                         </div>
-                        <div style={{ padding: '40px 32px', textAlign: 'center' }}>
-                            <div style={{ 
-                                background: '#fff', padding: 16, borderRadius: 20, 
-                                display: 'inline-block', border: '1px solid var(--line)', 
-                                boxShadow: '0 8px 24px rgba(0,0,0,0.06)', marginBottom: 24 
-                            }}>
-                                <QRCodeSVG value={`https://punch-in-8h24.vercel.app/#hr=${hrSid}`} size={200} />
-                                <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #f2f2f7', fontSize: '2rem', fontWeight: 800, letterSpacing: 6, color: '#1d1d1f' }}>
-                                    {hrSid}
+                        <div style={{ padding: '32px 24px', textAlign: 'center' }}>
+                            <div style={{ display: 'flex', gap: 20, justifyContent: 'center', flexWrap: 'wrap', marginBottom: 24 }}>
+                                {/* 1. 原生相機跳轉專用 */}
+                                <div style={{ 
+                                    background: '#fff', padding: 16, borderRadius: 20, 
+                                    border: '1px solid var(--line)', 
+                                    boxShadow: '0 8px 20px rgba(0,0,0,0.04)'
+                                }}>
+                                    <QRCodeSVG value={`https://punch-in-8h24.vercel.app/#hr=${hrSid}`} size={140} />
+                                    <div style={{ fontSize: '0.85rem', color: '#1d1d1f', fontWeight: 700, marginTop: 12 }}>系統掃描</div>
+                                    <div style={{ fontSize: '0.75rem', color: '#86868b', marginTop: 4 }}>(原生相機)</div>
                                 </div>
-                                <div style={{ fontSize: '0.85rem', color: '#86868b', marginTop: 4 }}>人事編輯碼</div>
+                                {/* 2. HR 內部掃描器專用純代碼 */}
+                                <div style={{ 
+                                    background: '#fff', padding: 16, borderRadius: 20, 
+                                    border: '1px solid var(--line)', 
+                                    boxShadow: '0 8px 20px rgba(0,0,0,0.04)'
+                                }}>
+                                    <QRCodeSVG value={hrSid} size={140} />
+                                    <div style={{ fontSize: '0.85rem', color: '#1d1d1f', fontWeight: 700, marginTop: 12 }}>HR 專用掃描</div>
+                                    <div style={{ fontSize: '0.75rem', color: '#86868b', marginTop: 4 }}>(純人事代碼)</div>
+                                </div>
+                            </div>
+                            
+                            <div style={{ fontSize: '2rem', fontWeight: 800, letterSpacing: 6, color: '#1d1d1f', background: '#f2f2f7', padding: '16px 0', borderRadius: 16, marginBottom: 24 }}>
+                                {hrSid}
                             </div>
                             <button className="btn btn-ghost btn-full" onClick={() => { setShowHrQr(false); setHrSid(''); setHrStatus('IDLE'); }}>
                                 關閉
