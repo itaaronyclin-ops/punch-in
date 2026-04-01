@@ -31,8 +31,8 @@ function formatDateTime(str: string): { date: string; time: string } {
 
 function normalizeDate(str: string): string {
     if (!str) return '';
-    if (str.includes(' ')) return str.split(' ')[0];
-    return str;
+    let d = str.includes(' ') ? str.split(' ')[0] : str;
+    return d.replace(/\//g, '-');
 }
 
 
@@ -235,7 +235,7 @@ function LoginScreen({ onLogin }: { onLogin: (pw: string) => Promise<boolean> })
         <div className="login-page">
             <div className="login-box">
                 <div className="login-icon-wrap" style={{ background: 'rgba(0,122,255,0.1)', color: 'var(--blue)' }}><IconShieldCheck size={36} /></div>
-                <h1 style={{ fontSize: '1.4rem', fontWeight: 700, letterSpacing: '-0.03em', marginBottom: 6 }}>後台管理</h1>
+                <h1 style={{ fontSize: '1.4rem', fontWeight: 700, letterSpacing: '-0.03em', marginBottom: 6 }}>後台管理 <span style={{fontSize: '0.8rem', fontWeight: 400, opacity: 0.5}}>V.63.0</span></h1>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 28 }}>請使用手機掃描下方 QR Code 登入</p>
 
                 {showPwForm ? (
@@ -463,6 +463,7 @@ function AttendanceSection({ token }: { token: string }) {
     const [records, setRecords] = useState<any[]>([]);
     const [requiredDays, setRequiredDays] = useState<any[]>([]);
     const [leaves, setLeaves] = useState<any[]>([]);
+    const [allMembers, setAllMembers] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [filterGroup, setFilterGroup] = useState('');
     const [filterName, setFilterName] = useState('');
@@ -476,14 +477,16 @@ function AttendanceSection({ token }: { token: string }) {
         (async () => {
             setLoading(true);
             try {
-                const [attRes, rdRes, lvRes] = await Promise.all([
+                const [attRes, rdRes, lvRes, memRes] = await Promise.all([
                     fetch(`/api/checkin?startDate=${filterStart}&endDate=${filterEnd}`, { headers: { 'x-admin-token': token } }),
                     fetch(`/api/required-days`, { headers: { 'x-admin-token': token } }),
                     fetch(`/api/leave`, { headers: { 'x-admin-token': token } }),
+                    fetch(`/api/member`, { headers: { 'x-admin-token': token } }),
                 ]);
                 if (attRes.ok) { const d = await attRes.json(); setRecords(d.records || []); }
                 if (rdRes.ok) { const d = await rdRes.json(); setRequiredDays(d.records || []); }
                 if (lvRes.ok) { const d = await lvRes.json(); setLeaves(d.records || []); }
+                if (memRes.ok) { const d = await memRes.json(); setAllMembers(d.members || []); }
             } catch (err) { console.error(err); }
             setLoading(false);
         })();
@@ -496,7 +499,6 @@ function AttendanceSection({ token }: { token: string }) {
         return inDate && inName;
     });
 
-    // Badge helper
     const badgeInline = (color: string, text: string) => (
         <span style={{ display: 'inline-block', padding: '1px 6px', borderRadius: 12, fontSize: '0.72rem', fontWeight: 700, background: color + '22', color, marginLeft: 6 }}>{text}</span>
     );
@@ -505,27 +507,42 @@ function AttendanceSection({ token }: { token: string }) {
     const isLate = (r: any): boolean => {
         const rd = requiredDays.find(d => (d.agcode === r.agcode || d.agcode === 'ALL') && d.date === normalizeDate(r.date));
         if (!rd || !rd.lateThreshold) return false;
-        const timeOnly = (r.checkinTime || '').split(' ')[1] || '';
-        return timeOnly > rd.lateThreshold;
+        // Normalize: compare HH:mm to ensure formats match
+        const checkinTimeOnly = (r.checkinTime || '').split(' ')[1]?.slice(0, 5) || ''; 
+        const thresh = rd.lateThreshold.slice(0, 5);
+        if (!checkinTimeOnly || !thresh) return false;
+        return checkinTimeOnly > thresh;
     };
 
-    // Get absent required days for a filtered agcode
+    // Get absent required days across ALL members
     const getMissingRows = (): { agcode: string; name: string; date: string; hasLeave: boolean }[] => {
-        if (!filterName) return []; // only show missing rows when filtered to a specific user
-        const checkedDates = new Set(filtered.map(r => normalizeDate(r.date)));
-        return requiredDays
-            .filter(rd =>
-                (rd.agcode === filtered[0]?.agcode || rd.agcode === 'ALL') &&
-                rd.date >= filterStart && rd.date <= filterEnd &&
-                !checkedDates.has(rd.date)
-            )
-            .map(rd => ({
-                agcode: filtered[0]?.agcode || '',
-                name: filtered[0]?.name || '',
-                date: rd.date,
-                hasLeave: leaves.some(l => l.agcode === filtered[0]?.agcode && l.leaveDate === rd.date && l.status === 'approved')
-            }))
-            .sort((a, b) => b.date.localeCompare(a.date));
+        // Build map of (agcode -> Set<date>) for checked-in days
+        const checkedMap = new Map<string, Set<string>>();
+        records.forEach(r => {
+            if (!checkedMap.has(r.agcode)) checkedMap.set(r.agcode, new Set());
+            checkedMap.get(r.agcode)!.add(normalizeDate(r.date));
+        });
+
+        const result: { agcode: string; name: string; date: string; hasLeave: boolean }[] = [];
+        requiredDays.forEach(rd => {
+            if (rd.date < filterStart || rd.date > filterEnd) return;
+            // For 'ALL', use full member list; otherwise use the specific agcode
+            const targets: { agcode: string; name: string }[] = rd.agcode === 'ALL'
+                ? allMembers.map((m: any) => ({ agcode: String(m.agcode || m.AGCODE || '').toUpperCase(), name: m.name || m.Name || '' }))
+                : [{ agcode: rd.agcode.toUpperCase(), name: allMembers.find((m: any) => String(m.agcode || m.AGCODE || '').toUpperCase() === rd.agcode.toUpperCase())?.name || rd.agcode }];
+
+            targets.forEach(({ agcode: ag, name }) => {
+                if (!ag) return;
+                // Apply filterName if set
+                if (filterName && !name.includes(filterName) && !ag.includes(filterName.toUpperCase())) return;
+                if (checkedMap.get(ag)?.has(rd.date)) return; // already checked in
+                const hasLeave = leaves.some(
+                    (l: any) => l.agcode === ag && l.leaveDate === rd.date && l.status === 'approved'
+                );
+                result.push({ agcode: ag, name, date: rd.date, hasLeave });
+            });
+        });
+        return result.sort((a, b) => b.date.localeCompare(a.date));
     };
 
     const exportCSV = () => {
@@ -605,9 +622,8 @@ function AttendanceSection({ token }: { token: string }) {
                                             <td style={{ fontVariantNumeric: 'tabular-nums' }}>{formatDateTime(r.date).date}</td>
                                             <td style={{ fontWeight: 600 }}>{r.name}</td>
                                             <td><code style={{ fontFamily: 'var(--font-mono)', fontSize: '0.82rem' }}>{r.agcode}</code></td>
-                                            <td style={{ fontVariantNumeric: 'tabular-nums' }}>
-                                                {checkinDt.time}
-                                                {late && badgeInline('#FF9500', '⏰ 遲到')}
+                                        <td>{late && badgeInline('#FF9500', '遲到')}
+                                            {checkinDt.time}
                                             </td>
                                             <td>{isField ? <span className="badge badge-yellow">外勤</span> : <span className="badge badge-green">一般</span>}</td>
                                             <td style={{ textAlign: 'center' }}>
@@ -623,7 +639,7 @@ function AttendanceSection({ token }: { token: string }) {
                                         <td style={{ fontWeight: 600 }}>{m.name}</td>
                                         <td><code style={{ fontFamily: 'var(--font-mono)', fontSize: '0.82rem' }}>{m.agcode}</code></td>
                                         <td>—</td>
-                                        <td>{m.hasLeave ? badgeInline('#34C759', '🏖️ 請假') : badgeInline('#FF3B30', '❌ 必要出席日缺席')}</td>
+                                        <td>{m.hasLeave ? badgeInline('#34C759', '請假') : badgeInline('#FF3B30', '缺席')}</td>
                                         <td>—</td>
                                         <td>—</td>
                                     </tr>

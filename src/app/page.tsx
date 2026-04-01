@@ -262,8 +262,8 @@ function CheckinTab({ fieldMode = false, forcedMember, onRequireFieldWork, onCom
           <div style={{ marginTop: 8 }}>
             <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: 16, lineHeight: 1.6 }}>
               {fieldMode
-                ? '📍 外勤簽到將記錄您目前的 GPS 位置。請確認身份資訊無誤後送出。'
-                : '✅ 系統將驗證您所在位置是否在公司範圍內。請確認身份資訊無誤後送出。'}
+                ? '外勤簽到將記錄您目前的 GPS 位置。請確認身份資訊無誤後送出。'
+                : '辦公室簽到將自動比對公司經緯度。請確認身份資訊無誤後送出。'}
             </p>
             <button
               className={`btn ${fieldMode ? 'btn-warning' : 'btn-success'} btn-full btn-lg`}
@@ -271,7 +271,7 @@ function CheckinTab({ fieldMode = false, forcedMember, onRequireFieldWork, onCom
               disabled={loading || geoLoading}
             >
               {(loading || geoLoading) ? <span className="spinner" /> : null}
-              {geoLoading ? '取得位置中⋯' : loading ? '簽到中⋯' : fieldMode ? '🏃 確認外勤簽到' : '✅ 確認簽到'}
+              {geoLoading ? '取得位置中⋯' : loading ? '簽到中⋯' : fieldMode ? '確認外勤簽到' : '確認簽到'}
             </button>
           </div>
         </>
@@ -379,7 +379,7 @@ function LeaveTab({ forcedMember, onComplete }: { forcedMember?: Member; onCompl
             </div>
             <button className="btn btn-primary btn-full" type="submit" disabled={loading || !leaveDate || !reason}>
               {loading ? <span className="spinner" /> : null}
-              {loading ? '送出中⋯' : '📬 送出請假申請'}
+              {loading ? '送出中⋯' : '送出請假申請'}
             </button>
           </form>
         </>
@@ -428,7 +428,7 @@ function VisitTab({ forcedMember, onComplete }: { forcedMember?: Member; onCompl
       });
       const data = await res.json();
       if (res.ok) {
-        showAnimation('visit-success', '📍 拜訪紀錄已上傳');
+        showAnimation('visit-success', '拜訪紀錄已上傳');
         toast.success('拜訪紀錄已上傳');
         setPurpose(''); setClientName(''); setNotes('');
         if (onComplete) onComplete();
@@ -470,7 +470,7 @@ function VisitTab({ forcedMember, onComplete }: { forcedMember?: Member; onCompl
             </div>
             <button className="btn btn-primary btn-full" type="submit" disabled={loading || !purpose || !clientName}>
               {loading ? <span className="spinner" /> : null}
-              {loading ? '送出中⋯' : '📍 送出拜訪紀錄'}
+              {loading ? '送出中⋯' : '送出拜訪紀錄'}
             </button>
           </form>
         </>
@@ -532,9 +532,11 @@ function QueryTab({
       (r.agcode === forcedMember.agcode || r.agcode === 'ALL') && r.date === record.date
     );
     if (!rd || !rd.lateThreshold) return false;
-    // checkinTime format: 'YYYY-MM-DD HH:mm:ss'
-    const timeOnly = record.checkinTime?.split(' ')[1] || '';
-    return timeOnly > rd.lateThreshold;
+    // Normalize: compare HH:mm to ensure formats match
+    const checkinTimeOnly = (record.checkinTime || '').split(' ')[1]?.slice(0, 5) || ''; 
+    const thresh = rd.lateThreshold.slice(0, 5);
+    if (!checkinTimeOnly || !thresh) return false;
+    return checkinTimeOnly > thresh;
   };
 
   // Helper: get all required dates in range that have no attendance and determine absence/leave status
@@ -588,7 +590,7 @@ function QueryTab({
         <div style={{ padding: '40px 0', textAlign: 'center' }}><span className="spinner" /></div>
       ) : type === 'attendance' ? (
         attendance.length === 0 && getMissingDays().length === 0 ? (
-          <div className="empty-state"><div className="empty-state-icon">📅</div><div className="empty-state-text">無出勤紀錄</div></div>
+          <div className="empty-state"><div className="empty-state-text">無出勤紀錄</div></div>
         ) : (
           <div className="table-wrapper">
             <table>
@@ -600,12 +602,12 @@ function QueryTab({
                     <td>
                       <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>
                         {a.checkinTime?.split(' ')[1]?.slice(0,5) || a.checkinTime}
-                        {isLate(a) && <span style={badgeStyle('#FF9500')}>⏰ 遲到</span>}
+                        {isLate(a) && <span style={badgeStyle('#FF9500')}>遲到</span>}
                       </div>
                     </td>
                     <td>
                       <div style={{ fontSize: '0.78rem', color: a.type === 'field' ? 'var(--orange)' : 'var(--green)', fontWeight: 600 }}>
-                        {a.type === 'field' ? '📍 外勤' : '🏢 辦公室'}
+                        {a.type === 'field' ? '外勤' : '辦公室'}
                       </div>
                       {a.notes && <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{a.notes}</div>}
                     </td>
@@ -620,8 +622,8 @@ function QueryTab({
                     </td>
                     <td>
                       {m.hasLeave
-                        ? <span style={badgeStyle('#34C759')}>🏖️ 請假</span>
-                        : <span style={badgeStyle('#FF3B30')}>❌ 必要出席日缺席</span>
+                        ? <span style={badgeStyle('#34C759')}>請假</span>
+                        : <span style={badgeStyle('#FF3B30')}>缺席</span>
                       }
                     </td>
                     <td style={{ textAlign: 'right', fontSize: '0.82rem', whiteSpace: 'nowrap', color: m.hasLeave ? '#34C759' : '#FF3B30', fontWeight: 600 }}>{m.date}</td>
@@ -633,7 +635,7 @@ function QueryTab({
         )
       ) : (
         visits.length === 0 ? (
-          <div className="empty-state"><div className="empty-state-icon">📍</div><div className="empty-state-text">無拜訪紀錄</div></div>
+          <div className="empty-state"><div className="empty-state-text">無拜訪紀錄</div></div>
         ) : (
           <div className="ios-list">
             {visits.map((v, i) => (
@@ -699,7 +701,6 @@ function NotificationModal({
           {loading ? <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}><span className="spinner spinner-dark" /></div> : (
             notifs.length === 0 ? (
               <div className="empty-state" style={{ padding: '60px 0' }}>
-                <div className="empty-state-icon">🔔</div>
                 <div className="empty-state-text">尚無任何通知</div>
               </div>
             ) : (
@@ -752,7 +753,6 @@ function HistoryExtView({ agcode }: { agcode: string }) {
   if (!history || !history.found) {
     return (
       <div className="empty-state" style={{ padding: '60px 0' }}>
-        <div className="empty-state-icon">🎓</div>
         <div className="empty-state-text">查無外部訓練歷程紀錄</div>
       </div>
     );
@@ -801,7 +801,7 @@ function TrainingCheckinTab({ member, onComplete }: { member: Member; onComplete
   const [initing, setIniting] = useState(true);
   const [events, setEvents] = useState<any[]>([]);
   const [selectedEvent, setSelectedEvent] = useState('');
-  const [locText, setLocText] = useState('📍 定位獲取中...');
+  const [locText, setLocText] = useState('定位獲取中...');
   const [userLoc, setUserLoc] = useState<{ latitude: number, longitude: number } | null>(null);
 
   const API_URL = 'https://script.google.com/macros/s/AKfycbz4kiWGCG96zZHAJgc-wOAaCxOkS7WXf5IriAEKk0StXYFNVlME7x2SjaSva3Rp8obX/exec';
@@ -819,14 +819,14 @@ function TrainingCheckinTab({ member, onComplete }: { member: Member; onComplete
   useEffect(() => {
     let watchId: number;
     if (!navigator.geolocation) {
-      setLocText('❌ 不支援定位功能');
+      setLocText('不支援定位功能');
     } else {
       watchId = navigator.geolocation.watchPosition(
         (pos) => {
           setUserLoc({ latitude: pos.coords.latitude, longitude: pos.coords.longitude });
-          setLocText(`📍 定位已就緒 (誤差 ${Math.round(pos.coords.accuracy)}m)`);
+          setLocText(`定位已就緒 (誤差 ${Math.round(pos.coords.accuracy)}m)`);
         },
-        () => setLocText('⚠️ 無法獲取定位，請確認權限'),
+        () => setLocText('無法獲取定位，請確認權限'),
         { enableHighAccuracy: true }
       );
     }
@@ -1058,7 +1058,7 @@ export default function HomePage() {
         .catch(() => { })
         .finally(() => setLoading(false));
     }
-  }, []); // eslint-disable-line
+  }, [member]);
 
   // 支援 V49 透過手機內建相機掃描網址，利用 Hash 傳遞 id 避免跳轉問題
   useEffect(() => {
@@ -1144,7 +1144,9 @@ export default function HomePage() {
           <>
             <div className="ios-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <h1 style={{ fontSize: '1.8rem', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 2 }}>Hello! {member.name}</h1>
+                <h1 style={{ fontSize: '1.8rem', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 2 }}>
+                  Hello! {member.name} <span style={{ fontSize: '0.7rem', fontWeight: 400, opacity: 0.5, verticalAlign: 'middle' }}>V.63.0</span>
+                </h1>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>祝你有美好的一天</p>
               </div>
               <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
