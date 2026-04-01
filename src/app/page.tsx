@@ -1376,7 +1376,7 @@ export default function HomePage() {
       )}
       {showVLinkScanner && (
         <AuthScanner
-          title="🔑 V-Link SSO 登入授權"
+          title=" V-Link SSO 授權"
           onClose={() => setShowVLinkScanner(false)}
           onCodeSubmited={handleVLinkSSO}
         />
