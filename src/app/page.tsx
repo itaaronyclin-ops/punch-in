@@ -492,26 +492,71 @@ function QueryTab({
 }) {
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
   const [visits, setVisits] = useState<any[]>([]);
+  const [requiredDays, setRequiredDays] = useState<any[]>([]);
+  const [leaves, setLeaves] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dateRange, setDateRange] = useState(new Date().toISOString().split('T')[0]);
+
+  // Default: last 30 days
+  const thirtyDaysAgo = new Date();
+  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  const [startDate, setStartDate] = useState(thirtyDaysAgo.toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
       if (type === 'attendance') {
-        const res = await fetch(`/api/checkin?agcode=${forcedMember.agcode}&startDate=${dateRange}`);
-        const data = await res.json();
-        if (res.ok) setAttendance(data.records || []);
+        const [attRes, rdRes, lvRes] = await Promise.all([
+          fetch(`/api/checkin?agcode=${forcedMember.agcode}&startDate=${startDate}&endDate=${endDate}`),
+          fetch(`/api/required-days`),
+          fetch(`/api/leave?agcode=${forcedMember.agcode}`),
+        ]);
+        const [attData, rdData, lvData] = await Promise.all([attRes.json(), rdRes.json(), lvRes.json()]);
+        if (attRes.ok) setAttendance(attData.records || []);
+        if (rdRes.ok) setRequiredDays(rdData.records || []);
+        if (lvRes.ok) setLeaves(lvData.records || []);
       } else {
-        const res = await fetch(`/api/visit?agcode=${forcedMember.agcode}&startDate=${dateRange}`);
+        const res = await fetch(`/api/visit?agcode=${forcedMember.agcode}&startDate=${startDate}`);
         const data = await res.json();
         if (res.ok) setVisits(data.records || []);
       }
     } catch { }
     setLoading(false);
-  }, [forcedMember.agcode, dateRange, type]);
+  }, [forcedMember.agcode, startDate, endDate, type]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // Helper: check if a checkin was late for a given date
+  const isLate = (record: AttendanceRecord): boolean => {
+    const rd = requiredDays.find(r =>
+      (r.agcode === forcedMember.agcode || r.agcode === 'ALL') && r.date === record.date
+    );
+    if (!rd || !rd.lateThreshold) return false;
+    // checkinTime format: 'YYYY-MM-DD HH:mm:ss'
+    const timeOnly = record.checkinTime?.split(' ')[1] || '';
+    return timeOnly > rd.lateThreshold;
+  };
+
+  // Helper: get all required dates in range that have no attendance and determine absence/leave status
+  const getMissingDays = (): { date: string; hasLeave: boolean }[] => {
+    const checkedDates = new Set(attendance.map(a => a.date));
+    return requiredDays
+      .filter(rd =>
+        (rd.agcode === forcedMember.agcode || rd.agcode === 'ALL') &&
+        rd.date >= startDate && rd.date <= endDate &&
+        !checkedDates.has(rd.date)
+      )
+      .map(rd => ({
+        date: rd.date,
+        hasLeave: leaves.some(l => l.agcode === forcedMember.agcode && l.leaveDate === rd.date && l.status === 'approved')
+      }))
+      .sort((a, b) => b.date.localeCompare(a.date));
+  };
+
+  const badgeStyle = (color: string): React.CSSProperties => ({
+    display: 'inline-block', padding: '2px 8px', borderRadius: 20,
+    fontSize: '0.7rem', fontWeight: 700, background: color + '20', color, marginLeft: 4
+  });
 
   return (
     <div className="ios-history-page">
@@ -529,14 +574,11 @@ function QueryTab({
       </div>
 
       <div className="section-header">{title}</div>
-      <div style={{ padding: '0 0 16px 0', display: 'flex', gap: 8 }}>
-        <input
-          type="date"
-          className="form-input"
-          style={{ flex: 1, padding: '0 12px' }}
-          value={dateRange}
-          onChange={e => setDateRange(e.target.value)}
-        />
+      <div style={{ padding: '0 0 16px 0', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <input type="date" className="form-input" style={{ flex: 1, minWidth: 120, padding: '0 12px' }}
+          value={startDate} onChange={e => setStartDate(e.target.value)} />
+        <input type="date" className="form-input" style={{ flex: 1, minWidth: 120, padding: '0 12px' }}
+          value={endDate} onChange={e => setEndDate(e.target.value)} />
         <button className="btn btn-primary" style={{ minWidth: 70 }} onClick={loadData} disabled={loading}>
           {loading ? '...' : '查詢'}
         </button>
@@ -545,23 +587,44 @@ function QueryTab({
       {loading ? (
         <div style={{ padding: '40px 0', textAlign: 'center' }}><span className="spinner" /></div>
       ) : type === 'attendance' ? (
-        attendance.length === 0 ? (
+        attendance.length === 0 && getMissingDays().length === 0 ? (
           <div className="empty-state"><div className="empty-state-icon">📅</div><div className="empty-state-text">無出勤紀錄</div></div>
         ) : (
           <div className="table-wrapper">
             <table>
-              <thead><tr><th>狀態</th><th style={{ textAlign: 'center' }}>地點</th><th style={{ textAlign: 'right' }}>日期</th></tr></thead>
+              <thead><tr><th>打卡時間</th><th>類型</th><th style={{ textAlign: 'right' }}>日期</th></tr></thead>
               <tbody>
+                {/* Attendance rows with late badge */}
                 {attendance.map((a, i) => (
                   <tr key={i}>
                     <td>
-                      <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>{a.checkinTime}</div>
-                      <div style={{ fontSize: '0.7rem', color: a.type === 'field' ? 'var(--orange)' : 'var(--green)' }}>
-                        {a.type === 'field' ? '📍 外勤' : '🏢 辦公室'}
+                      <div style={{ fontWeight: 600, fontSize: '0.88rem' }}>
+                        {a.checkinTime?.split(' ')[1]?.slice(0,5) || a.checkinTime}
+                        {isLate(a) && <span style={badgeStyle('#FF9500')}>⏰ 遲到</span>}
                       </div>
                     </td>
-                    <td style={{ textAlign: 'center' }}><span style={{ fontSize: '0.75rem' }}>{a.notes || '-'}</span></td>
+                    <td>
+                      <div style={{ fontSize: '0.78rem', color: a.type === 'field' ? 'var(--orange)' : 'var(--green)', fontWeight: 600 }}>
+                        {a.type === 'field' ? '📍 外勤' : '🏢 辦公室'}
+                      </div>
+                      {a.notes && <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{a.notes}</div>}
+                    </td>
                     <td style={{ textAlign: 'right', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>{a.date}</td>
+                  </tr>
+                ))}
+                {/* Missing required days */}
+                {getMissingDays().map((m, i) => (
+                  <tr key={`missing-${i}`} style={{ background: m.hasLeave ? 'rgba(52,199,89,0.05)' : 'rgba(255,59,48,0.05)' }}>
+                    <td>
+                      <div style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-secondary)' }}>—</div>
+                    </td>
+                    <td>
+                      {m.hasLeave
+                        ? <span style={badgeStyle('#34C759')}>🏖️ 請假</span>
+                        : <span style={badgeStyle('#FF3B30')}>❌ 必要出席日缺席</span>
+                      }
+                    </td>
+                    <td style={{ textAlign: 'right', fontSize: '0.82rem', whiteSpace: 'nowrap', color: m.hasLeave ? '#34C759' : '#FF3B30', fontWeight: 600 }}>{m.date}</td>
                   </tr>
                 ))}
               </tbody>
@@ -992,7 +1055,7 @@ export default function HomePage() {
       fetch(`/api/member?agcode=${savedAgcode}`)
         .then(r => r.json())
         .then(data => { if (data.member) setMemberRaw(data.member); })
-        .catch(() => {})
+        .catch(() => { })
         .finally(() => setLoading(false));
     }
   }, []); // eslint-disable-line
@@ -1007,23 +1070,23 @@ export default function HomePage() {
       if (action === 'auth' || action === 'hrauth') {
         // 清除 hash 避免重新整理時重複觸發
         window.history.replaceState(null, '', window.location.pathname + window.location.search);
-        
+
         confirmDialog('確定要透過您的主管身分授權開啟系統嗎？', async () => {
-           try {
-             const res = await fetch('/api/hr/auth', {
-                 method: 'POST',
-                 headers: { 'Content-Type': 'application/json' },
-                 body: JSON.stringify({ action: 'approveAuthSession', id, supervisorAgcode: member.agcode, supervisorName: member.name })
-             });
-             const data = await res.json();
-             if (data.success) {
-                 toast.success('授權成功！裝置將自動開啟');
-             } else {
-                 toast.error(data.error || '授權失敗');
-             }
-           } catch {
-             toast.error('網路連線失敗，請稍後再試');
-           }
+          try {
+            const res = await fetch('/api/hr/auth', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'approveAuthSession', id, supervisorAgcode: member.agcode, supervisorName: member.name })
+            });
+            const data = await res.json();
+            if (data.success) {
+              toast.success('授權成功！裝置將自動開啟');
+            } else {
+              toast.error(data.error || '授權失敗');
+            }
+          } catch {
+            toast.error('網路連線失敗，請稍後再試');
+          }
         });
       } else if (action === 'hr') {
         window.history.replaceState(null, '', window.location.pathname + window.location.search);
@@ -1116,8 +1179,8 @@ export default function HomePage() {
               {member?.rank !== '準增員' && (
                 <div className="ios-card" onClick={() => setShowScanner(true)}>
                   <div className="ios-card-icon" style={{ background: 'var(--blue-muted)' }}><IconQrcode color="var(--blue)" size={24} /></div>
-                  <div style={{ fontWeight: 600 }}>🔑 驗證/授權</div>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>授權 HR 驗證</div>
+                  <div style={{ fontWeight: 600 }}>驗證/授權</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>授權驗證</div>
                 </div>
               )}
               <div className="ios-card" onClick={() => setScreen('leave')}>
@@ -1207,7 +1270,7 @@ export default function HomePage() {
           title="🔑 授權驗證器"
           onCodeSubmited={async (code) => {
             setShowScanner(false);
-            
+
             let actionText = '';
             let id = '';
 
@@ -1215,30 +1278,30 @@ export default function HomePage() {
 
             // 支援 V50 純數字 6 位密碼
             if (cleanCode.length === 6 && /^\d+$/.test(cleanCode)) {
-                actionText = 'AUTH';
-                id = cleanCode;
+              actionText = 'AUTH';
+              id = cleanCode;
             } else if (cleanCode === 'ACTION:GOTO_HR') {
-                router.push('/hr');
-                return;
+              router.push('/hr');
+              return;
             } else if (cleanCode.includes('#hr=')) {
-                const targetId = cleanCode.split('#hr=')[1]?.split('&')[0];
-                router.push(targetId ? `/hr?target=${targetId}` : '/hr');
-                return;
+              const targetId = cleanCode.split('#hr=')[1]?.split('&')[0];
+              router.push(targetId ? `/hr?target=${targetId}` : '/hr');
+              return;
             } else {
-                // Fallback for V49 Hash URLs
-                try {
-                  if (cleanCode.includes('#')) {
-                     const hashParams = new URL(cleanCode).hash.substring(1);
-                     const [action, val] = hashParams.split('=');
-                     if (action === 'auth' || action === 'hrauth') actionText = 'AUTH';
-                     if (action === 'hr') actionText = 'HR';
-                     id = val || '';
-                  } else if (cleanCode.startsWith('{')) {
-                     const payload = JSON.parse(cleanCode);
-                     actionText = payload.action;
-                     id = payload.id || '';
-                  }
-                } catch { }
+              // Fallback for V49 Hash URLs
+              try {
+                if (cleanCode.includes('#')) {
+                  const hashParams = new URL(cleanCode).hash.substring(1);
+                  const [action, val] = hashParams.split('=');
+                  if (action === 'auth' || action === 'hrauth') actionText = 'AUTH';
+                  if (action === 'hr') actionText = 'HR';
+                  id = val || '';
+                } else if (cleanCode.startsWith('{')) {
+                  const payload = JSON.parse(cleanCode);
+                  actionText = payload.action;
+                  id = payload.id || '';
+                }
+              } catch { }
             }
 
             if (actionText === 'HR') {
@@ -1248,25 +1311,25 @@ export default function HomePage() {
 
             if ((actionText === 'AUTH' || actionText === 'HR_AUTH') && id) {
               confirmDialog(`確定要針對授權碼 ${id} 進行核准嗎？`, async () => {
-                 try {
-                   const res = await fetch('/api/hr/auth', {
-                       method: 'POST',
-                       headers: { 'Content-Type': 'application/json' },
-                       body: JSON.stringify({ action: 'approveAuthSession', id, supervisorAgcode: member.agcode, supervisorName: member.name })
-                   });
-                   const data = await res.json();
-                   if (data.success) {
-                       showAnimation('auth-success', '授權驗證成功！\n裝置將自動開啟');
-                   } else {
-                       toast.error(data.error || '授權失敗，此密碼不正確或已過期');
-                   }
-                 } catch {
-                   toast.error('網路連線失敗，請稍後再試');
-                 }
+                try {
+                  const res = await fetch('/api/hr/auth', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'approveAuthSession', id, supervisorAgcode: member.agcode, supervisorName: member.name })
+                  });
+                  const data = await res.json();
+                  if (data.success) {
+                    showAnimation('auth-success', '授權驗證成功！\n裝置將自動開啟');
+                  } else {
+                    toast.error(data.error || '授權失敗，此密碼不正確或已過期');
+                  }
+                } catch {
+                  toast.error('網路連線失敗，請稍後再試');
+                }
               });
             } else {
               if (actionText === '') {
-                  toast.error('無效的代碼形式，請重新產生 6 位數授權碼');
+                toast.error('無效的代碼形式，請重新產生 6 位數授權碼');
               }
             }
           }}
