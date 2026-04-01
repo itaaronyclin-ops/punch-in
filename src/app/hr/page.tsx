@@ -7,7 +7,7 @@ import {
     IconCheck, IconAlertTriangle, IconQrcode, IconLoader2, IconSearch, IconCamera, IconX
 } from '@tabler/icons-react';
 import { QRCodeSVG } from 'qrcode.react';
-import QRScanner from '@/components/QRScanner';
+import AuthScanner from '@/components/AuthScanner';
 
 type HRMode = 'candidate' | 'agent' | 'upgrade' | 'update' | 'delete';
 type HRStep = 'ENTRY_QR' | 'SELECT_MODE' | 'QUERY_ID' | 'FILL_FORM' | 'REVIEW' | 'AUTH_QR' | 'STATUS';
@@ -46,9 +46,17 @@ function HRPageContent() {
         const sid = searchParams.get('authSessionId');
         const sName = searchParams.get('supervisorName');
         const sAgcode = searchParams.get('supervisorAgcode');
+        const target = searchParams.get('target'); // From Admin deep link
+
         if (sName && sAgcode) {
             setSupervisorInfo({ supervisorName: sName, supervisorAgcode: sAgcode });
             setStep('SELECT_MODE');
+            // If they deep linked with a target, immediately select update or upgrade maybe? 
+            // We'll leave it at SELECT_MODE but pre-fill queryId to assist them
+        }
+
+        if (target) {
+            setQueryId(target);
         }
     }, [searchParams]);
 
@@ -254,23 +262,32 @@ function HRPageContent() {
                 {step === 'QUERY_ID' && (
                     <div className="hr-auth-card anim-fade-up" style={{ maxWidth: 400 }}>
                         <h2 style={{ marginBottom: 12 }}>身分確認</h2>
-                        <p style={{ color: '#86868b', marginBottom: 24 }}>請輸入要異動人員的「業務代號」或「身分證字號」</p>
+                        <p style={{ color: '#86868b', marginBottom: 24 }}>請輸入要異動人員的「業務代號」或使用掃描器</p>
                         <div style={{ position: 'relative', marginBottom: 20 }}>
                             <input
                                 className="hr-form-input"
-                                style={{ paddingRight: 40, height: 52 }}
-                                placeholder="AGCODE 或 身分證"
+                                style={{ paddingRight: 60, height: 52 }}
+                                placeholder="輸入代碼或掃描身分條碼"
                                 value={queryId}
                                 onChange={e => setQueryId(e.target.value.toUpperCase())}
                                 autoFocus
                             />
-                            <div style={{ position: 'absolute', right: 12, top: 14 }}>
-                                <IconSearch size={22} color="#86868b" />
+                            <div style={{ position: 'absolute', right: 8, top: 8 }}>
+                                <button 
+                                    onClick={() => setShowScanner(true)}
+                                    title="掃描員工代碼"
+                                    style={{ 
+                                        height: 36, width: 36, border: 'none', background: '#e5e5ea', 
+                                        borderRadius: 18, color: '#007aff', cursor: 'pointer', 
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center' 
+                                    }}>
+                                    <IconQrcode size={20} />
+                                </button>
                             </div>
                         </div>
                         <div style={{ display: 'flex', gap: 10 }}>
                             <button className="hr-btn hr-btn-ghost" style={{ flex: 1 }} onClick={() => setStep('SELECT_MODE')}>返回</button>
-                            <button className="hr-btn hr-btn-primary" style={{ flex: 1.5 }} onClick={() => loadProfile(queryId)}>執行查詢</button>
+                            <button className="hr-btn hr-btn-primary" style={{ flex: 1.5 }} onClick={() => loadProfile(queryId)}>快速執行查詢</button>
                         </div>
                     </div>
                 )}
@@ -440,6 +457,17 @@ function HRPageContent() {
                     .hr-form-card { border-radius: 16px; }
                 }
             `}</style>
+            {/* Render Scanner if requested */}
+            {showScanner && (
+                <AuthScanner 
+                    title="📸 掃描員工身分條碼"
+                    onCodeSubmited={(code) => {
+                        setQueryId(code);
+                        setShowScanner(false);
+                    }}
+                    onClose={() => setShowScanner(false)}
+                />
+            )}
         </div>
     );
 }

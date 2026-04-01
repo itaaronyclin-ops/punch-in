@@ -1027,7 +1027,7 @@ export default function HomePage() {
         });
       } else if (action === 'hr') {
         window.history.replaceState(null, '', window.location.pathname + window.location.search);
-        router.push('/hr');
+        router.push(id ? `/hr?target=${id}` : '/hr');
       }
     }
   }, [member, router]);
@@ -1116,7 +1116,7 @@ export default function HomePage() {
               {member?.rank !== '準增員' && (
                 <div className="ios-card" onClick={() => setShowScanner(true)}>
                   <div className="ios-card-icon" style={{ background: 'var(--blue-muted)' }}><IconQrcode color="var(--blue)" size={24} /></div>
-                  <div style={{ fontWeight: 600 }}>授權驗證</div>
+                  <div style={{ fontWeight: 600 }}>🔑 掃碼/輸入授權</div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>授權 HR 驗證</div>
                 </div>
               )}
@@ -1217,8 +1217,12 @@ export default function HomePage() {
             if (cleanCode.length === 6 && /^\d+$/.test(cleanCode)) {
                 actionText = 'AUTH';
                 id = cleanCode;
-            } else if (cleanCode === 'ACTION:GOTO_HR' || cleanCode.includes('#hr=')) {
+            } else if (cleanCode === 'ACTION:GOTO_HR') {
                 router.push('/hr');
+                return;
+            } else if (cleanCode.includes('#hr=')) {
+                const targetId = cleanCode.split('#hr=')[1]?.split('&')[0];
+                router.push(targetId ? `/hr?target=${targetId}` : '/hr');
                 return;
             } else {
                 // Fallback for V49 Hash URLs
@@ -1238,7 +1242,7 @@ export default function HomePage() {
             }
 
             if (actionText === 'HR') {
-              router.push('/hr');
+              router.push(id ? `/hr?target=${id}` : '/hr');
               return;
             }
 

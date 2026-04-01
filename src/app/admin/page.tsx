@@ -270,10 +270,7 @@ function LoginScreen({ onLogin }: { onLogin: (pw: string) => Promise<boolean> })
                                     </div>
                                     <div style={{ fontSize: '0.85rem', color: '#86868b', marginTop: 4 }}>授權密碼 (5分鐘有效)</div>
                                 </div>
-                                <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 8 }}>
-                                    手機開啟首頁 → 點「🔑 掃碼/輸入授權」→ 掃碼或打字
-                                </p>
-                                <button className="btn btn-ghost btn-sm" onClick={generateQR}>重新產生</button>
+                                <button className="btn btn-ghost btn-sm" style={{ display: 'block', margin: '0 auto' }} onClick={generateQR}>重新產生</button>
                             </>
                         )}
                         {qrStatus === 'ERROR' && (
@@ -1865,17 +1862,11 @@ function PersonnelSection({ token }: { token: string }) {
                                 display: 'inline-block', border: '1px solid var(--line)', 
                                 boxShadow: '0 8px 24px rgba(0,0,0,0.06)', marginBottom: 24 
                             }}>
-                                <QRCodeSVG value={hrSid} size={200} />
+                                <QRCodeSVG value={`https://punch-in-8h24.vercel.app/#hr=${hrSid}`} size={200} />
                                 <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #f2f2f7', fontSize: '2rem', fontWeight: 800, letterSpacing: 6, color: '#1d1d1f' }}>
                                     {hrSid}
                                 </div>
-                                <div style={{ fontSize: '0.85rem', color: '#86868b', marginTop: 4 }}>此員工之人事代碼</div>
-                            </div>
-                            <div style={{ background: '#F2F2F7', padding: '16px 20px', borderRadius: 12, textAlign: 'left', marginBottom: 8 }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                                    <IconInfo size={16} />
-                                    <span>掃描後開啟 HR 頁面，由授權者確認身份後即可操作</span>
-                                </div>
+                                <div style={{ fontSize: '0.85rem', color: '#86868b', marginTop: 4 }}>人事編輯碼</div>
                             </div>
                             <button className="btn btn-ghost btn-full" onClick={() => { setShowHrQr(false); setHrSid(''); setHrStatus('IDLE'); }}>
                                 關閉
