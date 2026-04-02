@@ -17,7 +17,7 @@ interface ConfirmOptions {
     onConfirm: () => void;
 }
 
-export type FullscreenAnimType = 'checkin-success' | 'checkin-fail' | 'leave-success' | 'leave-fail' | 'visit-success' | 'visit-fail' | 'auth-success';
+export type FullscreenAnimType = 'checkin-success' | 'checkin-fail' | 'leave-success' | 'leave-fail' | 'visit-success' | 'visit-fail' | 'auth-success' | 'sso-opening' | 'sso-success';
 
 interface AnimOptions {
     type: FullscreenAnimType;
@@ -39,15 +39,21 @@ class UIManager {
     }
 
     static dispatchAnim(type: FullscreenAnimType, msg: string) {
-        if (type === 'checkin-success' || type === 'auth-success') playSystemSound('success');
+        if (type === 'checkin-success' || type === 'auth-success' || type === 'sso-success') playSystemSound('success');
         if (type === 'checkin-fail') playSystemSound('error');
         if (type === 'leave-success') playSystemSound('whoosh');
         if (type === 'leave-fail') playSystemSound('error');
+        if (type === 'sso-opening') playSystemSound('whoosh');
 
         this.animListeners.forEach(l => l({ type, msg }));
+        
+        // sso-opening doesn't auto-dismiss by timeout in GlobalUI if we want to control it, 
+        // but for now let's keep it consistent or use a longer timeout for opening.
+        const duration = type === 'sso-opening' ? 1800 : 2500;
+        
         setTimeout(() => {
             this.animListeners.forEach(l => l(null));
-        }, 2500); // Overlay auto dismiss
+        }, duration); 
     }
 }
 
@@ -221,6 +227,28 @@ export default function GlobalUI() {
                                  <div className="anim-leave-fail">
                                      <svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                          <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01" />
+                                     </svg>
+                                 </div>
+                             )}
+
+                             {animOpts.type === 'sso-opening' && (
+                                 <div className="anim-sso-opening">
+                                     <div className="sso-portal-ring"></div>
+                                     <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                         <path className="sso-scan-line" d="M7 8h10" />
+                                         <path className="sso-scan-line" d="M7 12h10" style={{ animationDelay: '0.4s' }} />
+                                         <path className="sso-scan-line" d="M7 16h10" style={{ animationDelay: '0.8s' }} />
+                                     </svg>
+                                 </div>
+                             )}
+
+                             {animOpts.type === 'sso-success' && (
+                                 <div className="anim-sso-success">
+                                     <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                         <path className="anim-check-mark" d="m9 12 2 2 4-4"/>
+                                         <circle className="success-pulse-ring" cx="12" cy="12" r="10" />
                                      </svg>
                                  </div>
                              )}

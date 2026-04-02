@@ -2444,3 +2444,63 @@ code {
   from { transform: translateX(30px); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
 }
+/* ─── V-Link SSO Special Animations ─────────────────────────────────────── */
+.anim-sso-opening, .anim-sso-success {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.sso-portal-ring {
+  position: absolute;
+  width: 180px;
+  height: 180px;
+  border: 2px solid rgba(0, 122, 255, 0.3);
+  border-radius: 50%;
+  animation: ssoPortalPulse 1.5s infinite ease-out;
+}
+
+@keyframes ssoPortalPulse {
+  0% { transform: scale(0.8); opacity: 0; box-shadow: 0 0 0 rgba(0, 122, 255, 0); }
+  50% { opacity: 1; box-shadow: 0 0 30px rgba(0, 122, 255, 0.4); }
+  100% { transform: scale(1.4); opacity: 0; box-shadow: 0 0 60px rgba(0, 122, 255, 0); }
+}
+
+.sso-scan-line {
+  stroke: var(--blue);
+  stroke-width: 2;
+  opacity: 0;
+  animation: ssoScanMove 1.2s infinite linear;
+}
+
+@keyframes ssoScanMove {
+  0% { transform: translateY(-30px); opacity: 0; }
+  20% { opacity: 1; }
+  80% { opacity: 1; }
+  100% { transform: translateY(30px); opacity: 0; }
+}
+
+.success-pulse-ring {
+  stroke: var(--green);
+  stroke-width: 1;
+  fill: none;
+  transform-origin: center;
+  animation: successRipple 1s forwards cubic-bezier(0, 0.2, 0.8, 1);
+}
+
+@keyframes successRipple {
+  0% { transform: scale(0.5); opacity: 1; }
+  100% { transform: scale(2.5); opacity: 0; }
+}
+
+.anim-sso-success svg {
+  animation: ssoSuccessPop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes ssoSuccessPop {
+  0% { transform: scale(0); opacity: 0; }
+  70% { transform: scale(1.1); }
+  100% { transform: scale(1); opacity: 1; }
+}

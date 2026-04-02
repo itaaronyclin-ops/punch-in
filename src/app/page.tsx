@@ -982,8 +982,8 @@ function MoreTab({ member, onLogout, onExtHistory, onExtTrainingCheckin, onVLink
         <div className="ios-list-item" onClick={onVLinkSSO}>
           <div className="ios-list-icon" style={{ background: 'var(--blue)' }}><IconQrcode color="#fff" size={18} /></div>
           <div className="ios-list-text">
-            <div className="ios-list-title">V-Link SSO 驗證</div>
-            <div className="ios-list-desc">掃描 QR Code 驗證</div>
+            <div className="ios-list-title">V-Link SSO 掃碼登入</div>
+            <div className="ios-list-desc">掃描電腦版 QR Code 直接登入</div>
           </div>
           <IconChevronRight size={16} color="var(--text-secondary)" />
         </div>
@@ -1114,16 +1114,26 @@ export default function HomePage() {
     toast.info('正在進行 SSO 授權...');
 
     try {
-      const apiBase = process.env.NEXT_PUBLIC_VLINK_SSO_API || 'https://script.google.com/macros/s/AKfycbz28ylx9RPLCRtkRIUCHbr5XHKpECXa7UnifbBDCKFs4ODCDvQImB1UWUV3KFY5JrtedA/exec';
+      const apiBase = process.env.NEXT_PUBLIC_VLINK_SSO_API;
+      if (!apiBase) {
+        toast.error('系統尚未設定 V-Link SSO API，請在環境變數中設定後再試。');
+        return;
+      }
       const targetUrl = `${apiBase}?agcode=${member.agcode}&token=${encodeURIComponent(cleanToken)}`;
       
       // We use a simple fetch. Since it's a GAS Web App, it might redirect, 
       // but usually for SSO triggers, a simple ping is enough or it returns JSON.
-      const res = await fetch(targetUrl, { mode: 'no-cors' }); 
+      await fetch(targetUrl, { mode: 'no-cors' }); 
       
       // Note: 'no-cors' will always return an opaque response, 
       // but the request will still reach the server.
-      toast.success('SSO 登入請求已送出');
+      showAnimation('sso-success', 'SSO 登入授權成功！\n您現在可以返回電腦端查看。');
+      
+      // After animation, go back home
+      setTimeout(() => {
+        setScreen('home');
+      }, 2000);
+      
     } catch (err) {
       console.error('SSO Error:', err);
       toast.error('SSO 授權失敗，請檢查網路連線');
@@ -1181,7 +1191,7 @@ export default function HomePage() {
             <div className="ios-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <h1 style={{ fontSize: '1.8rem', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 2 }}>
-                  Hello! {member.name} <span style={{ fontSize: '0.7rem', fontWeight: 400, opacity: 0.5, verticalAlign: 'middle' }}>V.64.0</span>
+                  Hello! {member.name} <span style={{ fontSize: '0.7rem', fontWeight: 400, opacity: 0.5, verticalAlign: 'middle' }}>V.66.0</span>
                 </h1>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>祝你有美好的一天</p>
               </div>
@@ -1280,7 +1290,10 @@ export default function HomePage() {
               {screen === 'query-attendance' && <QueryTab forcedMember={member} title="個人出勤紀錄" type="attendance" />}
               {screen === 'query-visit' && <QueryTab forcedMember={member} title="客戶拜訪查詢" type="visit" />}
               {screen === 'visit' && <VisitTab forcedMember={member} onComplete={() => setScreen('home')} />}
-              {screen === 'more' && <MoreTab member={member} onLogout={logout} onExtHistory={() => setScreen('history-ext')} onExtTrainingCheckin={() => setScreen('external-training')} onVLinkSSO={() => setShowVLinkScanner(true)} />}
+              {screen === 'more' && <MoreTab member={member} onLogout={logout} onExtHistory={() => setScreen('history-ext')} onExtTrainingCheckin={() => setScreen('external-training')} onVLinkSSO={() => {
+                showAnimation('sso-opening', '正在初始化安全掃描器...');
+                setTimeout(() => setShowVLinkScanner(true), 1500);
+              }} />}
               {screen === 'history-ext' && (
                 <div className="ios-history-page">
                   <HistoryExtView agcode={member.agcode} />
@@ -1305,7 +1318,7 @@ export default function HomePage() {
 
       {showScanner && (
         <AuthScanner
-          title="授權驗證"
+          title="🔑 授權驗證器"
           onCodeSubmited={async (code) => {
             setShowScanner(false);
 
@@ -1376,7 +1389,7 @@ export default function HomePage() {
       )}
       {showVLinkScanner && (
         <AuthScanner
-          title=" V-Link SSO 授權"
+          title="🔑 V-Link SSO 登入授權"
           onClose={() => setShowVLinkScanner(false)}
           onCodeSubmited={handleVLinkSSO}
         />
