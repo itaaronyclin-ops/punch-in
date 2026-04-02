@@ -146,91 +146,17 @@ export default function GlobalUI() {
                 <div style={{
                     position: 'fixed',
                     inset: 0,
-                    backgroundColor: 'rgba(0,0,0,0.4)',
-                    backdropFilter: 'blur(20px) saturate(180%)', // High-fidelity blur
+                    backgroundColor: 'rgba(0,0,0,0.5)',
+                    backdropFilter: 'blur(30px) saturate(180%)',
                     zIndex: 11000,
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    animation: 'fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1)'
+                    animation: 'fadeIn 0.5s ease-out'
                 }}>
-                    <div className="anim-card-container">
-                        {/* Dynamic Background Pulse */}
-                        <div className={`anim-pulse-bg ${animOpts.type.includes('success') ? 'success' : 'fail'}`}></div>
-
-                        <div className="anim-icon-stage">
-                            {/* Checkin Success: Time clock punching */}
-                            {animOpts.type === 'checkin-success' && (
-                                <div className="anim-checkin-success">
-                                    <svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                                        <line x1="16" y1="2" x2="16" y2="6" />
-                                        <line x1="8" y1="2" x2="8" y2="6" />
-                                        <line x1="3" y1="10" x2="21" y2="10" />
-                                        <path className="anim-check-mark" d="M9 16l2 2 4-4" />
-                                    </svg>
-                                </div>
-                            )}
-
-                            {/* Checkin Fail: Shaky broken clock */}
-                            {animOpts.type === 'checkin-fail' && (
-                                <div className="anim-checkin-fail">
-                                    <svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-                                        <line x1="16" y1="2" x2="16" y2="6" />
-                                        <line x1="8" y1="2" x2="8" y2="6" />
-                                        <line x1="3" y1="10" x2="21" y2="10" />
-                                        <path d="M15 14l-6 6M9 14l6 6" />
-                                    </svg>
-                                </div>
-                            )}
-
-                            {/* Leave Success: Paper airplane fly */}
-                            {animOpts.type === 'leave-success' && (
-                                <div className="anim-leave-success">
-                                    <svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
-                                    </svg>
-                                </div>
-                            )}
-
-                            {/* Leave Fail: Crash airplane */}
-                            {animOpts.type === 'leave-fail' && (
-                                <div className="anim-leave-fail">
-                                    <svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01" />
-                                    </svg>
-                                </div>
-                            )}
-
-                             {animOpts.type === 'visit-success' && (
-                                 <div className="anim-checkin-success">
-                                     <svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                         <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                                         <circle cx="12" cy="10" r="3" />
-                                         <path className="anim-check-mark" d="M10 10l.5.5 1-1" />
-                                     </svg>
-                                 </div>
-                             )}
-
-                             {animOpts.type === 'auth-success' && (
-                                 <div className="anim-checkin-success">
-                                     <svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                                         <path className="anim-check-mark" d="m9 12 2 2 4-4"/>
-                                     </svg>
-                                 </div>
-                             )}
-
-                             {animOpts.type === 'visit-fail' && (
-                                 <div className="anim-leave-fail">
-                                     <svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                         <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01" />
-                                     </svg>
-                                 </div>
-                             )}
-
+                    <div style={{ position: 'relative', width: '100%', maxWidth: 360, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                         <div style={{ height: 260, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
                              {animOpts.type === 'sso-opening' && (
                                  <div className="premium-sso-container">
                                      <div className="premium-sso-glow"></div>
@@ -238,7 +164,7 @@ export default function GlobalUI() {
                                          <div className="premium-sso-ring ring-1"></div>
                                          <div className="premium-sso-ring ring-2"></div>
                                          <div className="premium-sso-shield">
-                                            <IconShieldCheck size={64} color="var(--blue)" />
+                                            <IconShieldCheck size={72} color="#fff" />
                                          </div>
                                          <div className="premium-sso-radar"></div>
                                      </div>
@@ -250,19 +176,30 @@ export default function GlobalUI() {
                                      <div className="premium-sso-glow success"></div>
                                      <div className="premium-sso-icon-success">
                                          <div className="premium-success-burst"></div>
-                                         <IconCheckCircle size={100} color="var(--green)" />
+                                         <IconCheckCircle size={100} color="#fff" />
                                      </div>
                                  </div>
                              )}
-                        </div>
 
-                        <div className="anim-message-area">
-                            <div className="anim-title">
-                                {animOpts.type === 'sso-opening' ? '安全環境檢查中' : 
-                                 animOpts.type.includes('success') ? '恭喜！' : '哎呀⋯'}
+                             {!animOpts.type.startsWith('sso-') && (
+                                 <div className="anim-icon-stage">
+                                     {animOpts.type.includes('success') ? (
+                                         <div style={{ color: 'var(--green)' }}><IconCheckCircle size={80} /></div>
+                                     ) : (
+                                         <div style={{ color: 'var(--red)' }}><IconAlertTriangle size={80} /></div>
+                                     )}
+                                 </div>
+                             )}
+                         </div>
+
+                         <div style={{ marginTop: 24, textAlign: 'center', color: '#fff' }}>
+                            <div style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: 8, letterSpacing: '-0.02em' }}>
+                                {animOpts.type === 'sso-opening' ? '載入中...' : 
+                                 animOpts.type.includes('success') ? '恭喜您！' : 
+                                 animOpts.type.includes('fail') ? '哎呀⋯' : '通知'}
                             </div>
-                            <div className="anim-text">{animOpts.msg}</div>
-                        </div>
+                            <div style={{ fontSize: '1.05rem', color: 'rgba(255,255,255,0.85)', lineHeight: 1.5, whiteSpace: 'pre-line' }}>{animOpts.msg}</div>
+                         </div>
                     </div>
                 </div>
             )}

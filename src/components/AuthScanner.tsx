@@ -13,6 +13,7 @@ interface AuthScannerProps {
 
 export default function AuthScanner({ onCodeSubmited, onClose, title = '🔑 掃碼 / 輸入授權', standalone = false }: AuthScannerProps) {
     const [error, setError] = useState<string | null>(null);
+    const [manualCode, setManualCode] = useState('');
 
     
     // Custom scanner references
@@ -88,12 +89,22 @@ export default function AuthScanner({ onCodeSubmited, onClose, title = '🔑 掃
             cleanupCamera();
         };
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
+    const handleManualSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        const clean = manualCode.trim();
+        if (clean.length > 0) {
+            cleanupCamera();
+            onCodeSubmited(clean);
+        }
+    };
 
 
     return (
         <div style={standalone ? {
-            width: '100%', height: '100%', background: '#f2f2f7', overflowY: 'auto'
+            width: '100%', height: '100%', 
+            background: 'var(--surface)', 
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 20
         } : {
             position: 'fixed', inset: 0,
             background: 'rgba(0,0,0,0.65)',
@@ -103,9 +114,12 @@ export default function AuthScanner({ onCodeSubmited, onClose, title = '🔑 掃
             padding: 16,
         }}>
             <div style={standalone ? {
-                background: '#f2f2f7',
-                width: '100%', height: '100%',
-                display: 'flex', flexDirection: 'column'
+                background: '#fff', 
+                borderRadius: 24,
+                width: '100%', maxWidth: 420,
+                boxShadow: '0 20px 50px rgba(0,0,0,0.1)',
+                display: 'flex', flexDirection: 'column',
+                overflow: 'hidden'
             } : {
                 background: '#f2f2f7', borderRadius: 24,
                 width: '100%', maxWidth: 420,
@@ -115,36 +129,37 @@ export default function AuthScanner({ onCodeSubmited, onClose, title = '🔑 掃
                 animation: 'qrPop 0.3s cubic-bezier(0.34,1.56,0.64,1)',
                 display: 'flex', flexDirection: 'column'
             }}>
-                {/* Header: Hide if standalone as parent provides navigation */}
-                {!standalone && (
+                {/* Header: Always show if standalone to look like "Validator" */}
+                {(!standalone || true) && (
                     <div style={{
                         padding: '16px 20px', flexShrink: 0,
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        background: '#fff', borderBottom: '1px solid #e5e5ea',
+                        background: '#fff', borderBottom: '1px solid #f2f2f7',
                     }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <IconQrcode size={20} color="#007aff" />
+                            <IconQrcode size={20} color="var(--blue)" />
                             <span style={{ fontWeight: 800, fontSize: '1.05rem', color: '#1d1d1f' }}>{title}</span>
                         </div>
-                        <button
-                            onClick={() => { cleanupCamera(); onClose(); }}
-                            style={{
-                                background: '#f2f2f7', border: 'none',
-                                width: 32, height: 32, borderRadius: 16,
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                cursor: 'pointer',
-                            }}
-                        >
-                            <IconX size={18} />
-                        </button>
+                        {!standalone && (
+                            <button
+                                onClick={() => { cleanupCamera(); onClose(); }}
+                                style={{
+                                    background: '#f2f2f7', border: 'none',
+                                    width: 32, height: 32, borderRadius: 16,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    cursor: 'pointer',
+                                }}
+                            >
+                                <IconX size={18} />
+                            </button>
+                        )}
                     </div>
                 )}
 
                 {/* Body: Native Camera UI (Top) */}
                 <div style={{ 
                     background: '#000', position: 'relative', flexShrink: 0,
-                    // Use larger area if standalone
-                    width: '100%', height: standalone ? '400px' : '240px', overflow: 'hidden'
+                    width: '100%', height: '240px', overflow: 'hidden'
                  }}>
                     {error ? (
                         <div style={{ padding: '32px 20px', textAlign: 'center', background: '#fff', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
@@ -154,16 +169,12 @@ export default function AuthScanner({ onCodeSubmited, onClose, title = '🔑 掃
                         </div>
                     ) : (
                         <>
-                            {/* Hidden canvas for computing standard frame sizes independent of layout shape */}
                             <canvas ref={canvasRef} style={{ display: 'none' }} />
-                            
-                            {/* Object-fit automatically handles dynamic CSS vs standard pixel dimension mapping */}
                             <video 
                                 ref={videoRef} 
                                 style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
                                 autoPlay playsInline muted 
                             />
-                            
                             <div style={{ 
                                 position: 'absolute', bottom: 12, left: 0, right: 0, 
                                 textAlign: 'center', color: '#fff', fontSize: '0.85rem', textShadow: '0 1px 4px rgba(0,0,0,0.6)',
@@ -175,7 +186,39 @@ export default function AuthScanner({ onCodeSubmited, onClose, title = '🔑 掃
                     )}
                 </div>
 
-
+                {/* Body: Manual Input Section (Bottom) - Restore this! */}
+                <div style={{ padding: '24px 20px', background: '#fff', flexShrink: 0 }}>
+                    <div style={{ textAlign: 'center', marginBottom: 16 }}>
+                        <span style={{ fontSize: '0.85rem', color: '#86868b', fontWeight: 600, letterSpacing: 1 }}>或者手動輸入代碼 (不限網路)</span>
+                        <div style={{ height: 1, background: '#f2f2f7', marginTop: 12 }}></div>
+                    </div>
+                    <form onSubmit={handleManualSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                        <input 
+                            type="text"
+                            inputMode="numeric"
+                            placeholder="輸入 6 位數字" 
+                            value={manualCode}
+                            onChange={(e) => setManualCode(e.target.value)}
+                            style={{
+                                width: '100%', padding: '16px', borderRadius: 12, border: '1px solid #d1d1d6',
+                                fontSize: '1.4rem', fontWeight: 700, letterSpacing: 4, textAlign: 'center', outline: 'none',
+                                background: '#f9f9fb', color: '#1d1d1f', margin: 0, boxSizing: 'border-box'
+                            }}
+                        />
+                        <button 
+                            type="submit" 
+                            disabled={manualCode.trim().length === 0}
+                            style={{
+                                width: '100%', background: manualCode.trim().length > 0 ? 'var(--blue)' : '#d1d1d6',
+                                color: '#fff', border: 'none', borderRadius: 12, padding: '16px',
+                                fontWeight: 700, fontSize: '1.05rem', cursor: manualCode.trim().length > 0 ? 'pointer' : 'not-allowed',
+                                transition: '0.2s', margin: 0
+                            }}
+                        >
+                            確認
+                        </button>
+                    </form>
+                </div>
             </div>
             <style>{`@keyframes qrPop { from { transform:scale(0.88);opacity:0 } to { transform:scale(1);opacity:1 } }`}</style>
         </div>

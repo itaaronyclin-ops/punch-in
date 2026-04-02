@@ -2444,10 +2444,11 @@ code {
   from { transform: translateX(30px); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
 }
-/* ─── V-Link SSO Premium iOS Security Animations ─────────────────────── */
+/* ─── V-Link SSO Premium iOS Security Animations (Stable V3) ──────────── */
 .premium-sso-container {
-  position: absolute;
-  inset: 0;
+  position: relative;
+  width: 100%;
+  height: 260px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2457,20 +2458,21 @@ code {
 
 .premium-sso-glow {
   position: absolute;
-  width: 140%;
-  height: 140%;
-  background: radial-gradient(circle at center, rgba(0, 122, 255, 0.12) 0%, transparent 65%);
-  animation: ssoEnvironmentGlow 6s infinite ease-in-out;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle at center, rgba(0, 122, 255, 0.25) 0%, transparent 70%);
+  animation: ssoEnvironmentGlow 4s infinite ease-in-out;
   pointer-events: none;
+  filter: blur(20px);
 }
 
 .premium-sso-glow.success {
-  background: radial-gradient(circle at center, rgba(52, 199, 89, 0.15) 0%, transparent 65%);
+  background: radial-gradient(circle at center, rgba(52, 199, 89, 0.3) 0%, transparent 70%);
 }
 
 @keyframes ssoEnvironmentGlow {
-  0%, 100% { opacity: 0.4; transform: scale(1); }
-  50% { opacity: 0.7; transform: scale(1.1); }
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.2); }
 }
 
 .premium-sso-shield-wrap {
@@ -2485,100 +2487,78 @@ code {
 .premium-sso-shield {
   position: relative;
   z-index: 5;
-  filter: drop-shadow(0 0 20px rgba(0, 122, 255, 0.4));
-  animation: shieldPulse 2.5s infinite var(--spring);
+  filter: drop-shadow(0 0 25px rgba(255, 255, 255, 0.4));
+  animation: shieldPulseV3 2s infinite cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-@keyframes shieldPulse {
-  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 15px rgba(0, 122, 255, 0.3)); }
-  50% { transform: scale(1.05); filter: drop-shadow(0 0 30px rgba(0, 122, 255, 0.6)); }
+@keyframes shieldPulseV3 {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.2)); }
+  50% { transform: scale(1.08); filter: drop-shadow(0 0 40px rgba(255, 255, 255, 0.6)); }
 }
 
 .premium-sso-ring {
   position: absolute;
   border-radius: 50%;
-  border: 1.5px solid rgba(0, 122, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.2);
 }
 
 .ring-1 {
-  width: 160px;
-  height: 160px;
-  animation: ringScale 3s infinite linear;
+  width: 120px;
+  height: 120px;
+  animation: ringScaleV3 2.5s infinite linear;
 }
 
 .ring-2 {
-  width: 160px;
-  height: 160px;
-  animation: ringScale 3s infinite linear 1.5s;
+  width: 120px;
+  height: 120px;
+  animation: ringScaleV3 2.5s infinite linear 1.25s;
 }
 
-@keyframes ringScale {
-  0% { transform: scale(0.6); opacity: 0; }
-  30% { opacity: 1; }
-  100% { transform: scale(1.8); opacity: 0; }
+@keyframes ringScaleV3 {
+  0% { transform: scale(0.8); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: scale(2.4); opacity: 0; }
 }
 
 .premium-sso-radar {
   position: absolute;
-  width: 280px;
-  height: 280px;
-  background: conic-gradient(from 0deg, transparent 0deg, rgba(0, 122, 255, 0.1) 120deg, transparent 180deg);
+  width: 260px;
+  height: 260px;
+  background: conic-gradient(from 0deg, transparent 0deg, rgba(255, 255, 255, 0.15) 120deg, transparent 180deg);
   border-radius: 50%;
-  animation: ssoRadarRotate 4s linear infinite;
+  animation: ssoRadarRotateV3 3s linear infinite;
 }
 
-@keyframes ssoRadarRotate {
+@keyframes ssoRadarRotateV3 {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
 
-/* Success State */
 .premium-sso-icon-success {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: ssoSuccessIconPop 0.6s var(--spring);
+  animation: ssoSuccessPopV3 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-@keyframes ssoSuccessIconPop {
-  0% { transform: scale(0.6); opacity: 0; }
+@keyframes ssoSuccessPopV3 {
+  0% { transform: scale(0.5); opacity: 0; }
   100% { transform: scale(1); opacity: 1; }
 }
 
 .premium-success-burst {
   position: absolute;
-  width: 140px;
-  height: 140px;
-  background: radial-gradient(circle, var(--green) 0%, transparent 70%);
+  width: 160px;
+  height: 160px;
+  background: radial-gradient(circle, #fff 0%, transparent 75%);
   opacity: 0;
-  animation: ssoBurstFade 0.6s ease-out;
+  animation: ssoBurstFadeV3 0.7s ease-out;
 }
 
-@keyframes ssoBurstFade {
-  0% { transform: scale(0.5); opacity: 0.8; }
-  100% { transform: scale(2.5); opacity: 0; }
-}
-
-/* Overriding Message Area for SSO */
-.anim-message-area {
-  margin-top: 40px;
-  text-align: center;
-}
-
-.anim-title {
-  font-size: 1.6rem;
-  font-weight: 800;
-  color: #fff;
-  letter-spacing: -0.01em;
-  margin-bottom: 12px;
-  text-shadow: 0 2px 10px rgba(0,0,0,0.2);
-}
-
-.anim-text {
-  font-size: 1rem;
-  color: rgba(255,255,255,0.7);
-  line-height: 1.6;
+@keyframes ssoBurstFadeV3 {
+  0% { transform: scale(0.4); opacity: 0.9; }
+  100% { transform: scale(3); opacity: 0; }
 }
 
 
