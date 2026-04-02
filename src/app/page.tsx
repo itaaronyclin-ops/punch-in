@@ -1010,7 +1010,7 @@ function MoreTab({ member, onLogout, onExtHistory, onExtTrainingCheckin, onVLink
 }
 
 // ─── Home Page (Main App) ────────────────────────────────────────────────────
-type AppScreen = 'home' | 'checkin' | 'field' | 'leave' | 'visit' | 'query-attendance' | 'query-visit' | 'more' | 'history-ext' | 'external-training';
+type AppScreen = 'home' | 'checkin' | 'field' | 'leave' | 'visit' | 'query-attendance' | 'query-visit' | 'more' | 'history-ext' | 'external-training' | 'vlink-sso';
 
 export default function HomePage() {
   const [_screen, _setScreen] = useState<AppScreen>('home');
@@ -1043,7 +1043,6 @@ export default function HomePage() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotif, setShowNotif] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
-  const [showVLinkScanner, setShowVLinkScanner] = useState(false);
   const fetchUnread = useCallback(async () => {
     if (!member) return;
     try {
@@ -1109,9 +1108,7 @@ export default function HomePage() {
     if (!member) return;
     const cleanToken = code.trim();
     if (!cleanToken) return;
-
-    setShowVLinkScanner(false);
-    toast.info('正在進行 SSO 授權...');
+    toast.info('正在驗證 SSO 授權憑證...');
 
     try {
       const apiBase = process.env.NEXT_PUBLIC_VLINK_SSO_API;
@@ -1281,6 +1278,7 @@ export default function HomePage() {
                 {screen === 'more' ? '更多功能' : ''}
                 {screen === 'history-ext' ? '區單位訓練歷程' : ''}
                 {screen === 'external-training' ? 'SEED PRO 課程簽到' : ''}
+                {screen === 'vlink-sso' ? 'V-Link SSO 登入' : ''}
               </div>
             </div>
             <div className="ios-content">
@@ -1292,8 +1290,17 @@ export default function HomePage() {
               {screen === 'visit' && <VisitTab forcedMember={member} onComplete={() => setScreen('home')} />}
               {screen === 'more' && <MoreTab member={member} onLogout={logout} onExtHistory={() => setScreen('history-ext')} onExtTrainingCheckin={() => setScreen('external-training')} onVLinkSSO={() => {
                 showAnimation('sso-opening', '正在初始化安全掃描器...');
-                setTimeout(() => setShowVLinkScanner(true), 1500);
+                setTimeout(() => setScreen('vlink-sso'), 1500);
               }} />}
+              {screen === 'vlink-sso' && (
+                  <div style={{ height: 'calc(100vh - 120px)' }}>
+                      <AuthScanner 
+                        standalone
+                        onCodeSubmited={handleVLinkSSO}
+                        onClose={() => setScreen('home')}
+                      />
+                  </div>
+              )}
               {screen === 'history-ext' && (
                 <div className="ios-history-page">
                   <HistoryExtView agcode={member.agcode} />
@@ -1387,13 +1394,7 @@ export default function HomePage() {
           onClose={() => setShowScanner(false)}
         />
       )}
-      {showVLinkScanner && (
-        <AuthScanner
-          title="🔑 V-Link SSO 登入授權"
-          onClose={() => setShowVLinkScanner(false)}
-          onCodeSubmited={handleVLinkSSO}
-        />
-      )}
+
     </div>
   );
 }

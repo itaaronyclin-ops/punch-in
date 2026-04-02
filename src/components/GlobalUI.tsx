@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { IconAlertTriangle, IconCheckCircle } from '@/components/Icons';
+import { IconAlertTriangle, IconCheckCircle, IconQrcode } from '@/components/Icons';
 import { playSystemSound } from '@/lib/sounds';
 
 type ToastType = 'success' | 'error' | 'info';
@@ -232,24 +232,26 @@ export default function GlobalUI() {
                              )}
 
                              {animOpts.type === 'sso-opening' && (
-                                 <div className="anim-sso-opening">
-                                     <div className="sso-portal-ring"></div>
-                                     <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                                         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                                         <path className="sso-scan-line" d="M7 8h10" />
-                                         <path className="sso-scan-line" d="M7 12h10" style={{ animationDelay: '0.4s' }} />
-                                         <path className="sso-scan-line" d="M7 16h10" style={{ animationDelay: '0.8s' }} />
-                                     </svg>
+                                 <div className="anim-sso-full">
+                                     <div className="sso-bg-glow"></div>
+                                     <div className="sso-scanning-hub">
+                                         <div className="sso-scanner-circle"></div>
+                                         <div className="sso-scanner-circle-outer"></div>
+                                         <div className="sso-scanner-line"></div>
+                                         <IconQrcode size={48} color="#fff" />
+                                     </div>
                                  </div>
                              )}
 
                              {animOpts.type === 'sso-success' && (
-                                 <div className="anim-sso-success">
-                                     <svg width="120" height="120" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                                         <path className="anim-check-mark" d="m9 12 2 2 4-4"/>
-                                         <circle className="success-pulse-ring" cx="12" cy="12" r="10" />
-                                     </svg>
+                                 <div className="anim-sso-full success">
+                                     <div className="sso-bg-glow success"></div>
+                                     <div className="sso-success-ring">
+                                         <IconCheckCircle size={80} color="#fff" />
+                                     </div>
+                                     <div className="sso-particle-container">
+                                        {[1,2,3,4,5,6,7,8].map(i => <div key={i} className="sso-particle" />)}
+                                     </div>
                                  </div>
                              )}
                         </div>

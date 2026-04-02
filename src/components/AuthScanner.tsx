@@ -8,9 +8,10 @@ interface AuthScannerProps {
     onCodeSubmited: (code: string) => void;
     onClose: () => void;
     title?: string;
+    standalone?: boolean;
 }
 
-export default function AuthScanner({ onCodeSubmited, onClose, title = '🔑 掃碼 / 輸入授權' }: AuthScannerProps) {
+export default function AuthScanner({ onCodeSubmited, onClose, title = '🔑 掃碼 / 輸入授權', standalone = false }: AuthScannerProps) {
     const [error, setError] = useState<string | null>(null);
 
     
@@ -91,52 +92,59 @@ export default function AuthScanner({ onCodeSubmited, onClose, title = '🔑 掃
 
 
     return (
-        <div style={{
+        <div style={standalone ? {
+            width: '100%', height: '100%', background: '#f2f2f7', overflowY: 'auto'
+        } : {
             position: 'fixed', inset: 0,
             background: 'rgba(0,0,0,0.65)',
             backdropFilter: 'blur(6px)',
             zIndex: 2000,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: 16, // Use tighter padding for SE displays
+            padding: 16,
         }}>
-            <div style={{
+            <div style={standalone ? {
+                background: '#f2f2f7',
+                width: '100%', height: '100%',
+                display: 'flex', flexDirection: 'column'
+            } : {
                 background: '#f2f2f7', borderRadius: 24,
                 width: '100%', maxWidth: 420,
-                // Critical responsive bounds layout to ensure button never runs off 
                 maxHeight: '85vh',
                 overflowY: 'auto',
                 boxShadow: '0 30px 60px rgba(0,0,0,0.25)',
                 animation: 'qrPop 0.3s cubic-bezier(0.34,1.56,0.64,1)',
                 display: 'flex', flexDirection: 'column'
             }}>
-                {/* Header */}
-                <div style={{
-                    padding: '16px 20px', flexShrink: 0,
-                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                    background: '#fff', borderBottom: '1px solid #e5e5ea',
-                }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <IconQrcode size={20} color="#007aff" />
-                        <span style={{ fontWeight: 800, fontSize: '1.05rem', color: '#1d1d1f' }}>{title}</span>
+                {/* Header: Hide if standalone as parent provides navigation */}
+                {!standalone && (
+                    <div style={{
+                        padding: '16px 20px', flexShrink: 0,
+                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                        background: '#fff', borderBottom: '1px solid #e5e5ea',
+                    }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <IconQrcode size={20} color="#007aff" />
+                            <span style={{ fontWeight: 800, fontSize: '1.05rem', color: '#1d1d1f' }}>{title}</span>
+                        </div>
+                        <button
+                            onClick={() => { cleanupCamera(); onClose(); }}
+                            style={{
+                                background: '#f2f2f7', border: 'none',
+                                width: 32, height: 32, borderRadius: 16,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                cursor: 'pointer',
+                            }}
+                        >
+                            <IconX size={18} />
+                        </button>
                     </div>
-                    <button
-                        onClick={() => { cleanupCamera(); onClose(); }}
-                        style={{
-                            background: '#f2f2f7', border: 'none',
-                            width: 32, height: 32, borderRadius: 16,
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                            cursor: 'pointer',
-                        }}
-                    >
-                        <IconX size={18} />
-                    </button>
-                </div>
+                )}
 
                 {/* Body: Native Camera UI (Top) */}
                 <div style={{ 
                     background: '#000', position: 'relative', flexShrink: 0,
-                    // Lock height to prevent vertical expansion and off-screen buttons
-                    width: '100%', height: '240px', overflow: 'hidden'
+                    // Use larger area if standalone
+                    width: '100%', height: standalone ? '400px' : '240px', overflow: 'hidden'
                  }}>
                     {error ? (
                         <div style={{ padding: '32px 20px', textAlign: 'center', background: '#fff', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
