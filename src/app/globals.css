@@ -2467,7 +2467,15 @@ code {
 }
 
 .premium-sso-glow.success {
-  background: radial-gradient(circle at center, rgba(52, 199, 89, 0.3) 0%, transparent 70%);
+  background: radial-gradient(circle at center, rgba(52, 199, 89, 0.4) 0%, transparent 70%);
+}
+
+.premium-sso-glow.fail {
+  background: radial-gradient(circle at center, rgba(255, 59, 48, 0.4) 0%, transparent 70%);
+}
+
+.premium-sso-glow.info {
+  background: radial-gradient(circle at center, rgba(0, 122, 255, 0.3) 0%, transparent 70%);
 }
 
 @keyframes ssoEnvironmentGlow {
@@ -2559,6 +2567,14 @@ code {
 @keyframes ssoBurstFadeV3 {
   0% { transform: scale(0.4); opacity: 0.9; }
   100% { transform: scale(3); opacity: 0; }
+}
+
+.fail .premium-success-burst {
+  background: radial-gradient(circle, #ff3b30 0%, transparent 75%);
+}
+
+.success .premium-success-burst {
+  background: radial-gradient(circle, #fff 0%, transparent 75%);
 }
 
 

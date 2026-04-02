@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { IconAlertTriangle, IconCheckCircle, IconQrcode, IconShieldCheck, IconLock } from '@/components/Icons';
+import { IconAlertTriangle, IconCheckCircle, IconQrcode, IconShieldCheck, IconLock, IconBriefcase, IconRun, IconMapPin } from '@/components/Icons';
 import { playSystemSound } from '@/lib/sounds';
 
 type ToastType = 'success' | 'error' | 'info';
@@ -147,58 +147,52 @@ export default function GlobalUI() {
                     position: 'fixed',
                     inset: 0,
                     backgroundColor: 'rgba(0,0,0,0.5)',
-                    backdropFilter: 'blur(30px) saturate(180%)',
+                    backdropFilter: 'blur(40px) saturate(210%)', // Enhanced blur & saturation
                     zIndex: 11000,
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    animation: 'fadeIn 0.5s ease-out'
+                    animation: 'fadeIn 0.5s var(--ease)'
                 }}>
                     <div style={{ position: 'relative', width: '100%', maxWidth: 360, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                         <div style={{ height: 260, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
-                             {animOpts.type === 'sso-opening' && (
-                                 <div className="premium-sso-container">
-                                     <div className="premium-sso-glow"></div>
+                         <div style={{ height: 280, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+                             
+                             {/* Unified Premium Container */}
+                             <div className={`premium-sso-container ${animOpts.type.includes('fail') ? 'fail' : animOpts.type.includes('success') ? 'success' : ''}`}>
+                                 <div className={`premium-sso-glow ${animOpts.type.includes('fail') ? 'fail' : animOpts.type.includes('success') ? 'success' : ''}`}></div>
+                                 
+                                 {animOpts.type === 'sso-opening' ? (
                                      <div className="premium-sso-shield-wrap">
                                          <div className="premium-sso-ring ring-1"></div>
                                          <div className="premium-sso-ring ring-2"></div>
                                          <div className="premium-sso-shield">
-                                            <IconShieldCheck size={72} color="#fff" />
+                                            <IconShieldCheck size={80} color="#fff" />
                                          </div>
                                          <div className="premium-sso-radar"></div>
                                      </div>
-                                 </div>
-                             )}
-
-                             {animOpts.type === 'sso-success' && (
-                                 <div className="premium-sso-container success">
-                                     <div className="premium-sso-glow success"></div>
+                                 ) : (
                                      <div className="premium-sso-icon-success">
                                          <div className="premium-success-burst"></div>
-                                         <IconCheckCircle size={100} color="#fff" />
+                                         {/* Dynamic Icon Mapping */}
+                                         {animOpts.type.includes('fail') ? <IconAlertTriangle size={90} color="#fff" /> : 
+                                          animOpts.type.includes('checkin') ? <IconBriefcase size={90} color="#fff" /> :
+                                          animOpts.type.includes('leave') ? <IconRun size={90} color="#fff" /> :
+                                          animOpts.type.includes('visit') ? <IconMapPin size={90} color="#fff" /> :
+                                          animOpts.type.includes('auth') || animOpts.type === 'sso-success' ? <IconCheckCircle size={100} color="#fff" /> :
+                                          <IconCheckCircle size={100} color="#fff" />}
                                      </div>
-                                 </div>
-                             )}
-
-                             {!animOpts.type.startsWith('sso-') && (
-                                 <div className="anim-icon-stage">
-                                     {animOpts.type.includes('success') ? (
-                                         <div style={{ color: 'var(--green)' }}><IconCheckCircle size={80} /></div>
-                                     ) : (
-                                         <div style={{ color: 'var(--red)' }}><IconAlertTriangle size={80} /></div>
-                                     )}
-                                 </div>
-                             )}
+                                 )}
+                             </div>
                          </div>
 
                          <div style={{ marginTop: 24, textAlign: 'center', color: '#fff' }}>
-                            <div style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: 8, letterSpacing: '-0.02em' }}>
+                            <div style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: 10, letterSpacing: '-0.03em' }}>
                                 {animOpts.type === 'sso-opening' ? '載入中...' : 
                                  animOpts.type.includes('success') ? '恭喜您！' : 
-                                 animOpts.type.includes('fail') ? '哎呀⋯' : '通知'}
+                                 animOpts.type.includes('fail') ? '系統提示' : '通知'}
                             </div>
-                            <div style={{ fontSize: '1.05rem', color: 'rgba(255,255,255,0.85)', lineHeight: 1.5, whiteSpace: 'pre-line' }}>{animOpts.msg}</div>
+                            <div style={{ fontSize: '1.1rem', color: 'rgba(255,255,255,0.85)', lineHeight: 1.6, whiteSpace: 'pre-line', fontWeight: 500 }}>{animOpts.msg}</div>
                          </div>
                     </div>
                 </div>
