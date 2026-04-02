@@ -2444,133 +2444,141 @@ code {
   from { transform: translateX(30px); opacity: 0; }
   to { transform: translateX(0); opacity: 1; }
 }
-/* ─── V-Link SSO Full-Screen Premium Animations ─────────────────────────── */
-.anim-sso-full {
+/* ─── V-Link SSO Premium iOS Security Animations ─────────────────────── */
+.premium-sso-container {
   position: absolute;
   inset: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  z-index: 10;
+  z-index: 20;
 }
 
-.sso-bg-glow {
+.premium-sso-glow {
   position: absolute;
-  width: 150%;
-  height: 150%;
-  background: radial-gradient(circle, rgba(0, 122, 255, 0.15) 0%, transparent 70%);
-  animation: ssoGlowPulse 4s infinite ease-in-out;
+  width: 140%;
+  height: 140%;
+  background: radial-gradient(circle at center, rgba(0, 122, 255, 0.12) 0%, transparent 65%);
+  animation: ssoEnvironmentGlow 6s infinite ease-in-out;
   pointer-events: none;
 }
 
-.sso-bg-glow.success {
-  background: radial-gradient(circle, rgba(52, 199, 89, 0.2) 0%, transparent 70%);
+.premium-sso-glow.success {
+  background: radial-gradient(circle at center, rgba(52, 199, 89, 0.15) 0%, transparent 65%);
 }
 
-@keyframes ssoGlowPulse {
-  0%, 100% { transform: scale(1); opacity: 0.5; }
-  50% { transform: scale(1.1); opacity: 0.8; }
+@keyframes ssoEnvironmentGlow {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.1); }
 }
 
-.sso-scanning-hub {
+.premium-sso-shield-wrap {
   position: relative;
-  width: 200px;
-  height: 200px;
+  width: 220px;
+  height: 220px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-.sso-scanner-circle, .sso-scanner-circle-outer {
+.premium-sso-shield {
+  position: relative;
+  z-index: 5;
+  filter: drop-shadow(0 0 20px rgba(0, 122, 255, 0.4));
+  animation: shieldPulse 2.5s infinite var(--spring);
+}
+
+@keyframes shieldPulse {
+  0%, 100% { transform: scale(1); filter: drop-shadow(0 0 15px rgba(0, 122, 255, 0.3)); }
+  50% { transform: scale(1.05); filter: drop-shadow(0 0 30px rgba(0, 122, 255, 0.6)); }
+}
+
+.premium-sso-ring {
   position: absolute;
   border-radius: 50%;
-  border: 2px solid rgba(0, 122, 255, 0.3);
+  border: 1.5px solid rgba(0, 122, 255, 0.2);
 }
 
-.sso-scanner-circle {
-  width: 120px;
-  height: 120px;
-  animation: ssoRotate 10s linear infinite;
-  border-style: dashed;
-}
-
-.sso-scanner-circle-outer {
+.ring-1 {
   width: 160px;
   height: 160px;
-  animation: ssoRotateRev 15s linear infinite;
-  border-style: double;
-  opacity: 0.5;
+  animation: ringScale 3s infinite linear;
 }
 
-@keyframes ssoRotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-@keyframes ssoRotateRev { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
+.ring-2 {
+  width: 160px;
+  height: 160px;
+  animation: ringScale 3s infinite linear 1.5s;
+}
 
-.sso-scanner-line {
+@keyframes ringScale {
+  0% { transform: scale(0.6); opacity: 0; }
+  30% { opacity: 1; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+
+.premium-sso-radar {
   position: absolute;
-  width: 180px;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, var(--blue), transparent);
-  box-shadow: 0 0 15px var(--blue);
-  animation: ssoScanY 2s infinite ease-in-out;
-}
-
-@keyframes ssoScanY {
-  0%, 100% { transform: translateY(-80px); opacity: 0; }
-  50% { transform: translateY(80px); opacity: 1; }
-}
-
-.sso-success-ring {
-  width: 140px;
-  height: 140px;
-  background: var(--green);
+  width: 280px;
+  height: 280px;
+  background: conic-gradient(from 0deg, transparent 0deg, rgba(0, 122, 255, 0.1) 120deg, transparent 180deg);
   border-radius: 50%;
+  animation: ssoRadarRotate 4s linear infinite;
+}
+
+@keyframes ssoRadarRotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Success State */
+.premium-sso-icon-success {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 40px rgba(52, 199, 89, 0.6);
-  animation: ssoSuccessPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  animation: ssoSuccessIconPop 0.6s var(--spring);
 }
 
-@keyframes ssoSuccessPop {
-  0% { transform: scale(0); opacity: 0; }
+@keyframes ssoSuccessIconPop {
+  0% { transform: scale(0.6); opacity: 0; }
   100% { transform: scale(1); opacity: 1; }
 }
 
-.sso-particle-container {
+.premium-success-burst {
   position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-.sso-particle {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 8px;
-  height: 8px;
-  background: var(--green);
-  border-radius: 50%;
+  width: 140px;
+  height: 140px;
+  background: radial-gradient(circle, var(--green) 0%, transparent 70%);
   opacity: 0;
+  animation: ssoBurstFade 0.6s ease-out;
 }
 
-.success .sso-particle {
-  animation: ssoParticleExplode 0.8s ease-out forwards;
+@keyframes ssoBurstFade {
+  0% { transform: scale(0.5); opacity: 0.8; }
+  100% { transform: scale(2.5); opacity: 0; }
 }
 
-@keyframes ssoParticleExplode {
-  0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-  100% { transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0); opacity: 0; }
+/* Overriding Message Area for SSO */
+.anim-message-area {
+  margin-top: 40px;
+  text-align: center;
 }
 
-/* Setup particle directions */
-.sso-particle:nth-child(1) { --tx: 100px; --ty: -100px; }
-.sso-particle:nth-child(2) { --tx: 150px; --ty: 0px; }
-.sso-particle:nth-child(3) { --tx: 100px; --ty: 100px; }
-.sso-particle:nth-child(4) { --tx: 0px; --ty: 150px; }
-.sso-particle:nth-child(5) { --tx: -100px; --ty: 100px; }
-.sso-particle:nth-child(6) { --tx: -150px; --ty: 0px; }
-.sso-particle:nth-child(7) { --tx: -100px; --ty: -100px; }
-.sso-particle:nth-child(8) { --tx: 0px; --ty: -150px; }
+.anim-title {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.01em;
+  margin-bottom: 12px;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+
+.anim-text {
+  font-size: 1rem;
+  color: rgba(255,255,255,0.7);
+  line-height: 1.6;
+}
+
 

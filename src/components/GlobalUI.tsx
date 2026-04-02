@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { IconAlertTriangle, IconCheckCircle, IconQrcode } from '@/components/Icons';
+import { IconAlertTriangle, IconCheckCircle, IconQrcode, IconShieldCheck, IconLock } from '@/components/Icons';
 import { playSystemSound } from '@/lib/sounds';
 
 type ToastType = 'success' | 'error' | 'info';
@@ -232,32 +232,35 @@ export default function GlobalUI() {
                              )}
 
                              {animOpts.type === 'sso-opening' && (
-                                 <div className="anim-sso-full">
-                                     <div className="sso-bg-glow"></div>
-                                     <div className="sso-scanning-hub">
-                                         <div className="sso-scanner-circle"></div>
-                                         <div className="sso-scanner-circle-outer"></div>
-                                         <div className="sso-scanner-line"></div>
-                                         <IconQrcode size={48} color="#fff" />
+                                 <div className="premium-sso-container">
+                                     <div className="premium-sso-glow"></div>
+                                     <div className="premium-sso-shield-wrap">
+                                         <div className="premium-sso-ring ring-1"></div>
+                                         <div className="premium-sso-ring ring-2"></div>
+                                         <div className="premium-sso-shield">
+                                            <IconShieldCheck size={64} color="var(--blue)" />
+                                         </div>
+                                         <div className="premium-sso-radar"></div>
                                      </div>
                                  </div>
                              )}
 
                              {animOpts.type === 'sso-success' && (
-                                 <div className="anim-sso-full success">
-                                     <div className="sso-bg-glow success"></div>
-                                     <div className="sso-success-ring">
-                                         <IconCheckCircle size={80} color="#fff" />
-                                     </div>
-                                     <div className="sso-particle-container">
-                                        {[1,2,3,4,5,6,7,8].map(i => <div key={i} className="sso-particle" />)}
+                                 <div className="premium-sso-container success">
+                                     <div className="premium-sso-glow success"></div>
+                                     <div className="premium-sso-icon-success">
+                                         <div className="premium-success-burst"></div>
+                                         <IconCheckCircle size={100} color="var(--green)" />
                                      </div>
                                  </div>
                              )}
                         </div>
 
                         <div className="anim-message-area">
-                            <div className="anim-title">{animOpts.type.includes('success') ? '恭喜！' : '哎呀⋯'}</div>
+                            <div className="anim-title">
+                                {animOpts.type === 'sso-opening' ? '安全環境檢查中' : 
+                                 animOpts.type.includes('success') ? '恭喜！' : '哎呀⋯'}
+                            </div>
                             <div className="anim-text">{animOpts.msg}</div>
                         </div>
                     </div>
