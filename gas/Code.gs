@@ -22,6 +22,7 @@ const SHEET = {
   CONTACTS_COMMON: 'ContactsCommon',
   CONTACTS_BUSINESS: 'ContactsBusiness',
   CONTACTS_CUSTOM: 'ContactsCustom',
+  CONTACTS_UNIT_EXT: 'ContactsUnitExt',
 };
 
 // ─── Entry Points ──────────────────────────────────────────────────────────
@@ -693,13 +694,14 @@ function getContacts(data) {
   if (type === 'common') sheetName = SHEET.CONTACTS_COMMON;
   else if (type === 'business') sheetName = SHEET.CONTACTS_BUSINESS;
   else if (type === 'custom') sheetName = SHEET.CONTACTS_CUSTOM;
+  else if (type === 'unit_ext') sheetName = SHEET.CONTACTS_UNIT_EXT;
   else return { error: 'Invalid contact type' };
 
   const sheet = getSheet(sheetName);
   const rows = sheetToObjects(sheet);
   
   let filtered = rows;
-  if (type === 'custom' && agcode) {
+  if ((type === 'custom' || type === 'unit_ext') && agcode) {
     filtered = rows.filter(r => r.agcode === agcode.toUpperCase());
   }
 
@@ -707,22 +709,22 @@ function getContacts(data) {
 }
 
 function addContact(data) {
-  const { type, agcode, company, name, title, phone, ext, mobile, email } = data;
+  const { type, agcode, company, name, title, phone, ext, mobile, email, businessType } = data;
   let sheetName = '';
   let row = [];
-  
-  // Ensure phone numbers are stored as strings by prepending ' if needed (though appendRow/GAS handles most)
-  // We'll rely on the frontend sending them as strings and GAS storing them.
   
   if (type === 'common') {
     sheetName = SHEET.CONTACTS_COMMON;
     row = [generateId(), name || '', phone || ''];
   } else if (type === 'business') {
     sheetName = SHEET.CONTACTS_BUSINESS;
-    row = [generateId(), data.businessType || '', name || '', phone || '', ext || ''];
+    row = [generateId(), businessType || '', name || '', phone || '', ext || ''];
   } else if (type === 'custom') {
     sheetName = SHEET.CONTACTS_CUSTOM;
     row = [generateId(), agcode.toUpperCase(), company || '', name || '', title || '', phone || '', ext || '', mobile || '', email || '', nowStr()];
+  } else if (type === 'unit_ext') {
+    sheetName = SHEET.CONTACTS_UNIT_EXT;
+    row = [generateId(), agcode.toUpperCase(), name || '', title || '', ext || '', nowStr()];
   } else return { error: 'Invalid contact type' };
 
   appendRow(sheetName, row);
@@ -735,6 +737,7 @@ function deleteContact(data) {
   if (type === 'common') sheetName = SHEET.CONTACTS_COMMON;
   else if (type === 'business') sheetName = SHEET.CONTACTS_BUSINESS;
   else if (type === 'custom') sheetName = SHEET.CONTACTS_CUSTOM;
+  else if (type === 'unit_ext') sheetName = SHEET.CONTACTS_UNIT_EXT;
   else return { error: 'Invalid contact type' };
 
   if (!rowIndex) return { error: 'rowIndex required' };
@@ -761,6 +764,7 @@ function initSheets() {
     { name: SHEET.CONTACTS_COMMON, headers: ['ID', 'Name', 'Phone'] },
     { name: SHEET.CONTACTS_BUSINESS, headers: ['ID', 'BusinessType', 'Name', 'Phone', 'Ext'] },
     { name: SHEET.CONTACTS_CUSTOM, headers: ['ID', 'AGCODE', 'Company', 'Name', 'Title', 'Phone', 'Ext', 'Mobile', 'Email', 'CreatedAt'] },
+    { name: SHEET.CONTACTS_UNIT_EXT, headers: ['ID', 'AGCODE', 'Name', 'Title', 'Ext', 'CreatedAt'] },
   ];
 
   sheetDefs.forEach(def => {

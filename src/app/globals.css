@@ -961,7 +961,9 @@ tr:hover td {
   margin-left: 236px;
   flex: 1;
   padding: 44px 52px;
-  min-height: 100vh;
+  height: 100vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* ─── Page Header ─────────────────────────────────────────────────────────── */

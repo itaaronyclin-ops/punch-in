@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import {
   IconCheckCircle, IconRun, IconInbox, IconMapPin, IconSearch,
   IconLogo, IconChevronRight, IconAlertTriangle, IconClock, IconLogOut, IconBell, IconX, IconGrid, IconInfo, IconQrcode,
-  IconListCheck, IconAddressBook, IconTrash, IconPlus, IconRefreshCw, IconPhone, IconLoader
+  IconListCheck, IconAddressBook, IconTrash, IconPlus, IconRefreshCw, IconPhone, IconLoader, IconClipboard
 } from '@/components/Icons';
 import { toast, confirmDialog, showAnimation } from '@/components/GlobalUI';
 import AuthScanner from '@/components/AuthScanner';
@@ -1067,9 +1067,9 @@ function TodoListView({ member }: { member: Member }) {
 
       <div style={{ padding: '0 16px' }}>
         {loading ? <div style={{ textAlign: 'center', padding: 40 }}><IconLoader className="spin" size={32} /></div> :
-         todos.length === 0 ? <div className="empty-state">目前無待辦事項</div> :
+         (!todos || todos.length === 0) ? <div className="empty-state">目前無待辦事項</div> :
          todos.map(t => (
-           <div key={t.id || t.rowIndex} className={`card todo-card ${t.status}`} onClick={() => setSelectedTodo(t)} style={{ padding: '16px 20px', marginBottom: 12 }}>
+           <div key={t.id || t.rowIndex} className={`card todo-card ${t.status || 'pending'}`} onClick={() => setSelectedTodo(t)} style={{ padding: '16px 20px', marginBottom: 12 }}>
              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                <div style={{ fontWeight: 600, fontSize: '1.05rem' }}>{t.title}</div>
                <IconChevronRight size={16} color="var(--text-tertiary)" />
@@ -1110,6 +1110,14 @@ function TodoListView({ member }: { member: Member }) {
     </div>
   );
 }
+// ─── Utils ────────────────────────────────────────────────────────────────
+function getDirectImageUrl(url: string) {
+  if (!url) return '';
+  if (url.includes('dropbox.com')) {
+    return url.replace('?dl=0', '?raw=1').replace('&dl=0', '&raw=1');
+  }
+  return url;
+}
 
 // ─── Contact Network Tab ───────────────────────────────────────────────────
 function ContactNetworkView({ member }: { member: Member }) {
@@ -1118,14 +1126,16 @@ function ContactNetworkView({ member }: { member: Member }) {
   const [data, setData] = useState<any[]>([]);
   const [settings, setSettings] = useState<any>({});
   const [showAddCustom, setShowAddCustom] = useState(false);
+  const [showAddUnitExt, setShowAddUnitExt] = useState(false);
   const [newCustom, setNewCustom] = useState({ company: '', name: '', title: '', phone: '', ext: '', mobile: '', email: '' });
+  const [newUnitExt, setNewUnitExt] = useState({ name: '', title: '', ext: '' });
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const typeMap = { common: 'common', business: 'business', ext: 'common', custom: 'custom' };
+      const typeMap = { common: 'common', business: 'business', ext: 'unit_ext', custom: 'custom' };
       const apiType = typeMap[activeSubTab];
-      const res = await fetch(`/api/contacts?type=${apiType}${apiType === 'custom' ? `&agcode=${member.agcode}` : ''}`);
+      const res = await fetch(`/api/contacts?type=${apiType}${apiType === 'custom' || apiType === 'unit_ext' ? `&agcode=${member.agcode}` : ''}`);
       const d = await res.json();
       setData(d.records || []);
 
@@ -1157,10 +1167,27 @@ function ContactNetworkView({ member }: { member: Member }) {
     } catch { toast.error('新增失敗'); }
   };
 
-  const handleDeleteCustom = async (rowIndex: number) => {
+  const handleAddUnitExt = async () => {
+    if (!newUnitExt.name || !newUnitExt.ext) return;
+    try {
+      const res = await fetch('/api/contacts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'unit_ext', agcode: member.agcode, ...newUnitExt }),
+      });
+      if (res.ok) {
+        showAnimation('contact-add', '分機已儲存');
+        setShowAddUnitExt(false);
+        setNewUnitExt({ name: '', title: '', ext: '' });
+        fetchData();
+      }
+    } catch { toast.error('新增失敗'); }
+  };
+
+  const handleDeleteContact = async (type: string, rowIndex: number) => {
     confirmDialog('確定要刪除此聯絡人嗎？', async () => {
       try {
-        const res = await fetch(`/api/contacts?type=custom&rowIndex=${rowIndex}`, { method: 'DELETE' });
+        const res = await fetch(`/api/contacts?type=${type}&rowIndex=${rowIndex}`, { method: 'DELETE' });
         if (res.ok) {
           toast.success('已刪除');
           fetchData();
@@ -1189,9 +1216,13 @@ function ContactNetworkView({ member }: { member: Member }) {
             )}
 
             {activeSubTab === 'ext' && settings.branch_extension_image && (
-              <div className="extension-image-container">
-                <img src={settings.branch_extension_image} alt="Extension Table" />
+              <div className="extension-image-container" style={{ marginBottom: 20 }}>
+                <img src={getDirectImageUrl(settings.branch_extension_image)} alt="Extension Table" style={{ width: '100%', borderRadius: 12 }} />
               </div>
+            )}
+
+            {activeSubTab === 'ext' && (
+              <div className="section-label" style={{ marginTop: 20, marginBottom: 12 }}>常用分機清單</div>
             )}
 
             {data.length === 0 ? <div className="empty-state">無資料</div> : (
@@ -1208,7 +1239,11 @@ function ContactNetworkView({ member }: { member: Member }) {
                   </div>
                   <div style={{display: 'flex', gap: 8}}>
                     {c.phone && <a href={`tel:${c.phone}${c.ext ? `,${c.ext}` : ''}`} className="contact-action"><IconPhone size={18} /></a>}
-                    {activeSubTab === 'custom' && <button className="contact-action" style={{background: 'var(--red-bg)', color: 'var(--red)'}} onClick={() => handleDeleteCustom(c.rowIndex)}><IconTrash size={18} /></button>}
+                    {(activeSubTab === 'custom' || activeSubTab === 'ext') && (
+                      <button className="contact-action" style={{background: 'var(--red-bg)', color: 'var(--red)'}} onClick={() => handleDeleteContact(activeSubTab === 'ext' ? 'unit_ext' : 'custom', c.rowIndex)}>
+                        <IconTrash size={18} />
+                      </button>
+                    )}
                   </div>
                 </div>
               ))
@@ -1219,6 +1254,10 @@ function ContactNetworkView({ member }: { member: Member }) {
 
       {activeSubTab === 'custom' && (
         <button className="todo-fab" onClick={() => setShowAddCustom(true)}><IconPlus size={28} /></button>
+      )}
+
+      {activeSubTab === 'ext' && (
+        <button className="todo-fab" onClick={() => setShowAddUnitExt(true)}><IconPlus size={28} /></button>
       )}
 
       {showAddCustom && (
@@ -1243,12 +1282,36 @@ function ContactNetworkView({ member }: { member: Member }) {
           </div>
         </div>
       )}
+
+      {showAddUnitExt && (
+        <div className="modal-overlay" onClick={() => setShowAddUnitExt(false)}>
+          <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <span className="modal-title">新增常用分機</span>
+              <button className="modal-close" onClick={() => setShowAddUnitExt(false)}><IconX size={16} /></button>
+            </div>
+            <div className="form-group">
+              <label className="form-label">姓名</label>
+              <input className="form-input" value={newUnitExt.name} onChange={e => setNewUnitExt({...newUnitExt, name: e.target.value})} placeholder="例如: 林佑承" />
+            </div>
+            <div className="form-group">
+              <label className="form-label">職稱</label>
+              <input className="form-input" value={newUnitExt.title} onChange={e => setNewUnitExt({...newUnitExt, title: e.target.value})} placeholder="例如: 主任" />
+            </div>
+            <div className="form-group">
+              <label className="form-label">分機號碼</label>
+              <input className="form-input" value={newUnitExt.ext} onChange={e => setNewUnitExt({...newUnitExt, ext: e.target.value})} placeholder="例如: 3899" />
+            </div>
+            <button className="btn btn-primary btn-full" onClick={handleAddUnitExt} disabled={!newUnitExt.name || !newUnitExt.ext}>確認新增</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 // ─── More Tab ──────────────────────────────────────────────────────────────
-function MoreTab({ member, onLogout, onExtHistory, onExtTrainingCheckin, onVLinkSSO, onContactNetwork }: { member: Member; onLogout: () => void; onExtHistory: () => void; onExtTrainingCheckin: () => void; onVLinkSSO: () => void; onContactNetwork: () => void }) {
+function MoreTab({ member, onLogout, onExtHistory, onExtTrainingCheckin, onVLinkSSO, onContactNetwork, onTodo }: { member: Member; onLogout: () => void; onExtHistory: () => void; onExtTrainingCheckin: () => void; onVLinkSSO: () => void; onContactNetwork: () => void; onTodo: () => void }) {
   return (
     <div className="ios-history-page">
       <div className="section-header" style={{ marginTop: 0 }}>系統與外部整合</div>
@@ -1260,11 +1323,19 @@ function MoreTab({ member, onLogout, onExtHistory, onExtTrainingCheckin, onVLink
             <div className="ios-list-desc">參加區單位主辦之訓練與活動</div>
           </div>
         </div>
-        <div className="ios-list-item" onClick={onContactNetwork}>
+        <div className="ios-list-item" onClick={() => onContactNetwork()}>
           <div className="ios-list-icon" style={{ background: '#FF9500' }}><IconAddressBook color="#fff" size={18} /></div>
           <div className="ios-list-text">
             <div className="ios-list-title">聯絡網</div>
             <div className="ios-list-desc">常用電話、業務窗口及分機表</div>
+          </div>
+          <IconChevronRight size={16} color="var(--text-secondary)" />
+        </div>
+        <div className="ios-list-item" onClick={() => onTodo()}>
+          <div className="ios-list-icon" style={{ background: '#32ADE6' }}><IconClipboard color="#fff" size={18} /></div>
+          <div className="ios-list-text">
+            <div className="ios-list-title">待辦事項</div>
+            <div className="ios-list-desc">個人任務管理與進度追蹤</div>
           </div>
           <IconChevronRight size={16} color="var(--text-secondary)" />
         </div>
@@ -1527,6 +1598,11 @@ export default function HomePage() {
                 <div style={{ fontWeight: 600 }}>紀錄拜訪</div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>上傳拜訪資料</div>
               </div>
+              <div className="ios-card" onClick={() => setScreen('todo')}>
+                <div className="ios-card-icon" style={{ background: '#32ADE6' }}><IconClipboard color="#fff" size={24} /></div>
+                <div style={{ fontWeight: 600 }}>待辦事項</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>查看個人待辦</div>
+              </div>
               <div className="ios-card" onClick={() => setScreen('query-visit')}>
                 <div className="ios-card-icon" style={{ background: 'var(--blue-muted)' }}><IconSearch color="var(--blue)" size={24} /></div>
                 <div style={{ fontWeight: 600 }}>拜訪查詢</div>
@@ -1579,7 +1655,7 @@ export default function HomePage() {
               {screen === 'visit' && <VisitTab forcedMember={member} onComplete={() => setScreen('home')} />}
               {screen === 'todo' && <TodoListView member={member} />}
               {screen === 'contacts' && <ContactNetworkView member={member} />}
-              {screen === 'more' && <MoreTab member={member} onLogout={logout} onExtHistory={() => setScreen('history-ext')} onExtTrainingCheckin={() => setScreen('external-training')} onContactNetwork={() => setScreen('contacts')} onVLinkSSO={() => {
+              {screen === 'more' && <MoreTab member={member} onLogout={logout} onExtHistory={() => setScreen('history-ext')} onExtTrainingCheckin={() => setScreen('external-training')} onContactNetwork={() => setScreen('contacts')} onTodo={() => setScreen('todo')} onVLinkSSO={() => {
                 showAnimation('sso-opening', '正在初始化安全掃描器...');
                 setTimeout(() => setScreen('vlink-sso'), 1500);
               }} />}

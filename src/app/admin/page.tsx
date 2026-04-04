@@ -35,6 +35,14 @@ function normalizeDate(str: string): string {
     return d.replace(/\//g, '-');
 }
 
+function getDirectImageUrl(url: string) {
+    if (!url) return '';
+    if (url.includes('dropbox.com')) {
+        return url.replace('?dl=0', '?raw=1').replace('&dl=0', '&raw=1');
+    }
+    return url;
+}
+
 
 function generatePDFReport(title: string, dateRange: string, cols: string[], rows: (string | React.ReactNode)[][]) {
     const iframe = document.createElement('iframe');
@@ -2101,7 +2109,7 @@ function ContactSection({ token }: { token: string }) {
                         </div>
                         {extImage && (
                             <div style={{ marginTop: 12, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--line)' }}>
-                                <img src={extImage} alt="Preview" style={{ width: '100%', maxHeight: 120, objectFit: 'cover' }} />
+                                <img src={getDirectImageUrl(extImage)} alt="Preview" style={{ width: '100%', maxHeight: 120, objectFit: 'cover' }} />
                             </div>
                         )}
                     </div>
