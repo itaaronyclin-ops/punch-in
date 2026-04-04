@@ -2799,6 +2799,7 @@ code {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  padding: 6px;
 }
 
 .icon-box-blue { background: rgba(0, 122, 255, 0.1); color: #007aff; }

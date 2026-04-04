@@ -1539,7 +1539,9 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotif, setShowNotif] = useState(false);
-  const [showScanner, setShowScanner] = useState(false);  const [isVLinkLoading, setIsVLinkLoading] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
+  const [isVLinkLoading, setIsVLinkLoading] = useState(false);
+  const [cachedMember, setCachedMember] = useState<Member | null>(null);
 
   const fetchUnread = useCallback(async () => {
     if (!member) return;
@@ -1556,15 +1558,13 @@ export default function HomePage() {
   // Restore the seamless login cache mechanism so the user doesn't have to keep logging in
   useEffect(() => {
     const savedAgcode = localStorage.getItem('agcode');
-    if (savedAgcode && !member) {
-      setLoading(true);
+    if (savedAgcode && !member && !cachedMember) {
       fetch(`/api/member?agcode=${savedAgcode}`)
         .then(r => r.json())
-        .then(data => { if (data.member) setMemberRaw(data.member); })
-        .catch(() => { })
-        .finally(() => setLoading(false));
+        .then(data => { if (data.member) setCachedMember(data.member); })
+        .catch(() => { });
     }
-  }, [member]);
+  }, [member, cachedMember]);
 
   // 支援 V49 透過手機內建相機掃描網址，利用 Hash 傳遞 id 避免跳轉問題
   useEffect(() => {
@@ -1660,13 +1660,44 @@ export default function HomePage() {
           <div className="login-icon-wrap" style={{ background: 'var(--surface-card)', border: '1px solid var(--line)', color: 'var(--text-primary)', boxShadow: 'none' }}><IconLogo size={32} /></div>
           <h1 style={{ fontSize: '1.4rem', fontWeight: 700, letterSpacing: '-0.03em', marginBottom: 6 }}>V-Link</h1>
           <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 32 }}>CONNECTING TECH</p>
-          <AgcodeLookup onFound={(m) => {
-            setIsVLinkLoading(true);
-            setTimeout(() => {
-              setMember(m);
-              setIsVLinkLoading(false);
-            }, 1800);
-          }} loading={loading} setLoading={setLoading} />
+          
+          {cachedMember ? (
+            <div className="welcome-back-card" style={{ background: 'var(--surface-input)', padding: '24px 20px', borderRadius: 20, marginBottom: 24, textAlign: 'center', border: '1px solid var(--line)', animation: 'slideUp 0.4s ease' }}>
+              <div style={{ fontSize: '1.2rem', fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 4 }}>歡迎回來，{cachedMember.name}</div>
+              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 20 }}>{cachedMember.agcode}</div>
+              <button 
+                className="btn btn-primary btn-full btn-lg" 
+                onClick={() => {
+                  setIsVLinkLoading(true);
+                  setTimeout(() => {
+                    setMember(cachedMember);
+                    setIsVLinkLoading(false);
+                  }, 1500);
+                }}
+              >
+                一鍵進入系統
+              </button>
+              <button 
+                className="btn-text" 
+                style={{ marginTop: 16, fontSize: '0.82rem', opacity: 0.6 }} 
+                onClick={() => {
+                  setCachedMember(null);
+                  localStorage.removeItem('agcode');
+                }}
+              >
+                切換其他代號
+              </button>
+            </div>
+          ) : (
+            <AgcodeLookup onFound={(m) => {
+              setIsVLinkLoading(true);
+              setTimeout(() => {
+                setMember(m);
+                setIsVLinkLoading(false);
+              }, 1800);
+            }} loading={loading} setLoading={setLoading} />
+          )}
+
           <div style={{ marginTop: 24 }}>
             <a href="/admin" className="btn-text" style={{ fontSize: '0.85rem' }}>前往後台管理 →</a>
           </div>

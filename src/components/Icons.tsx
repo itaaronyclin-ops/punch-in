@@ -85,7 +85,7 @@ export function IconShield({ size = 28, color = 'currentColor' }: { size?: numbe
 }
 
 export function IconLogo({ size = 20, className = '' }: { size?: number; className?: string }) {
-    return <img src="/logo.png" alt="V-Link" style={{ width: size, height: size, objectFit: 'contain' }} className={className} />;
+    return <img src="/logo.png" alt="V-Link" style={{ width: '100%', height: '100%', objectFit: 'contain' }} className={className} />;
 }
 
 export function IconChevronRight({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {
