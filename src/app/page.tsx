@@ -4,13 +4,15 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   IconCheckCircle, IconRun, IconInbox, IconMapPin, IconSearch,
-  IconLogo, IconChevronRight, IconAlertTriangle, IconClock, IconLogOut, IconBell, IconX, IconGrid, IconInfo, IconQrcode
+  IconLogo, IconChevronRight, IconAlertTriangle, IconClock, IconLogOut, IconBell, IconX, IconGrid, IconInfo, IconQrcode,
+  IconListCheck, IconAddressBook, IconTrash, IconPlus, IconRefreshCw, IconPhone, IconLoader
 } from '@/components/Icons';
 import { toast, confirmDialog, showAnimation } from '@/components/GlobalUI';
 import AuthScanner from '@/components/AuthScanner';
+import { Todo, ContactCommon, ContactBusiness, ContactCustom } from '@/lib/gas-client';
 
 
-type Tab = 'checkin' | 'field' | 'leave' | 'visit' | 'query';
+type Tab = 'checkin' | 'field' | 'leave' | 'visit' | 'query' | 'todo' | 'contacts';
 
 
 interface Member {
@@ -804,7 +806,7 @@ function TrainingCheckinTab({ member, onComplete }: { member: Member; onComplete
   const [locText, setLocText] = useState('定位獲取中...');
   const [userLoc, setUserLoc] = useState<{ latitude: number, longitude: number } | null>(null);
 
-  const API_URL = 'https://script.google.com/macros/s/AKfycbz4kiWGCG96zZHAJgc-wOAaCxOkS7WXf5IriAEKk0StXYFNVlME7x2SjaSva3Rp8obX/exec';
+  const API_URL = 'https://script.google.com/macros/s/AKfycbwJGDqs0leWieKG7n-O3KRdCMueRredwKyCNudQi6qzvFdsa1vvzKKvxGiN9GVp0xnV/exec';
 
   const gasRun = async (action: string, ...args: any[]) => {
     const res = await fetch(API_URL, {
@@ -966,8 +968,287 @@ function TrainingCheckinTab({ member, onComplete }: { member: Member; onComplete
   );
 }
 
+// ─── To-Do Tab ─────────────────────────────────────────────────────────────
+function TodoListView({ member }: { member: Member }) {
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showAdd, setShowAdd] = useState(false);
+  const [newTodo, setNewTodo] = useState({ title: '', details: '', deadline: '' });
+  const [selectedTodo, setSelectedTodo] = useState<Todo | null>(null);
+
+  const fetchTodos = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/todos?agcode=${member.agcode}`);
+      const data = await res.json();
+      setTodos(data.records || []);
+    } catch { toast.error('讀取失敗'); }
+    setLoading(false);
+  }, [member.agcode]);
+
+  useEffect(() => { fetchTodos(); }, [fetchTodos]);
+
+  const handleAdd = async () => {
+    if (!newTodo.title || !newTodo.deadline) return;
+    try {
+      const res = await fetch('/api/todos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...newTodo, agcode: member.agcode }),
+      });
+      if (res.ok) {
+        showAnimation('todo-success', '待辦事項已新增');
+        setShowAdd(false);
+        setNewTodo({ title: '', details: '', deadline: '' });
+        fetchTodos();
+      }
+    } catch { toast.error('新增失敗'); }
+  };
+
+  const handleToggleComplete = async (todo: Todo) => {
+    const nextStatus = todo.status === 'completed' ? 'pending' : 'completed';
+    try {
+      const res = await fetch('/api/todos', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...todo, status: nextStatus }),
+      });
+      if (res.ok) {
+        if (nextStatus === 'completed') showAnimation('todo-complete', '任務已完成！');
+        fetchTodos();
+        setSelectedTodo(null);
+      }
+    } catch { toast.error('操作失敗'); }
+  };
+
+  const handleDelete = async (rowIndex: number) => {
+    confirmDialog('確定要刪除此待辦事項嗎？', async () => {
+      try {
+        const res = await fetch(`/api/todos?rowIndex=${rowIndex}`, { method: 'DELETE' });
+        if (res.ok) {
+          showAnimation('todo-delete', '任務已刪除');
+          fetchTodos();
+          setSelectedTodo(null);
+        }
+      } catch { toast.error('刪除失敗'); }
+    });
+  };
+
+  if (selectedTodo) {
+    return (
+      <div className="ios-history-page" style={{ padding: 20 }}>
+        <button className="btn btn-ghost" onClick={() => setSelectedTodo(null)} style={{ marginBottom: 20 }}>← 返回列表</button>
+        <div className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+            <span className={`todo-badge ${selectedTodo.status}`}>{selectedTodo.status === 'completed' ? '已完成' : '待辦中'}</span>
+            <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>期限：{selectedTodo.deadline}</span>
+          </div>
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: 12 }}>{selectedTodo.title}</h2>
+          <div style={{ fontSize: '1rem', color: 'var(--text-secondary)', lineHeight: 1.6, whiteSpace: 'pre-line', marginBottom: 32 }}>
+            {selectedTodo.details || '無詳細內容'}
+          </div>
+          <div style={{ display: 'flex', gap: 12 }}>
+            <button className="btn btn-success btn-full" onClick={() => handleToggleComplete(selectedTodo)}>
+              {selectedTodo.status === 'completed' ? '重啟任務' : '標記完成'}
+            </button>
+            <button className="btn btn-danger" onClick={() => handleDelete(selectedTodo.rowIndex)}><IconTrash size={20} /></button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="ios-history-page">
+      <div className="section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span>待辦事項</span>
+        <button className="btn btn-ghost btn-sm" onClick={fetchTodos}><IconRefreshCw size={14} /></button>
+      </div>
+
+      <div style={{ padding: '0 16px' }}>
+        {loading ? <div style={{ textAlign: 'center', padding: 40 }}><IconLoader className="spin" size={32} /></div> :
+         todos.length === 0 ? <div className="empty-state">目前無待辦事項</div> :
+         todos.map(t => (
+           <div key={t.id || t.rowIndex} className={`card todo-card ${t.status}`} onClick={() => setSelectedTodo(t)} style={{ padding: '16px 20px', marginBottom: 12 }}>
+             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+               <div style={{ fontWeight: 600, fontSize: '1.05rem' }}>{t.title}</div>
+               <IconChevronRight size={16} color="var(--text-tertiary)" />
+             </div>
+             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
+               <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>📅 {t.deadline}</div>
+               <span className={`todo-badge ${t.status}`} style={{ fontSize: '0.65rem' }}>{t.status === 'completed' ? 'DONE' : 'TODO'}</span>
+             </div>
+           </div>
+         ))}
+      </div>
+
+      <button className="todo-fab" onClick={() => setShowAdd(true)}><IconPlus size={28} /></button>
+
+      {showAdd && (
+        <div className="modal-overlay" onClick={() => setShowAdd(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <span className="modal-title">新增待辦事項</span>
+              <button className="modal-close" onClick={() => setShowAdd(false)}><IconX size={16} /></button>
+            </div>
+            <div className="form-group">
+              <label className="form-label">標題</label>
+              <input className="form-input" value={newTodo.title} onChange={e => setNewTodo({...newTodo, title: e.target.value})} placeholder="任務名稱" />
+            </div>
+            <div className="form-group">
+              <label className="form-label">期限</label>
+              <input type="date" className="form-input" value={newTodo.deadline} onChange={e => setNewTodo({...newTodo, deadline: e.target.value})} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">詳情 (選填)</label>
+              <textarea className="form-textarea" value={newTodo.details} onChange={e => setNewTodo({...newTodo, details: e.target.value})} placeholder="任務內容描述..." rows={3} />
+            </div>
+            <button className="btn btn-primary btn-full" onClick={handleAdd} disabled={!newTodo.title || !newTodo.deadline}>確認新增</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Contact Network Tab ───────────────────────────────────────────────────
+function ContactNetworkView({ member }: { member: Member }) {
+  const [activeSubTab, setActiveSubTab] = useState<'common' | 'business' | 'ext' | 'custom'>('common');
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<any[]>([]);
+  const [settings, setSettings] = useState<any>({});
+  const [showAddCustom, setShowAddCustom] = useState(false);
+  const [newCustom, setNewCustom] = useState({ company: '', name: '', title: '', phone: '', ext: '', mobile: '', email: '' });
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const typeMap = { common: 'common', business: 'business', ext: 'common', custom: 'custom' };
+      const apiType = typeMap[activeSubTab];
+      const res = await fetch(`/api/contacts?type=${apiType}${apiType === 'custom' ? `&agcode=${member.agcode}` : ''}`);
+      const d = await res.json();
+      setData(d.records || []);
+
+      if (activeSubTab === 'ext') {
+        const sRes = await fetch('/api/admin/settings');
+        const sData = await sRes.json();
+        setSettings(sData.settings || {});
+      }
+    } catch { toast.error('載入失敗'); }
+    setLoading(false);
+  }, [activeSubTab, member.agcode]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const handleAddCustom = async () => {
+    if (!newCustom.name || !newCustom.phone) return;
+    try {
+      const res = await fetch('/api/contacts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'custom', agcode: member.agcode, ...newCustom }),
+      });
+      if (res.ok) {
+        showAnimation('contact-add', '聯絡人已儲存');
+        setShowAddCustom(false);
+        setNewCustom({ company: '', name: '', title: '', phone: '', ext: '', mobile: '', email: '' });
+        fetchData();
+      }
+    } catch { toast.error('新增失敗'); }
+  };
+
+  const handleDeleteCustom = async (rowIndex: number) => {
+    confirmDialog('確定要刪除此聯絡人嗎？', async () => {
+      try {
+        const res = await fetch(`/api/contacts?type=custom&rowIndex=${rowIndex}`, { method: 'DELETE' });
+        if (res.ok) {
+          toast.success('已刪除');
+          fetchData();
+        }
+      } catch { toast.error('刪除失敗'); }
+    });
+  };
+
+  return (
+    <div className="ios-history-page">
+      <div className="segmented" style={{ width: 'calc(100% - 32px)', margin: '0 16px 16px' }}>
+        <button className={`seg-btn ${activeSubTab === 'common' ? 'active' : ''}`} onClick={() => setActiveSubTab('common')}>常用</button>
+        <button className={`seg-btn ${activeSubTab === 'business' ? 'active' : ''}`} onClick={() => setActiveSubTab('business')}>業務</button>
+        <button className={`seg-btn ${activeSubTab === 'ext' ? 'active' : ''}`} onClick={() => setActiveSubTab('ext')}>分機表</button>
+        <button className={`seg-btn ${activeSubTab === 'custom' ? 'active' : ''}`} onClick={() => setActiveSubTab('custom')}>自訂</button>
+      </div>
+
+      <div style={{ padding: '0 16px' }}>
+        {loading ? <div style={{ textAlign: 'center', padding: 40 }}><IconLoader className="spin" size={32} /></div> : (
+          <>
+            {activeSubTab === 'ext' && settings.outbound_line && (
+              <div style={{ background: 'var(--blue-muted)', padding: '12px 16px', borderRadius: 12, marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: 600, color: 'var(--blue)' }}>外播線路</span>
+                <a href={`tel:${settings.outbound_line}`} className="phone-link">{settings.outbound_line}</a>
+              </div>
+            )}
+
+            {activeSubTab === 'ext' && settings.branch_extension_image && (
+              <div className="extension-image-container">
+                <img src={settings.branch_extension_image} alt="Extension Table" />
+              </div>
+            )}
+
+            {data.length === 0 ? <div className="empty-state">無資料</div> : (
+              data.map((c, i) => (
+                <div key={i} className="contact-item">
+                  <div className="contact-avatar">{c.name?.[0]}</div>
+                  <div className="contact-info">
+                    <div className="contact-name">{c.name} {c.title ? <span style={{fontSize: '0.75rem', fontWeight: 400, color: 'var(--text-tertiary)'}}>| {c.title}</span> : ''}</div>
+                    <div className="contact-detail">
+                      {c.company && <span>{c.company} • </span>}
+                      {c.businesstype && <span className="badge badge-blue" style={{padding: '1px 6px', fontSize: '0.7rem'}}>{c.businesstype}</span>}
+                      {c.phone && <span> {c.phone}{c.ext ? `#${c.ext}` : ''}</span>}
+                    </div>
+                  </div>
+                  <div style={{display: 'flex', gap: 8}}>
+                    {c.phone && <a href={`tel:${c.phone}${c.ext ? `,${c.ext}` : ''}`} className="contact-action"><IconPhone size={18} /></a>}
+                    {activeSubTab === 'custom' && <button className="contact-action" style={{background: 'var(--red-bg)', color: 'var(--red)'}} onClick={() => handleDeleteCustom(c.rowIndex)}><IconTrash size={18} /></button>}
+                  </div>
+                </div>
+              ))
+            )}
+          </>
+        )}
+      </div>
+
+      {activeSubTab === 'custom' && (
+        <button className="todo-fab" onClick={() => setShowAddCustom(true)}><IconPlus size={28} /></button>
+      )}
+
+      {showAddCustom && (
+        <div className="modal-overlay" onClick={() => setShowAddCustom(false)}>
+          <div className="modal" style={{ maxWidth: 440 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <span className="modal-title">新增自訂聯絡人</span>
+              <button className="modal-close" onClick={() => setShowAddCustom(false)}><IconX size={16} /></button>
+            </div>
+            <div className="grid-2">
+               <div className="form-group"><label className="form-label">單位/公司</label><input className="form-input" value={newCustom.company} onChange={e => setNewCustom({...newCustom, company: e.target.value})} /></div>
+               <div className="form-group"><label className="form-label">姓名</label><input className="form-input" value={newCustom.name} onChange={e => setNewCustom({...newCustom, name: e.target.value})} /></div>
+            </div>
+            <div className="form-group"><label className="form-label">職務</label><input className="form-input" value={newCustom.title} onChange={e => setNewCustom({...newCustom, title: e.target.value})} /></div>
+            <div className="grid-2">
+               <div className="form-group"><label className="form-label">外播線路</label><input className="form-input" value={newCustom.phone} onChange={e => setNewCustom({...newCustom, phone: e.target.value})} /></div>
+               <div className="form-group"><label className="form-label">分機</label><input className="form-input" value={newCustom.ext} onChange={e => setNewCustom({...newCustom, ext: e.target.value})} /></div>
+            </div>
+            <div className="form-group"><label className="form-label">手機</label><input className="form-input" value={newCustom.mobile} onChange={e => setNewCustom({...newCustom, mobile: e.target.value})} /></div>
+            <div className="form-group"><label className="form-label">Email</label><input className="form-input" value={newCustom.email} onChange={e => setNewCustom({...newCustom, email: e.target.value})} /></div>
+            <button className="btn btn-primary btn-full" onClick={handleAddCustom} disabled={!newCustom.name || !newCustom.phone}>確認新增</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── More Tab ──────────────────────────────────────────────────────────────
-function MoreTab({ member, onLogout, onExtHistory, onExtTrainingCheckin, onVLinkSSO }: { member: Member; onLogout: () => void; onExtHistory: () => void; onExtTrainingCheckin: () => void; onVLinkSSO: () => void }) {
+function MoreTab({ member, onLogout, onExtHistory, onExtTrainingCheckin, onVLinkSSO, onContactNetwork }: { member: Member; onLogout: () => void; onExtHistory: () => void; onExtTrainingCheckin: () => void; onVLinkSSO: () => void; onContactNetwork: () => void }) {
   return (
     <div className="ios-history-page">
       <div className="section-header" style={{ marginTop: 0 }}>系統與外部整合</div>
@@ -978,6 +1259,14 @@ function MoreTab({ member, onLogout, onExtHistory, onExtTrainingCheckin, onVLink
             <div className="ios-list-title">SEED PRO 課程簽到</div>
             <div className="ios-list-desc">參加區單位主辦之訓練與活動</div>
           </div>
+        </div>
+        <div className="ios-list-item" onClick={onContactNetwork}>
+          <div className="ios-list-icon" style={{ background: '#FF9500' }}><IconAddressBook color="#fff" size={18} /></div>
+          <div className="ios-list-text">
+            <div className="ios-list-title">聯絡網</div>
+            <div className="ios-list-desc">常用電話、業務窗口及分機表</div>
+          </div>
+          <IconChevronRight size={16} color="var(--text-secondary)" />
         </div>
         <div className="ios-list-item" onClick={onVLinkSSO}>
           <div className="ios-list-icon" style={{ background: 'var(--blue)' }}><IconQrcode color="#fff" size={18} /></div>
@@ -1010,7 +1299,7 @@ function MoreTab({ member, onLogout, onExtHistory, onExtTrainingCheckin, onVLink
 }
 
 // ─── Home Page (Main App) ────────────────────────────────────────────────────
-type AppScreen = 'home' | 'checkin' | 'field' | 'leave' | 'visit' | 'query-attendance' | 'query-visit' | 'more' | 'history-ext' | 'external-training' | 'vlink-sso';
+type AppScreen = 'home' | 'checkin' | 'field' | 'leave' | 'visit' | 'query-attendance' | 'query-visit' | 'more' | 'history-ext' | 'external-training' | 'vlink-sso' | 'todo' | 'contacts';
 
 export default function HomePage() {
   const [_screen, _setScreen] = useState<AppScreen>('home');
@@ -1288,7 +1577,9 @@ export default function HomePage() {
               {screen === 'query-attendance' && <QueryTab forcedMember={member} title="個人出勤紀錄" type="attendance" />}
               {screen === 'query-visit' && <QueryTab forcedMember={member} title="客戶拜訪查詢" type="visit" />}
               {screen === 'visit' && <VisitTab forcedMember={member} onComplete={() => setScreen('home')} />}
-              {screen === 'more' && <MoreTab member={member} onLogout={logout} onExtHistory={() => setScreen('history-ext')} onExtTrainingCheckin={() => setScreen('external-training')} onVLinkSSO={() => {
+              {screen === 'todo' && <TodoListView member={member} />}
+              {screen === 'contacts' && <ContactNetworkView member={member} />}
+              {screen === 'more' && <MoreTab member={member} onLogout={logout} onExtHistory={() => setScreen('history-ext')} onExtTrainingCheckin={() => setScreen('external-training')} onContactNetwork={() => setScreen('contacts')} onVLinkSSO={() => {
                 showAnimation('sso-opening', '正在初始化安全掃描器...');
                 setTimeout(() => setScreen('vlink-sso'), 1500);
               }} />}

@@ -171,3 +171,19 @@ export function IconShieldCheck({ size = 20, color = 'currentColor' }: { size?: 
 export function IconUserEdit({ size = 20, color = 'currentColor' }: { size?: number; color?: string }) {
     return <svg {...props} width={size} height={size} stroke={color}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /><path d="M18 10l3 3-5 5-2-2 4-6z" /></svg>;
 }
+
+export function IconListCheck({ size = 20, color = 'currentColor' }: { size?: number; color?: string }) {
+    return <svg {...props} width={size} height={size} stroke={color}><path d="M11 5h10M11 12h10M11 19h10M7 5l-2 2-1-1M7 12l-2 2-1-1M7 19l-2 2-1-1" /></svg>;
+}
+
+export function IconAddressBook({ size = 20, color = 'currentColor' }: { size?: number; color?: string }) {
+    return <svg {...props} width={size} height={size} stroke={color}><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" /><path d="M12 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" /><path d="M6 20v-2a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3v2" /></svg>;
+}
+
+export function IconLoader({ size = 20, color = 'currentColor', className = '' }: { size?: number; color?: string; className?: string }) {
+    return <svg {...props} width={size} height={size} stroke={color} className={className}><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" /></svg>;
+}
+
+export function IconPhone({ size = 20, color = 'currentColor' }: { size?: number; color?: string }) {
+    return <svg {...props} width={size} height={size} stroke={color}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" /></svg>;
+}

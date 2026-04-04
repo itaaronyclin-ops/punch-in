@@ -18,6 +18,10 @@ const SHEET = {
   NOTIFICATIONS: 'Notifications',
   PROFILES:      'Profiles',
   AUTH:          'AuthSessions',
+  TODOS:         'Todos',
+  CONTACTS_COMMON: 'ContactsCommon',
+  CONTACTS_BUSINESS: 'ContactsBusiness',
+  CONTACTS_CUSTOM: 'ContactsCustom',
 };
 
 // ─── Entry Points ──────────────────────────────────────────────────────────
@@ -94,6 +98,17 @@ function handleRequest(e) {
       case 'createAuthSession':  result = createAuthSession(data);  break;
       case 'approveAuthSession': result = approveAuthSession(data); break;
       case 'getAuthSession':     result = getAuthSession(data.id);  break;
+
+      // ── To-Do List ──────────────────────────────────────────────────────
+      case 'getTodos':          result = getTodos(data.agcode);       break;
+      case 'addTodo':           result = addTodo(data);               break;
+      case 'updateTodo':        result = updateTodo(data);            break;
+      case 'deleteTodo':        result = deleteTodo(data.rowIndex);   break;
+
+      // ── Contacts ────────────────────────────────────────────────────────
+      case 'getContacts':       result = getContacts(data);           break;
+      case 'addContact':        result = addContact(data);            break;
+      case 'deleteContact':     result = deleteContact(data);         break;
 
       // ── Init ──────────────────────────────────────────────────────────────
       case 'initSheets':        result = initSheets();                break;
@@ -626,6 +641,107 @@ function getAuthSession(id) {
   return { session };
 }
 
+// ─── To-Do List ─────────────────────────────────────────────────────────────
+
+function getTodos(agcode) {
+  if (!agcode) return { error: 'agcode required' };
+  const sheet = getSheet(SHEET.TODOS);
+  const rows = sheetToObjects(sheet);
+  const filtered = rows.filter(r => r.agcode === agcode.toUpperCase());
+  return {
+    records: filtered.map(r => ({
+      id: r.id,
+      agcode: r.agcode,
+      title: r.title,
+      details: r.details,
+      deadline: r.deadline,
+      status: r.status,
+      createdAt: r.createdat,
+      rowIndex: r.rowIndex
+    })).sort((a,b) => b.createdAt.localeCompare(a.createdAt))
+  };
+}
+
+function addTodo(data) {
+  const { agcode, title, details, deadline } = data;
+  if (!agcode || !title) return { error: '參數不完整' };
+  const id = generateId();
+  appendRow(SHEET.TODOS, [id, agcode.toUpperCase(), title, details || '', deadline || '', 'pending', nowStr()]);
+  return { success: true, id };
+}
+
+function updateTodo(data) {
+  const { rowIndex, id, agcode, title, details, deadline, status, createdAt } = data;
+  if (!rowIndex) return { error: 'rowIndex required' };
+  updateRow(SHEET.TODOS, parseInt(rowIndex), [
+    id, agcode.toUpperCase(), title, details || '', deadline || '', status || 'pending', createdAt || nowStr()
+  ]);
+  return { success: true };
+}
+
+function deleteTodo(rowIndex) {
+  if (!rowIndex) return { error: 'rowIndex required' };
+  deleteRow(SHEET.TODOS, rowIndex);
+  return { success: true };
+}
+
+// ─── Contacts ──────────────────────────────────────────────────────────────
+
+function getContacts(data) {
+  const { type, agcode } = data;
+  let sheetName = '';
+  if (type === 'common') sheetName = SHEET.CONTACTS_COMMON;
+  else if (type === 'business') sheetName = SHEET.CONTACTS_BUSINESS;
+  else if (type === 'custom') sheetName = SHEET.CONTACTS_CUSTOM;
+  else return { error: 'Invalid contact type' };
+
+  const sheet = getSheet(sheetName);
+  const rows = sheetToObjects(sheet);
+  
+  let filtered = rows;
+  if (type === 'custom' && agcode) {
+    filtered = rows.filter(r => r.agcode === agcode.toUpperCase());
+  }
+
+  return { records: filtered };
+}
+
+function addContact(data) {
+  const { type, agcode, company, name, title, phone, ext, mobile, email } = data;
+  let sheetName = '';
+  let row = [];
+  
+  // Ensure phone numbers are stored as strings by prepending ' if needed (though appendRow/GAS handles most)
+  // We'll rely on the frontend sending them as strings and GAS storing them.
+  
+  if (type === 'common') {
+    sheetName = SHEET.CONTACTS_COMMON;
+    row = [generateId(), name || '', phone || ''];
+  } else if (type === 'business') {
+    sheetName = SHEET.CONTACTS_BUSINESS;
+    row = [generateId(), data.businessType || '', name || '', phone || '', ext || ''];
+  } else if (type === 'custom') {
+    sheetName = SHEET.CONTACTS_CUSTOM;
+    row = [generateId(), agcode.toUpperCase(), company || '', name || '', title || '', phone || '', ext || '', mobile || '', email || '', nowStr()];
+  } else return { error: 'Invalid contact type' };
+
+  appendRow(sheetName, row);
+  return { success: true };
+}
+
+function deleteContact(data) {
+  const { type, rowIndex } = data;
+  let sheetName = '';
+  if (type === 'common') sheetName = SHEET.CONTACTS_COMMON;
+  else if (type === 'business') sheetName = SHEET.CONTACTS_BUSINESS;
+  else if (type === 'custom') sheetName = SHEET.CONTACTS_CUSTOM;
+  else return { error: 'Invalid contact type' };
+
+  if (!rowIndex) return { error: 'rowIndex required' };
+  deleteRow(sheetName, rowIndex);
+  return { success: true };
+}
+
 // ─── Init Sheets ────────────────────────────────────────────────────────────
 
 function initSheets() {
@@ -641,6 +757,10 @@ function initSheets() {
     { name: SHEET.NOTIFICATIONS, headers: ['ID', 'AGCODE', 'Type', 'Title', 'Content', 'CreatedAt', 'IsRead'] },
     { name: SHEET.PROFILES,      headers: ['ID', 'AGCODE', 'IDCard', 'Name', 'Birthday', 'Gender', 'Phone', 'Email', 'AddressContact', 'AddressResident', 'EmgName', 'EmgRelation', 'EmgPhone', 'EduLevel', 'EduSchool', 'PrevIndustry', 'PrevJob', 'GroupName', 'CertEthics', 'CertLife', 'CertProperty', 'CertForeign', 'CertInvestment', 'Rank', 'CreatedAt', 'UpdatedAt'] },
     { name: SHEET.AUTH,          headers: ['SessionId', 'Status', 'SupervisorAgcode', 'SupervisorName', 'ApplicantAgcode', 'ApplicantName', 'CreatedAt', 'UpdatedAt'] },
+    { name: SHEET.TODOS,         headers: ['ID', 'AGCODE', 'Title', 'Details', 'Deadline', 'Status', 'CreatedAt'] },
+    { name: SHEET.CONTACTS_COMMON, headers: ['ID', 'Name', 'Phone'] },
+    { name: SHEET.CONTACTS_BUSINESS, headers: ['ID', 'BusinessType', 'Name', 'Phone', 'Ext'] },
+    { name: SHEET.CONTACTS_CUSTOM, headers: ['ID', 'AGCODE', 'Company', 'Name', 'Title', 'Phone', 'Ext', 'Mobile', 'Email', 'CreatedAt'] },
   ];
 
   sheetDefs.forEach(def => {

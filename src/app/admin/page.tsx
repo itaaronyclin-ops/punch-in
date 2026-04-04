@@ -7,7 +7,7 @@ import {
     IconShield, IconLock, IconPlus, IconX, IconEdit, IconTrash,
     IconLogOut, IconDownload, IconAlertTriangle, IconCheck, IconDatabase,
     IconCheckCircle, IconSend, IconClock, IconRefreshCw, IconRun, IconQrcode, IconCamera, IconEye, IconInfo,
-    IconUserEdit, IconShieldCheck, LoadingState, SkeletonRows,
+    IconUserEdit, IconShieldCheck, LoadingState, SkeletonRows, IconAddressBook,
 } from '@/components/Icons';
 import { confirmDialog, toast } from '@/components/GlobalUI';
 
@@ -140,6 +140,7 @@ type AdminSection =
     | 'settings'
     | 'tg-settings'
     | 'reports'
+    | 'contacts'
 
 function useAdminAuth() {
     const [token, setToken] = useState('');
@@ -301,6 +302,7 @@ const navItems: { key: AdminSection; icon: React.ReactNode; label: string; secti
     { key: 'required-days', icon: <IconCalendar size={16} />, label: '必要出席日', section: '系統設定' },
     { key: 'settings', icon: <IconSettings size={16} />, label: '系統設定', section: '系統設定' },
     { key: 'tg-settings', icon: <IconMessageSquare size={16} />, label: 'TG 通知設定', section: '系統設定' },
+    { key: 'contacts', icon: <IconAddressBook size={16} />, label: '聯絡網管理', section: '系統設定' },
 ];
 
 function Sidebar({
@@ -1986,6 +1988,243 @@ function DetailItem({ label, value, full }: { label: string, value: any, full?: 
 }
 
 
+// ─── Contact Section ────────────────────────────────────────────────────────
+function ContactSection({ token }: { token: string }) {
+    const [commonContacts, setCommonContacts] = useState<any[]>([]);
+    const [businessContacts, setBusinessContacts] = useState<any[]>([]);
+    const [extImage, setExtImage] = useState('');
+    const [outboundLine, setOutboundLine] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+
+    const [showAddCommon, setShowAddCommon] = useState(false);
+    const [newCommon, setNewCommon] = useState({ name: '', phone: '' });
+
+    const [showAddBusiness, setShowAddBusiness] = useState(false);
+    const [newBusiness, setNewBusiness] = useState({ businessType: '', name: '', phone: '', ext: '' });
+
+    const fetchAll = useCallback(async () => {
+        setLoading(true);
+        try {
+            const [cRes, bRes, sRes] = await Promise.all([
+                fetch('/api/contacts?type=common'),
+                fetch('/api/contacts?type=business'),
+                fetch('/api/admin/settings', { headers: { 'x-admin-token': token } })
+            ]);
+            const cData = await cRes.json();
+            const bData = await bRes.json();
+            const sData = await sRes.json();
+
+            setCommonContacts(cData.records || []);
+            setBusinessContacts(bData.records || []);
+            setExtImage(sData.settings?.branch_extension_image || '');
+            setOutboundLine(sData.settings?.outbound_line || '');
+        } catch (err) {
+            toast.error('載入失敗');
+        } finally {
+            setLoading(false);
+        }
+    }, [token]);
+
+    useEffect(() => { fetchAll(); }, [fetchAll]);
+
+    const handleSaveSetting = async (key: string, value: string) => {
+        setSaving(true);
+        try {
+            const res = await fetch('/api/admin/settings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-admin-token': token },
+                body: JSON.stringify({ key, value }),
+            });
+            if (res.ok) toast.success('設定已儲存');
+        } catch { toast.error('儲存失敗'); }
+        setSaving(false);
+    };
+
+    const handleAddContact = async (type: string, data: any) => {
+        setSaving(true);
+        try {
+            const res = await fetch('/api/contacts', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type, ...data }),
+            });
+            if (res.ok) {
+                toast.success('已新增');
+                fetchAll();
+                setShowAddCommon(false);
+                setShowAddBusiness(false);
+                setNewCommon({ name: '', phone: '' });
+                setNewBusiness({ businessType: '', name: '', phone: '', ext: '' });
+            }
+        } catch { toast.error('新增失敗'); }
+        setSaving(false);
+    };
+
+    const handleDeleteContact = async (type: string, rowIndex: number) => {
+        confirmDialog('確定要刪除此聯絡人嗎？', async () => {
+            try {
+                const res = await fetch(`/api/contacts?type=${type}&rowIndex=${rowIndex}`, { method: 'DELETE' });
+                if (res.ok) {
+                    toast.success('已刪除');
+                    fetchAll();
+                }
+            } catch { toast.error('刪除失敗'); }
+        });
+    };
+
+    return (
+        <div style={{ paddingBottom: 60 }}>
+            <div className="page-header">
+                <h1 className="page-title">聯絡網管理</h1>
+                <p className="page-subtitle">維修常用電話、業務窗口及分機表</p>
+            </div>
+
+            <div className="grid-2">
+                <div className="card">
+                    <div className="card-header" style={{ marginBottom: 20 }}>
+                        <IconSettings size={18} color="var(--blue)" />
+                        <h3 className="card-title">全域設定</h3>
+                    </div>
+                    <div className="form-group">
+                        <label className="form-label">外播線路 (顯示於 App 頂部)</label>
+                        <div style={{ display: 'flex', gap: 10 }}>
+                            <input className="form-input" value={outboundLine} onChange={e => setOutboundLine(e.target.value)} placeholder="(02)1234-5678" />
+                            <button className="btn btn-primary" onClick={() => handleSaveSetting('outbound_line', outboundLine)}>儲存</button>
+                        </div>
+                    </div>
+                    <div className="form-group" style={{ marginTop: 20 }}>
+                        <label className="form-label">單位分機表圖片 URL</label>
+                        <div style={{ display: 'flex', gap: 10 }}>
+                            <input className="form-input" value={extImage} onChange={e => setExtImage(e.target.value)} placeholder="https://..." />
+                            <button className="btn btn-primary" onClick={() => handleSaveSetting('branch_extension_image', extImage)}>儲存</button>
+                        </div>
+                        {extImage && (
+                            <div style={{ marginTop: 12, borderRadius: 8, overflow: 'hidden', border: '1px solid var(--line)' }}>
+                                <img src={extImage} alt="Preview" style={{ width: '100%', maxHeight: 120, objectFit: 'cover' }} />
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="card">
+                    <div className="card-header" style={{ justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                            <IconRefreshCw size={18} color="var(--green)" />
+                            <h3 className="card-title">常用電話</h3>
+                        </div>
+                        <button className="btn btn-ghost btn-sm" onClick={() => setShowAddCommon(true)}><IconPlus size={14} /> 新增</button>
+                    </div>
+                    <div className="table-wrapper" style={{ maxHeight: 300 }}>
+                        <table>
+                            <thead>
+                                <tr><th>名稱</th><th>電話</th><th>操作</th></tr>
+                            </thead>
+                            <tbody>
+                                {commonContacts.map((c, i) => (
+                                    <tr key={i}>
+                                        <td>{c.name}</td>
+                                        <td>{c.phone}</td>
+                                        <td>
+                                            <button className="btn btn-text btn-danger" onClick={() => handleDeleteContact('common', c.rowIndex)}><IconTrash size={14} /></button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div className="card" style={{ marginTop: 24 }}>
+                <div className="card-header" style={{ justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <IconUserEdit size={18} color="var(--orange)" />
+                        <h3 className="card-title">業務窗口</h3>
+                    </div>
+                    <button className="btn btn-ghost btn-sm" onClick={() => setShowAddBusiness(true)}><IconPlus size={14} /> 新增窗口</button>
+                </div>
+                <div className="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr><th>業務內容</th><th>姓名</th><th>電話 / 分機</th><th>操作</th></tr>
+                        </thead>
+                        <tbody>
+                            {businessContacts.map((c, i) => (
+                                <tr key={i}>
+                                    <td><span className="badge badge-blue">{c.businesstype}</span></td>
+                                    <td>{c.name}</td>
+                                    <td>{c.phone} {c.ext ? `#${c.ext}` : ''}</td>
+                                    <td>
+                                        <button className="btn btn-text btn-danger" onClick={() => handleDeleteContact('business', c.rowIndex)}><IconTrash size={14} /></button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {/* Modals for adding */}
+            {showAddCommon && (
+                <div className="modal-overlay" onClick={() => setShowAddCommon(false)}>
+                    <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <span className="modal-title">新增常用電話</span>
+                            <button className="modal-close" onClick={() => setShowAddCommon(false)}><IconX size={16} /></button>
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">名稱</label>
+                            <input className="form-input" value={newCommon.name} onChange={e => setNewCommon({ ...newCommon, name: e.target.value })} placeholder="例：客服中心" />
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">電話</label>
+                            <input className="form-input" value={newCommon.phone} onChange={e => setNewCommon({ ...newCommon, phone: e.target.value })} placeholder="0800..." />
+                        </div>
+                        <div className="action-row" style={{ marginTop: 20 }}>
+                            <button className="btn btn-ghost" onClick={() => setShowAddCommon(false)}>取消</button>
+                            <button className="btn btn-primary" onClick={() => handleAddContact('common', newCommon)}>確認新增</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showAddBusiness && (
+                <div className="modal-overlay" onClick={() => setShowAddBusiness(false)}>
+                    <div className="modal" style={{ maxWidth: 460 }} onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <span className="modal-title">新增業務窗口</span>
+                            <button className="modal-close" onClick={() => setShowAddBusiness(false)}><IconX size={16} /></button>
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">業務內容</label>
+                            <input className="form-input" value={newBusiness.businessType} onChange={e => setNewBusiness({ ...newBusiness, businessType: e.target.value })} placeholder="例：契約變更" />
+                        </div>
+                        <div className="form-group">
+                            <label className="form-label">姓名</label>
+                            <input className="form-input" value={newBusiness.name} onChange={e => setNewBusiness({ ...newBusiness, name: e.target.value })} placeholder="姓名" />
+                        </div>
+                        <div className="grid-2">
+                            <div className="form-group">
+                                <label className="form-label">外播線路</label>
+                                <input className="form-input" value={newBusiness.phone} onChange={e => setNewBusiness({ ...newBusiness, phone: e.target.value })} placeholder="(02)..." />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">分機</label>
+                                <input className="form-input" value={newBusiness.ext} onChange={e => setNewBusiness({ ...newBusiness, ext: e.target.value })} placeholder="12345" />
+                            </div>
+                        </div>
+                        <div className="action-row" style={{ marginTop: 20 }}>
+                            <button className="btn btn-ghost" onClick={() => setShowAddBusiness(false)}>取消</button>
+                            <button className="btn btn-primary" onClick={() => handleAddContact('business', newBusiness)}>確認新增</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
 // ─── Main Admin Page ───────────────────────────────────────────────────────
 export default function AdminPage() {
     const { token, authed, checking, login, logout } = useAdminAuth();
@@ -2011,6 +2250,7 @@ export default function AdminPage() {
         settings: <SettingsSection token={token} />,
         'tg-settings': <TGSettingsSection token={token} />,
         reports: <ReportsSection token={token} />,
+        contacts: <ContactSection token={token} />,
     } as any;
 
     return (

@@ -2577,4 +2577,155 @@ code {
   background: radial-gradient(circle, #fff 0%, transparent 75%);
 }
 
+.spin {
+  animation: spin 1.2s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ─── To-Do List Styles ────────────────────────────────────────────────── */
+.todo-card {
+  transition: transform 0.2s, opacity 0.2s;
+  cursor: pointer;
+  border-left: 4px solid var(--line);
+}
+
+.todo-card:active {
+  transform: scale(0.98);
+  opacity: 0.8;
+}
+
+.todo-card.pending {
+  border-left-color: var(--blue);
+}
+
+.todo-card.completed {
+  border-left-color: var(--green);
+  opacity: 0.6;
+}
+
+.todo-card.completed .card-title {
+  text-decoration: line-through;
+  color: var(--text-secondary);
+}
+
+.todo-badge {
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 100px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.todo-badge.pending { background: var(--blue-muted); color: var(--blue); }
+.todo-badge.completed { background: var(--green-bg); color: var(--green); }
+
+/* ─── Contact Network Styles ───────────────────────────────────────────── */
+.contact-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: var(--surface-card);
+  border-radius: var(--r-lg);
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-card);
+  transition: transform 0.2s;
+}
+
+.contact-item:active {
+  transform: scale(0.98);
+}
+
+.contact-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--gray-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.contact-info {
+  flex: 1;
+}
+
+.contact-name {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.contact-detail {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.contact-action {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--blue-muted);
+  color: var(--blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.extension-image-container {
+  width: 100%;
+  border-radius: var(--r-xl);
+  overflow: hidden;
+  background: var(--surface-input);
+  box-shadow: var(--shadow-card);
+  margin-bottom: 24px;
+}
+
+.extension-image-container img {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.phone-link {
+  color: var(--blue);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.phone-link:hover {
+  text-decoration: underline;
+}
+
+.todo-fab {
+  position: fixed;
+  bottom: 100px;
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-raised);
+  z-index: 500;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.todo-fab:active {
+  transform: scale(0.9);
+}
+
 

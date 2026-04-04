@@ -342,3 +342,78 @@ export async function getAllProfiles(): Promise<HRProfile[]> {
 export async function saveProfile(profile: HRProfile): Promise<{ success: boolean; error?: string }> {
     return gasPost('saveProfile', profile as unknown as Record<string, unknown>);
 }
+
+// ─── To-Do List ─────────────────────────────────────────────────────────────
+
+export interface Todo {
+    id: string;
+    agcode: string;
+    title: string;
+    details: string;
+    deadline: string;
+    status: 'pending' | 'completed';
+    createdAt: string;
+    rowIndex: number;
+}
+
+export async function getTodos(agcode: string): Promise<Todo[]> {
+    const data = await gasGet<{ records: Todo[] }>('getTodos', { agcode });
+    return data.records;
+}
+
+export async function addTodo(todo: Omit<Todo, 'id' | 'status' | 'createdAt' | 'rowIndex'>) {
+    return gasPost('addTodo', todo as unknown as Record<string, unknown>);
+}
+
+export async function updateTodo(todo: Todo) {
+    return gasPost('updateTodo', todo as unknown as Record<string, unknown>);
+}
+
+export async function deleteTodo(rowIndex: number) {
+    return gasPost('deleteTodo', { rowIndex });
+}
+
+// ─── Contacts ──────────────────────────────────────────────────────────────
+
+export interface ContactCommon {
+    id: string;
+    name: string;
+    phone: string;
+    rowIndex?: number;
+}
+
+export interface ContactBusiness {
+    id: string;
+    businessType: string;
+    name: string;
+    phone: string;
+    ext: string;
+    rowIndex?: number;
+}
+
+export interface ContactCustom {
+    id: string;
+    agcode: string;
+    company: string;
+    name: string;
+    title: string;
+    phone: string;
+    ext: string;
+    mobile: string;
+    email: string;
+    createdAt: string;
+    rowIndex?: number;
+}
+
+export async function getContacts(type: 'common' | 'business' | 'custom', agcode?: string) {
+    const data = await gasGet<{ records: any[] }>('getContacts', { type, agcode: agcode || '' });
+    return data.records;
+}
+
+export async function addContact(type: 'common' | 'business' | 'custom', contact: any) {
+    return gasPost('addContact', { type, ...contact });
+}
+
+export async function deleteContact(type: 'common' | 'business' | 'custom', rowIndex: number) {
+    return gasPost('deleteContact', { type, rowIndex });
+}

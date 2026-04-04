@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { IconAlertTriangle, IconCheckCircle, IconQrcode, IconShieldCheck, IconLock, IconBriefcase, IconRun, IconMapPin } from '@/components/Icons';
+import { IconAlertTriangle, IconCheckCircle, IconQrcode, IconShieldCheck, IconLock, IconBriefcase, IconRun, IconMapPin, IconListCheck, IconTrash, IconAddressBook, IconLoader } from '@/components/Icons';
 import { playSystemSound } from '@/lib/sounds';
 
 type ToastType = 'success' | 'error' | 'info';
@@ -17,7 +17,7 @@ interface ConfirmOptions {
     onConfirm: () => void;
 }
 
-export type FullscreenAnimType = 'checkin-success' | 'checkin-fail' | 'leave-success' | 'leave-fail' | 'visit-success' | 'visit-fail' | 'auth-success' | 'sso-opening' | 'sso-success';
+export type FullscreenAnimType = 'checkin-success' | 'checkin-fail' | 'leave-success' | 'leave-fail' | 'visit-success' | 'visit-fail' | 'auth-success' | 'sso-opening' | 'sso-success' | 'todo-success' | 'todo-complete' | 'todo-delete' | 'contact-add' | 'contact-load';
 
 interface AnimOptions {
     type: FullscreenAnimType;
@@ -39,17 +39,17 @@ class UIManager {
     }
 
     static dispatchAnim(type: FullscreenAnimType, msg: string) {
-        if (type === 'checkin-success' || type === 'auth-success' || type === 'sso-success') playSystemSound('success');
+        if (type === 'checkin-success' || type === 'auth-success' || type === 'sso-success' || type === 'todo-success' || type === 'todo-complete' || type === 'contact-add') playSystemSound('success');
         if (type === 'checkin-fail') playSystemSound('error');
-        if (type === 'leave-success') playSystemSound('whoosh');
+        if (type === 'leave-success' || type === 'todo-delete') playSystemSound('whoosh');
         if (type === 'leave-fail') playSystemSound('error');
-        if (type === 'sso-opening') playSystemSound('whoosh');
+        if (type === 'sso-opening' || type === 'contact-load') playSystemSound('whoosh');
 
         this.animListeners.forEach(l => l({ type, msg }));
         
         // sso-opening doesn't auto-dismiss by timeout in GlobalUI if we want to control it, 
         // but for now let's keep it consistent or use a longer timeout for opening.
-        const duration = type === 'sso-opening' ? 1800 : 2500;
+        const duration = (type === 'sso-opening' || type === 'contact-load') ? 1800 : 2500;
         
         setTimeout(() => {
             this.animListeners.forEach(l => l(null));
@@ -159,15 +159,15 @@ export default function GlobalUI() {
                          <div style={{ height: 280, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
                              
                              {/* Unified Premium Container */}
-                             <div className={`premium-sso-container ${animOpts.type.includes('fail') ? 'fail' : animOpts.type.includes('success') ? 'success' : ''}`}>
-                                 <div className={`premium-sso-glow ${animOpts.type.includes('fail') ? 'fail' : animOpts.type.includes('success') ? 'success' : ''}`}></div>
+                             <div className={`premium-sso-container ${animOpts.type.includes('fail') ? 'fail' : animOpts.type.includes('success') || animOpts.type.includes('complete') || animOpts.type === 'contact-add' ? 'success' : ''}`}>
+                                 <div className={`premium-sso-glow ${animOpts.type.includes('fail') ? 'fail' : animOpts.type.includes('success') || animOpts.type.includes('complete') || animOpts.type === 'contact-add' ? 'success' : ''}`}></div>
                                  
-                                 {animOpts.type === 'sso-opening' ? (
+                                 {animOpts.type === 'sso-opening' || animOpts.type === 'contact-load' ? (
                                      <div className="premium-sso-shield-wrap">
                                          <div className="premium-sso-ring ring-1"></div>
                                          <div className="premium-sso-ring ring-2"></div>
                                          <div className="premium-sso-shield">
-                                            <IconShieldCheck size={80} color="#fff" />
+                                            {animOpts.type === 'sso-opening' ? <IconShieldCheck size={80} color="#fff" /> : <IconLoader size={80} color="#fff" className="spin" />}
                                          </div>
                                          <div className="premium-sso-radar"></div>
                                      </div>
@@ -179,6 +179,10 @@ export default function GlobalUI() {
                                           animOpts.type.includes('checkin') ? <IconBriefcase size={90} color="#fff" /> :
                                           animOpts.type.includes('leave') ? <IconRun size={90} color="#fff" /> :
                                           animOpts.type.includes('visit') ? <IconMapPin size={90} color="#fff" /> :
+                                          animOpts.type.includes('todo-success') ? <IconListCheck size={90} color="#fff" /> :
+                                          animOpts.type.includes('todo-complete') ? <IconCheckCircle size={100} color="#fff" /> :
+                                          animOpts.type.includes('todo-delete') ? <IconTrash size={90} color="#fff" /> :
+                                          animOpts.type.includes('contact-add') ? <IconAddressBook size={90} color="#fff" /> :
                                           animOpts.type.includes('auth') || animOpts.type === 'sso-success' ? <IconCheckCircle size={100} color="#fff" /> :
                                           <IconCheckCircle size={100} color="#fff" />}
                                      </div>
@@ -188,8 +192,8 @@ export default function GlobalUI() {
 
                          <div style={{ marginTop: 24, textAlign: 'center', color: '#fff' }}>
                             <div style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: 10, letterSpacing: '-0.03em' }}>
-                                {animOpts.type === 'sso-opening' ? '載入中...' : 
-                                 animOpts.type.includes('success') ? '恭喜您！' : 
+                                {animOpts.type === 'sso-opening' || animOpts.type === 'contact-load' ? '載入中...' : 
+                                 animOpts.type.includes('success') || animOpts.type.includes('complete') || animOpts.type === 'contact-add' ? '恭喜您！' : 
                                  animOpts.type.includes('fail') ? '系統提示' : '通知'}
                             </div>
                             <div style={{ fontSize: '1.1rem', color: 'rgba(255,255,255,0.85)', lineHeight: 1.6, whiteSpace: 'pre-line', fontWeight: 500 }}>{animOpts.msg}</div>
