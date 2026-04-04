@@ -3,7 +3,7 @@ import { checkAdminAuth } from '@/lib/auth';
 import { getAllSettings, setSetting } from '@/lib/gas-client';
 
 export async function GET(req: NextRequest) {
-    if (!checkAdminAuth(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // 允許所有人讀取設定（用於顯示分機圖片與外播線路），但只有管理員能修改
     const settings = await getAllSettings();
     return NextResponse.json({ settings });
 }
