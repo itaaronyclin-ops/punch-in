@@ -84,8 +84,8 @@ export function IconShield({ size = 28, color = 'currentColor' }: { size?: numbe
     return <svg {...props} width={size} height={size} stroke={color}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>;
 }
 
-export function IconLogo({ size = 20, color = 'currentColor' }: { size?: number; color?: string }) {
-    return <svg {...props} width={size} height={size} stroke={color}><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" /><rect x="9" y="3" width="6" height="4" rx="1" /><path d="M9 12l2 2 4-4" /></svg>;
+export function IconLogo({ size = 20, className = '' }: { size?: number; className?: string }) {
+    return <img src="/logo.png" alt="V-Link" style={{ width: size, height: size, objectFit: 'contain' }} className={className} />;
 }
 
 export function IconChevronRight({ size = 16, color = 'currentColor' }: { size?: number; color?: string }) {

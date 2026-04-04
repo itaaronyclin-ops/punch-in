@@ -141,6 +141,22 @@ function MemberInfo({ member, onReset }: { member: Member; onReset: () => void }
     </div>
   );
 }
+function VLinkLoadingScreen() {
+  return (
+    <div className="vlink-loading-screen">
+      <div className="vlink-loading-logo">
+        <IconLogo size={120} />
+      </div>
+      <div className="vlink-loading-text">V-LINK</div>
+      <div className="vlink-loading-bar">
+        <div className="vlink-loading-progress" />
+      </div>
+      <div style={{ marginTop: 24, fontSize: '0.85rem', color: 'var(--text-tertiary)', letterSpacing: '0.05em' }}>
+        CONNECTING TECH...
+      </div>
+    </div>
+  );
+}
 
 
 // ─── Clock ────────────────────────────────────────────────────────────────
@@ -1129,6 +1145,7 @@ function ContactNetworkView({ member }: { member: Member }) {
   const [showAddCustom, setShowAddCustom] = useState(false);
   const [showAddUnitExt, setShowAddUnitExt] = useState(false);
   const [editingContact, setEditingContact] = useState<any>(null);
+  const [viewingContact, setViewingContact] = useState<any>(null);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
   const [newCustom, setNewCustom] = useState({ company: '', name: '', title: '', phone: '', ext: '', mobile: '', email: '' });
   const [newUnitExt, setNewUnitExt] = useState({ name: '', title: '', ext: '' });
@@ -1272,15 +1289,27 @@ function ContactNetworkView({ member }: { member: Member }) {
                     <div className="contact-name" style={{ marginBottom: 2 }}>{c.name} {c.title ? <span style={{fontSize: '0.75rem', fontWeight: 400, color: 'var(--text-tertiary)'}}>| {c.title}</span> : ''}</div>
                     <div className="contact-detail" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
                       {c.company && <span>{c.company}</span>}
-                      {c.businesstype && <span className="badge badge-blue" style={{margin: '2px 0'}}>{c.businesstype}</span>}
-                      {c.phone && <div style={{ fontWeight: activeSubTab === 'business' ? 600 : 400, color: activeSubTab === 'business' ? 'var(--text-primary)' : 'var(--text-secondary)', marginTop: activeSubTab === 'business' ? 4 : 0 }}>{c.phone}{c.ext ? `#${c.ext}` : ''}</div>}
+                      {c.businesstype && <span className="badge badge-primary" style={{ margin: '2px 0', marginLeft: -9 }}>{c.businesstype}</span>}
+                      {((activeSubTab === 'ext' && c.ext) || c.phone) && (
+                        <div style={{ fontWeight: (activeSubTab === 'business' || activeSubTab === 'ext') ? 600 : 400, color: (activeSubTab === 'business' || activeSubTab === 'ext') ? 'var(--text-primary)' : 'var(--text-secondary)', marginTop: (activeSubTab === 'business' || activeSubTab === 'ext') ? 4 : 0 }}>
+                          {c.phone}{c.ext ? (c.phone ? `#${c.ext}` : `分機: ${c.ext}`) : ''}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div style={{display: 'flex', gap: 8}}>
-                    {c.phone && <a href={`tel:${c.phone}${c.ext ? `,${c.ext}` : ''}`} className="contact-action" onClick={() => playSystemSound('click')}><IconPhone size={18} /></a>}
+                    {(c.phone || (activeSubTab === 'ext' && c.ext && settings.outbound_line)) && (
+                      <a 
+                        href={`tel:${c.phone || settings.outbound_line}${c.ext ? `,${c.ext}` : ''}`} 
+                        className="contact-action" 
+                        onClick={() => playSystemSound('click')}
+                      >
+                        <IconPhone size={18} />
+                      </a>
+                    )}
                     {activeSubTab === 'custom' && (
-                      <button className="contact-action" style={{background: 'var(--blue-muted)', color: 'var(--blue)'}} onClick={() => startEdit(c)}>
-                        <IconEdit size={18} />
+                      <button className="contact-action" style={{background: 'var(--blue-muted)', color: 'var(--blue)'}} onClick={() => { playSystemSound('click'); setViewingContact(c); }}>
+                        <IconSearch size={18} />
                       </button>
                     )}
                     {(activeSubTab === 'custom' || activeSubTab === 'ext') && (
@@ -1338,6 +1367,59 @@ function ContactNetworkView({ member }: { member: Member }) {
         </div>
       )}
 
+      {viewingContact && (
+        <div className="modal-overlay" onClick={() => setViewingContact(null)}>
+          <div className="modal" style={{ maxWidth: 440 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <span className="modal-title">聯絡人詳情</span>
+              <button className="modal-close" onClick={() => setViewingContact(null)}><IconX size={16} /></button>
+            </div>
+            <div style={{ padding: '10px 0' }}>
+              <div className="detail-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, borderBottom: '1px solid var(--line)', paddingBottom: 8 }}>
+                <span style={{ color: 'var(--text-tertiary)' }}>姓名</span>
+                <span style={{ fontWeight: 600 }}>{viewingContact.name}</span>
+              </div>
+              {viewingContact.company && (
+                <div className="detail-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, borderBottom: '1px solid var(--line)', paddingBottom: 8 }}>
+                  <span style={{ color: 'var(--text-tertiary)' }}>單位/公司</span>
+                  <span>{viewingContact.company}</span>
+                </div>
+              )}
+              {viewingContact.title && (
+                <div className="detail-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, borderBottom: '1px solid var(--line)', paddingBottom: 8 }}>
+                  <span style={{ color: 'var(--text-tertiary)' }}>職務/稱謂</span>
+                  <span>{viewingContact.title}</span>
+                </div>
+              )}
+              {viewingContact.phone && (
+                <div className="detail-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, borderBottom: '1px solid var(--line)', paddingBottom: 8 }}>
+                  <span style={{ color: 'var(--text-tertiary)' }}>外播/市話</span>
+                  <span>{viewingContact.phone}{viewingContact.ext ? ` #${viewingContact.ext}` : ''}</span>
+                </div>
+              )}
+              {viewingContact.mobile && (
+                <div className="detail-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, borderBottom: '1px solid var(--line)', paddingBottom: 8 }}>
+                  <span style={{ color: 'var(--text-tertiary)' }}>手機</span>
+                  <span>{viewingContact.mobile}</span>
+                </div>
+              )}
+              {viewingContact.email && (
+                <div className="detail-row" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12, borderBottom: '1px solid var(--line)', paddingBottom: 8 }}>
+                  <span style={{ color: 'var(--text-tertiary)' }}>Email</span>
+                  <span>{viewingContact.email}</span>
+                </div>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 12, marginTop: 10 }}>
+              <button className="btn btn-full" onClick={() => setViewingContact(null)}>關閉</button>
+              <button className="btn btn-primary btn-full" style={{ display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'center' }} onClick={() => { startEdit(viewingContact); setViewingContact(null); }}>
+                <IconEdit size={18} /> 編輯資料
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showAddUnitExt && (
         <div className="modal-overlay" onClick={() => setShowAddUnitExt(false)}>
           <div className="modal" style={{ maxWidth: 400 }} onClick={e => e.stopPropagation()}>
@@ -1371,15 +1453,15 @@ function MoreTab({ member, onLogout, onExtHistory, onExtTrainingCheckin, onVLink
     <div className="ios-history-page">
       <div className="section-header" style={{ marginTop: 0 }}>系統與外部整合</div>
       <div className="ios-list">
-        <div className="ios-list-item" onClick={onExtTrainingCheckin}>
-          <div className="ios-list-icon" style={{ background: 'var(--blue)' }}><IconRun color="#fff" size={18} /></div>
+         <div className="ios-list-item" onClick={onExtTrainingCheckin}>
+          <div className="icon-box icon-box-blue" style={{ marginRight: 16 }}><IconRun size={18} /></div>
           <div className="ios-list-text">
             <div className="ios-list-title">SEED PRO 課程簽到</div>
             <div className="ios-list-desc">參加區單位主辦之訓練與活動</div>
           </div>
         </div>
         <div className="ios-list-item" onClick={() => onContactNetwork()}>
-          <div className="ios-list-icon" style={{ background: '#FF9500' }}><IconAddressBook color="#fff" size={18} /></div>
+          <div className="icon-box icon-box-orange" style={{ marginRight: 16 }}><IconAddressBook size={18} /></div>
           <div className="ios-list-text">
             <div className="ios-list-title">聯絡網</div>
             <div className="ios-list-desc">常用電話、業務窗口及分機表</div>
@@ -1387,7 +1469,7 @@ function MoreTab({ member, onLogout, onExtHistory, onExtTrainingCheckin, onVLink
           <IconChevronRight size={16} color="var(--text-secondary)" />
         </div>
         <div className="ios-list-item" onClick={() => onTodo()}>
-          <div className="ios-list-icon" style={{ background: '#32ADE6' }}><IconClipboard color="#fff" size={18} /></div>
+          <div className="icon-box icon-box-teal" style={{ marginRight: 16 }}><IconClipboard size={18} /></div>
           <div className="ios-list-text">
             <div className="ios-list-title">待辦事項</div>
             <div className="ios-list-desc">個人任務管理與進度追蹤</div>
@@ -1395,7 +1477,7 @@ function MoreTab({ member, onLogout, onExtHistory, onExtTrainingCheckin, onVLink
           <IconChevronRight size={16} color="var(--text-secondary)" />
         </div>
         <div className="ios-list-item" onClick={onVLinkSSO}>
-          <div className="ios-list-icon" style={{ background: 'var(--blue)' }}><IconQrcode color="#fff" size={18} /></div>
+          <div className="icon-box icon-box-blue" style={{ marginRight: 16 }}><IconQrcode size={18} /></div>
           <div className="ios-list-text">
             <div className="ios-list-title">V-Link SSO 掃碼登入</div>
             <div className="ios-list-desc">掃描電腦版 QR Code 直接登入</div>
@@ -1457,7 +1539,8 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotif, setShowNotif] = useState(false);
-  const [showScanner, setShowScanner] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);  const [isVLinkLoading, setIsVLinkLoading] = useState(false);
+
   const fetchUnread = useCallback(async () => {
     if (!member) return;
     try {
@@ -1565,15 +1648,25 @@ export default function HomePage() {
 
   const logout = () => confirmDialog('確定要登出系統嗎？', () => setMember(null));
 
+  if (isVLinkLoading) {
+    return <VLinkLoadingScreen />;
+  }
+
   // If unauthenticated
   if (!member) {
     return (
       <div className="login-page">
         <div className="login-box" style={{ maxWidth: 360, margin: '0 auto' }}>
           <div className="login-icon-wrap" style={{ background: 'var(--surface-card)', border: '1px solid var(--line)', color: 'var(--text-primary)', boxShadow: 'none' }}><IconLogo size={32} /></div>
-          <h1 style={{ fontSize: '1.4rem', fontWeight: 700, letterSpacing: '-0.03em', marginBottom: 6 }}>出勤管理</h1>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 32 }}>以業務代號登入</p>
-          <AgcodeLookup onFound={setMember} loading={loading} setLoading={setLoading} />
+          <h1 style={{ fontSize: '1.4rem', fontWeight: 700, letterSpacing: '-0.03em', marginBottom: 6 }}>V-Link</h1>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: 32 }}>CONNECTING TECH</p>
+          <AgcodeLookup onFound={(m) => {
+            setIsVLinkLoading(true);
+            setTimeout(() => {
+              setMember(m);
+              setIsVLinkLoading(false);
+            }, 1800);
+          }} loading={loading} setLoading={setLoading} />
           <div style={{ marginTop: 24 }}>
             <a href="/admin" className="btn-text" style={{ fontSize: '0.85rem' }}>前往後台管理 →</a>
           </div>
@@ -1632,34 +1725,34 @@ export default function HomePage() {
 
             <div className="ios-cards-scroll">
               <div className="ios-card" onClick={() => { playSystemSound('click'); setScreen('query-attendance'); }}>
-                <div className="ios-card-icon" style={{ background: '#f2f2f7' }}><IconSearch color="#007AFF" size={24} /></div>
+                <div className="icon-box icon-box-blue" style={{ marginBottom: 12, width: 44, height: 44 }}><IconSearch size={22} /></div>
                 <div style={{ fontWeight: 600 }}>個人出勤</div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>查看打卡紀錄</div>
               </div>
               {member?.rank !== '準增員' && (
                 <div className="ios-card" onClick={() => { playSystemSound('click'); setShowScanner(true); }}>
-                  <div className="ios-card-icon" style={{ background: '#f2f2f7' }}><IconQrcode color="#32ADE6" size={24} /></div>
+                  <div className="icon-box icon-box-teal" style={{ marginBottom: 12, width: 44, height: 44 }}><IconQrcode size={22} /></div>
                   <div style={{ fontWeight: 600 }}>驗證/授權</div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>授權驗證</div>
                 </div>
               )}
               <div className="ios-card" onClick={() => { playSystemSound('click'); setScreen('leave'); }}>
-                <div className="ios-card-icon" style={{ background: '#f2f2f7' }}><IconInbox color="#FF9500" size={24} /></div>
+                <div className="icon-box icon-box-orange" style={{ marginBottom: 12, width: 44, height: 44 }}><IconInbox size={22} /></div>
                 <div style={{ fontWeight: 600 }}>請假申請</div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>線上辦理請假</div>
               </div>
               <div className="ios-card" onClick={() => { playSystemSound('click'); setScreen('visit'); }}>
-                <div className="ios-card-icon" style={{ background: '#f2f2f7' }}><IconMapPin color="#FF2D55" size={24} /></div>
+                <div className="icon-box icon-box-red" style={{ marginBottom: 12, width: 44, height: 44 }}><IconMapPin size={22} /></div>
                 <div style={{ fontWeight: 600 }}>紀錄拜訪</div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>上傳拜訪資料</div>
               </div>
               <div className="ios-card" onClick={() => { playSystemSound('click'); setScreen('todo'); }}>
-                <div className="ios-card-icon" style={{ background: '#f2f2f7' }}><IconClipboard color="#5856D6" size={24} /></div>
+                <div className="icon-box icon-box-purple" style={{ marginBottom: 12, width: 44, height: 44 }}><IconClipboard size={22} /></div>
                 <div style={{ fontWeight: 600 }}>待辦事項</div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>查看個人待辦</div>
               </div>
               <div className="ios-card" onClick={() => { playSystemSound('click'); setScreen('query-visit'); }}>
-                <div className="ios-card-icon" style={{ background: '#f2f2f7' }}><IconSearch color="#34C759" size={24} /></div>
+                <div className="icon-box icon-box-green" style={{ marginBottom: 12, width: 44, height: 44 }}><IconSearch size={22} /></div>
                 <div style={{ fontWeight: 600 }}>拜訪查詢</div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>歷史拜訪紀錄</div>
               </div>
@@ -1699,6 +1792,7 @@ export default function HomePage() {
                 {screen === 'history-ext' ? '區單位訓練歷程' : ''}
                 {screen === 'external-training' ? 'SEED PRO 課程簽到' : ''}
                 {screen === 'vlink-sso' ? 'V-Link SSO 登入' : ''}
+                {screen === 'contacts' ? '單位聯絡網' : ''}
               </div>
             </div>
             <div className="ios-content">

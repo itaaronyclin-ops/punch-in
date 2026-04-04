@@ -2,15 +2,15 @@ import './globals.css';
 import type { Metadata, Viewport } from 'next';
 
 export const metadata: Metadata = {
-  title: '打卡系統',
-  description: '業務出勤管理平台',
+  title: 'V-Link',
+  description: '全方位業務連接平台',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: '打卡系統',
+    title: 'V-Link',
   },
-  applicationName: '打卡系統',
+  applicationName: 'V-Link',
 };
 
 export const viewport: Viewport = {

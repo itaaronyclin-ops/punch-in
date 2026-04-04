@@ -330,7 +330,7 @@ function Sidebar({
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ width: 28, height: 28, background: 'var(--accent)', borderRadius: 7, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}><IconLogo size={16} /></div>
                     <div>
-                        <div style={{ fontWeight: 700, fontSize: '0.95rem', letterSpacing: '-0.02em' }}>出勤管理</div>
+                        <div style={{ fontWeight: 700, fontSize: '0.95rem', letterSpacing: '-0.02em' }}>V-Link</div>
                         <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>後台管理系統</div>
                     </div>
                 </div>
