@@ -1136,9 +1136,11 @@ function ContactNetworkView({ member }: { member: Member }) {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const typeMap = { common: 'common', business: 'business', ext: 'unit_ext', custom: 'custom' };
+      const typeMap: Record<string, string> = { common: 'common', business: 'business', ext: 'unit_ext', custom: 'custom' };
       const apiType = typeMap[activeSubTab];
-      const res = await fetch(`/api/contacts?type=${apiType}${apiType === 'custom' || apiType === 'unit_ext' ? `&agcode=${member.agcode}` : ''}`);
+      // 強制將 agcode 轉為大寫以確保匹配
+      const agHeader = (apiType === 'custom' || apiType === 'unit_ext') ? `&agcode=${String(member.agcode || '').toUpperCase()}` : '';
+      const res = await fetch(`/api/contacts?type=${apiType}${agHeader}`);
       const d = await res.json();
       setData(d.records || []);
 
@@ -1235,10 +1237,10 @@ function ContactNetworkView({ member }: { member: Member }) {
   return (
     <div className="ios-history-page">
       <div className="segmented" style={{ width: 'calc(100% - 32px)', margin: '0 16px 16px' }}>
-        <button className={`seg-btn ${activeSubTab === 'common' ? 'active' : ''}`} onClick={() => { playSystemSound('click'); setActiveSubTab('common'); }}>常用</button>
-        <button className={`seg-btn ${activeSubTab === 'business' ? 'active' : ''}`} onClick={() => { playSystemSound('click'); setActiveSubTab('business'); }}>業務</button>
-        <button className={`seg-btn ${activeSubTab === 'ext' ? 'active' : ''}`} onClick={() => { playSystemSound('click'); setActiveSubTab('ext'); }}>分機表</button>
-        <button className={`seg-btn ${activeSubTab === 'custom' ? 'active' : ''}`} onClick={() => { playSystemSound('click'); setActiveSubTab('custom'); }}>自訂</button>
+        <button className={`seg-btn ${activeSubTab === 'common' ? 'active' : ''}`} onClick={() => setActiveSubTab('common')}>常用</button>
+        <button className={`seg-btn ${activeSubTab === 'business' ? 'active' : ''}`} onClick={() => setActiveSubTab('business')}>業務</button>
+        <button className={`seg-btn ${activeSubTab === 'ext' ? 'active' : ''}`} onClick={() => setActiveSubTab('ext')}>分機表</button>
+        <button className={`seg-btn ${activeSubTab === 'custom' ? 'active' : ''}`} onClick={() => setActiveSubTab('custom')}>自訂</button>
       </div>
 
       <div style={{ padding: '0 16px' }}>
@@ -1267,11 +1269,11 @@ function ContactNetworkView({ member }: { member: Member }) {
                 <div key={i} className="contact-item">
                   <div className="contact-avatar" style={{ background: activeSubTab === 'ext' ? 'var(--blue-muted)' : 'var(--surface-input)', color: activeSubTab === 'ext' ? 'var(--blue)' : 'var(--text-tertiary)' }}>{c.name?.[0]}</div>
                   <div className="contact-info">
-                    <div className="contact-name">{c.name} {c.title ? <span style={{fontSize: '0.75rem', fontWeight: 400, color: 'var(--text-tertiary)'}}>| {c.title}</span> : ''}</div>
-                    <div className="contact-detail" style={{ flexDirection: activeSubTab === 'business' ? 'column' : 'row', alignItems: 'flex-start', gap: activeSubTab === 'business' ? 2 : 4 }}>
+                    <div className="contact-name" style={{ marginBottom: 2 }}>{c.name} {c.title ? <span style={{fontSize: '0.75rem', fontWeight: 400, color: 'var(--text-tertiary)'}}>| {c.title}</span> : ''}</div>
+                    <div className="contact-detail" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
                       {c.company && <span>{c.company}</span>}
-                      {c.businesstype && <span className="badge badge-blue" style={{margin: activeSubTab === 'business' ? '2px 0 0' : '0'}}>{c.businesstype}</span>}
-                      {c.phone && <span style={{ fontWeight: activeSubTab === 'business' ? 600 : 400, color: activeSubTab === 'business' ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{c.phone}{c.ext ? `#${c.ext}` : ''}</span>}
+                      {c.businesstype && <span className="badge badge-blue" style={{margin: '2px 0'}}>{c.businesstype}</span>}
+                      {c.phone && <div style={{ fontWeight: activeSubTab === 'business' ? 600 : 400, color: activeSubTab === 'business' ? 'var(--text-primary)' : 'var(--text-secondary)', marginTop: activeSubTab === 'business' ? 4 : 0 }}>{c.phone}{c.ext ? `#${c.ext}` : ''}</div>}
                     </div>
                   </div>
                   <div style={{display: 'flex', gap: 8}}>
@@ -1735,19 +1737,19 @@ export default function HomePage() {
       </div>
 
       <div className="ios-tab-bar">
-        <div className={`ios-tab-item ${['home', 'attendance-stats', 'vlink-sso'].includes(screen) ? 'active' : ''}`} onClick={() => { playSystemSound('click'); setScreen('home'); }}>
+        <div className={`ios-tab-item ${['home', 'attendance-stats', 'vlink-sso'].includes(screen) ? 'active' : ''}`} onClick={() => setScreen('home')}>
           <IconGrid size={24} />
           <span>首頁</span>
         </div>
-        <div className={`ios-tab-item ${['checkin', 'field', 'query-attendance'].includes(screen) ? 'active' : ''}`} onClick={() => { playSystemSound('click'); setScreen('checkin'); }}>
+        <div className={`ios-tab-item ${['checkin', 'field', 'query-attendance'].includes(screen) ? 'active' : ''}`} onClick={() => setScreen('checkin')}>
           <IconSearch size={24} />
           <span>出勤</span>
         </div>
-        <div className={`ios-tab-item ${['visit', 'query-visit'].includes(screen) ? 'active' : ''}`} onClick={() => { playSystemSound('click'); setScreen('visit'); }}>
+        <div className={`ios-tab-item ${['visit', 'query-visit'].includes(screen) ? 'active' : ''}`} onClick={() => setScreen('visit')}>
           <IconMapPin size={24} />
           <span>拜訪</span>
         </div>
-        <div className={`ios-tab-item ${['more', 'contacts', 'todo', 'history-ext', 'external-training'].includes(screen) ? 'active' : ''}`} onClick={() => { playSystemSound('click'); setScreen('more'); }}>
+        <div className={`ios-tab-item ${['more', 'contacts', 'todo', 'history-ext', 'external-training'].includes(screen) ? 'active' : ''}`} onClick={() => setScreen('more')}>
           <IconLogo size={24} />
           <span>其他</span>
         </div>
