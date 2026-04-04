@@ -379,7 +379,7 @@ export interface ContactCommon {
     id: string;
     name: string;
     phone: string;
-    rowIndex?: number;
+    rowIndex: number;
 }
 
 export interface ContactBusiness {
@@ -388,7 +388,7 @@ export interface ContactBusiness {
     name: string;
     phone: string;
     ext: string;
-    rowIndex?: number;
+    rowIndex: number;
 }
 
 export interface ContactCustom {
@@ -402,7 +402,7 @@ export interface ContactCustom {
     mobile: string;
     email: string;
     createdAt: string;
-    rowIndex?: number;
+    rowIndex: number;
 }
 
 export async function getContacts(type: 'common' | 'business' | 'custom', agcode?: string) {
@@ -414,6 +414,10 @@ export async function addContact(type: 'common' | 'business' | 'custom', contact
     return gasPost('addContact', { type, ...contact });
 }
 
-export async function deleteContact(type: 'common' | 'business' | 'custom', rowIndex: number) {
+export async function deleteContact(type: string, rowIndex: number) {
     return gasPost('deleteContact', { type, rowIndex });
+}
+
+export async function updateContact(type: string, contact: any) {
+    return gasPost('updateContact', { type, ...contact });
 }

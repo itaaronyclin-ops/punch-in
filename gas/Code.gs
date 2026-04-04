@@ -715,16 +715,16 @@ function addContact(data) {
   
   if (type === 'common') {
     sheetName = SHEET.CONTACTS_COMMON;
-    row = [generateId(), name || '', phone || ''];
+    row = [generateId(), name || '', phone ? "'" + phone : ''];
   } else if (type === 'business') {
     sheetName = SHEET.CONTACTS_BUSINESS;
-    row = [generateId(), businessType || '', name || '', phone || '', ext || ''];
+    row = [generateId(), businessType || '', name || '', phone ? "'" + phone : '', ext ? "'" + ext : ''];
   } else if (type === 'custom') {
     sheetName = SHEET.CONTACTS_CUSTOM;
-    row = [generateId(), agcode.toUpperCase(), company || '', name || '', title || '', phone || '', ext || '', mobile || '', email || '', nowStr()];
+    row = [generateId(), agcode.toUpperCase(), company || '', name || '', title || '', phone ? "'" + phone : '', ext ? "'" + ext : '', mobile ? "'" + mobile : '', email || '', nowStr()];
   } else if (type === 'unit_ext') {
     sheetName = SHEET.CONTACTS_UNIT_EXT;
-    row = [generateId(), agcode.toUpperCase(), name || '', title || '', ext || '', nowStr()];
+    row = [generateId(), agcode.toUpperCase(), name || '', title || '', ext ? "'" + ext : '', nowStr()];
   } else return { error: 'Invalid contact type' };
 
   appendRow(sheetName, row);
@@ -742,6 +742,31 @@ function deleteContact(data) {
 
   if (!rowIndex) return { error: 'rowIndex required' };
   deleteRow(sheetName, rowIndex);
+  return { success: true };
+}
+
+function updateContact(data) {
+  const { type, rowIndex, agcode, company, name, title, phone, ext, mobile, email, businessType } = data;
+  if (!rowIndex) return { error: 'rowIndex is required for update' };
+  
+  let sheetName = '';
+  let row = [];
+  
+  if (type === 'common') {
+    sheetName = SHEET.CONTACTS_COMMON;
+    row = [data.id, name || '', phone ? "'" + phone : ''];
+  } else if (type === 'business') {
+    sheetName = SHEET.CONTACTS_BUSINESS;
+    row = [data.id, businessType || '', name || '', phone ? "'" + phone : '', ext ? "'" + ext : ''];
+  } else if (type === 'custom') {
+    sheetName = SHEET.CONTACTS_CUSTOM;
+    row = [data.id, agcode.toUpperCase(), company || '', name || '', title || '', phone ? "'" + phone : '', ext ? "'" + ext : '', mobile ? "'" + mobile : '', email || '', nowStr()];
+  } else if (type === 'unit_ext') {
+    sheetName = SHEET.CONTACTS_UNIT_EXT;
+    row = [data.id, agcode.toUpperCase(), name || '', title || '', ext ? "'" + ext : '', nowStr()];
+  } else return { error: 'Invalid contact type' };
+
+  updateRow(sheetName, rowIndex, row);
   return { success: true };
 }
 

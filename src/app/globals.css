@@ -301,33 +301,33 @@ body {
 
 /* ─── Segmented control (small) ──────────────────────────────────────────── */
 .segmented {
-  display: inline-flex;
-  background: var(--surface-input);
-  border-radius: var(--r-sm);
-  padding: 3px;
+  display: flex;
+  background: rgba(118, 118, 128, 0.12);
+  padding: 2px;
+  border-radius: 9px;
   gap: 2px;
 }
 
 .seg-btn {
-  padding: 6px 14px;
+  flex: 1;
+  padding: 7px 12px;
   border: none;
-  border-radius: var(--r-xs);
+  border-radius: 7px;
   background: transparent;
   color: var(--text-secondary);
-  font-size: 0.8125rem;
+  font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.18s var(--ease);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   font-family: var(--font);
-  letter-spacing: -0.01em;
   white-space: nowrap;
 }
 
 .seg-btn.active {
-  background: var(--surface-card);
+  background: #fff;
   color: var(--text-primary);
   font-weight: 600;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.10);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
 }
 
 .seg-btn:hover:not(.active) {
@@ -2377,7 +2377,10 @@ code {
 /* ─── IOS STYLE LIST & MORE PAGE ────────────────────────────────────────── */
 .ios-more-page, .ios-history-page {
   animation: slideInRight 0.3s var(--ease);
-  padding-bottom: 40px;
+  padding-bottom: 80px;
+  height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .section-header {

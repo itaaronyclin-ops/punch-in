@@ -5,11 +5,12 @@ import { useRouter } from 'next/navigation';
 import {
   IconCheckCircle, IconRun, IconInbox, IconMapPin, IconSearch,
   IconLogo, IconChevronRight, IconAlertTriangle, IconClock, IconLogOut, IconBell, IconX, IconGrid, IconInfo, IconQrcode,
-  IconListCheck, IconAddressBook, IconTrash, IconPlus, IconRefreshCw, IconPhone, IconLoader, IconClipboard
+  IconListCheck, IconAddressBook, IconTrash, IconPlus, IconRefreshCw, IconPhone, IconLoader, IconClipboard, IconEdit
 } from '@/components/Icons';
 import { toast, confirmDialog, showAnimation } from '@/components/GlobalUI';
 import AuthScanner from '@/components/AuthScanner';
 import { Todo, ContactCommon, ContactBusiness, ContactCustom } from '@/lib/gas-client';
+import { playSystemSound, resumeContext } from '@/lib/sounds';
 
 
 type Tab = 'checkin' | 'field' | 'leave' | 'visit' | 'query' | 'todo' | 'contacts';
@@ -1127,6 +1128,8 @@ function ContactNetworkView({ member }: { member: Member }) {
   const [settings, setSettings] = useState<any>({});
   const [showAddCustom, setShowAddCustom] = useState(false);
   const [showAddUnitExt, setShowAddUnitExt] = useState(false);
+  const [editingContact, setEditingContact] = useState<any>(null);
+  const [zoomImage, setZoomImage] = useState<string | null>(null);
   const [newCustom, setNewCustom] = useState({ company: '', name: '', title: '', phone: '', ext: '', mobile: '', email: '' });
   const [newUnitExt, setNewUnitExt] = useState({ name: '', title: '', ext: '' });
 
@@ -1150,21 +1153,36 @@ function ContactNetworkView({ member }: { member: Member }) {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const handleAddCustom = async () => {
+  const handleSaveCustom = async () => {
     if (!newCustom.name || !newCustom.phone) return;
+    playSystemSound('click');
     try {
+      const isEdit = !!editingContact;
       const res = await fetch('/api/contacts', {
-        method: 'POST',
+        method: isEdit ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'custom', agcode: member.agcode, ...newCustom }),
+        body: JSON.stringify({ 
+          type: 'custom', 
+          agcode: member.agcode, 
+          ...(isEdit ? { id: editingContact.id, rowIndex: editingContact.rowIndex } : {}),
+          ...newCustom 
+        }),
       });
       if (res.ok) {
-        showAnimation('contact-add', '聯絡人已儲存');
+        playSystemSound('success');
+        showAnimation('contact-add', isEdit ? '已更新資料' : '聯絡人已儲存');
         setShowAddCustom(false);
+        setEditingContact(null);
         setNewCustom({ company: '', name: '', title: '', phone: '', ext: '', mobile: '', email: '' });
         fetchData();
+      } else {
+        playSystemSound('error');
+        toast.error('儲存失敗');
       }
-    } catch { toast.error('新增失敗'); }
+    } catch { 
+      playSystemSound('error');
+      toast.error('系統錯誤'); 
+    }
   };
 
   const handleAddUnitExt = async () => {
@@ -1176,6 +1194,7 @@ function ContactNetworkView({ member }: { member: Member }) {
         body: JSON.stringify({ type: 'unit_ext', agcode: member.agcode, ...newUnitExt }),
       });
       if (res.ok) {
+        playSystemSound('success');
         showAnimation('contact-add', '分機已儲存');
         setShowAddUnitExt(false);
         setNewUnitExt({ name: '', title: '', ext: '' });
@@ -1185,10 +1204,12 @@ function ContactNetworkView({ member }: { member: Member }) {
   };
 
   const handleDeleteContact = async (type: string, rowIndex: number) => {
+    playSystemSound('click');
     confirmDialog('確定要刪除此聯絡人嗎？', async () => {
       try {
         const res = await fetch(`/api/contacts?type=${type}&rowIndex=${rowIndex}`, { method: 'DELETE' });
         if (res.ok) {
+          playSystemSound('success');
           toast.success('已刪除');
           fetchData();
         }
@@ -1196,13 +1217,28 @@ function ContactNetworkView({ member }: { member: Member }) {
     });
   };
 
+  const startEdit = (item: any) => {
+    playSystemSound('click');
+    setEditingContact(item);
+    setNewCustom({
+      company: item.company || '',
+      name: item.name || '',
+      title: item.title || '',
+      phone: item.phone || '',
+      ext: item.ext || '',
+      mobile: item.mobile || '',
+      email: item.email || ''
+    });
+    setShowAddCustom(true);
+  };
+
   return (
     <div className="ios-history-page">
       <div className="segmented" style={{ width: 'calc(100% - 32px)', margin: '0 16px 16px' }}>
-        <button className={`seg-btn ${activeSubTab === 'common' ? 'active' : ''}`} onClick={() => setActiveSubTab('common')}>常用</button>
-        <button className={`seg-btn ${activeSubTab === 'business' ? 'active' : ''}`} onClick={() => setActiveSubTab('business')}>業務</button>
-        <button className={`seg-btn ${activeSubTab === 'ext' ? 'active' : ''}`} onClick={() => setActiveSubTab('ext')}>分機表</button>
-        <button className={`seg-btn ${activeSubTab === 'custom' ? 'active' : ''}`} onClick={() => setActiveSubTab('custom')}>自訂</button>
+        <button className={`seg-btn ${activeSubTab === 'common' ? 'active' : ''}`} onClick={() => { playSystemSound('click'); setActiveSubTab('common'); }}>常用</button>
+        <button className={`seg-btn ${activeSubTab === 'business' ? 'active' : ''}`} onClick={() => { playSystemSound('click'); setActiveSubTab('business'); }}>業務</button>
+        <button className={`seg-btn ${activeSubTab === 'ext' ? 'active' : ''}`} onClick={() => { playSystemSound('click'); setActiveSubTab('ext'); }}>分機表</button>
+        <button className={`seg-btn ${activeSubTab === 'custom' ? 'active' : ''}`} onClick={() => { playSystemSound('click'); setActiveSubTab('custom'); }}>自訂</button>
       </div>
 
       <div style={{ padding: '0 16px' }}>
@@ -1216,8 +1252,9 @@ function ContactNetworkView({ member }: { member: Member }) {
             )}
 
             {activeSubTab === 'ext' && settings.branch_extension_image && (
-              <div className="extension-image-container" style={{ marginBottom: 20 }}>
-                <img src={getDirectImageUrl(settings.branch_extension_image)} alt="Extension Table" style={{ width: '100%', borderRadius: 12 }} />
+              <div className="extension-image-container" style={{ marginBottom: 20 }} onClick={() => setZoomImage(getDirectImageUrl(settings.branch_extension_image))}>
+                <img src={getDirectImageUrl(settings.branch_extension_image)} alt="Extension Table" style={{ width: '100%', borderRadius: 12, cursor: 'zoom-in' }} />
+                <div style={{ fontSize: '0.7rem', color: 'var(--text-tertiary)', textAlign: 'center', marginTop: 8 }}>點擊可放大查看</div>
               </div>
             )}
 
@@ -1228,17 +1265,22 @@ function ContactNetworkView({ member }: { member: Member }) {
             {data.length === 0 ? <div className="empty-state">無資料</div> : (
               data.map((c, i) => (
                 <div key={i} className="contact-item">
-                  <div className="contact-avatar">{c.name?.[0]}</div>
+                  <div className="contact-avatar" style={{ background: activeSubTab === 'ext' ? 'var(--blue-muted)' : 'var(--surface-input)', color: activeSubTab === 'ext' ? 'var(--blue)' : 'var(--text-tertiary)' }}>{c.name?.[0]}</div>
                   <div className="contact-info">
                     <div className="contact-name">{c.name} {c.title ? <span style={{fontSize: '0.75rem', fontWeight: 400, color: 'var(--text-tertiary)'}}>| {c.title}</span> : ''}</div>
-                    <div className="contact-detail">
-                      {c.company && <span>{c.company} • </span>}
-                      {c.businesstype && <span className="badge badge-blue" style={{padding: '1px 6px', fontSize: '0.7rem'}}>{c.businesstype}</span>}
-                      {c.phone && <span> {c.phone}{c.ext ? `#${c.ext}` : ''}</span>}
+                    <div className="contact-detail" style={{ flexDirection: activeSubTab === 'business' ? 'column' : 'row', alignItems: 'flex-start', gap: activeSubTab === 'business' ? 2 : 4 }}>
+                      {c.company && <span>{c.company}</span>}
+                      {c.businesstype && <span className="badge badge-blue" style={{margin: activeSubTab === 'business' ? '2px 0 0' : '0'}}>{c.businesstype}</span>}
+                      {c.phone && <span style={{ fontWeight: activeSubTab === 'business' ? 600 : 400, color: activeSubTab === 'business' ? 'var(--text-primary)' : 'var(--text-secondary)' }}>{c.phone}{c.ext ? `#${c.ext}` : ''}</span>}
                     </div>
                   </div>
                   <div style={{display: 'flex', gap: 8}}>
-                    {c.phone && <a href={`tel:${c.phone}${c.ext ? `,${c.ext}` : ''}`} className="contact-action"><IconPhone size={18} /></a>}
+                    {c.phone && <a href={`tel:${c.phone}${c.ext ? `,${c.ext}` : ''}`} className="contact-action" onClick={() => playSystemSound('click')}><IconPhone size={18} /></a>}
+                    {activeSubTab === 'custom' && (
+                      <button className="contact-action" style={{background: 'var(--blue-muted)', color: 'var(--blue)'}} onClick={() => startEdit(c)}>
+                        <IconEdit size={18} />
+                      </button>
+                    )}
                     {(activeSubTab === 'custom' || activeSubTab === 'ext') && (
                       <button className="contact-action" style={{background: 'var(--red-bg)', color: 'var(--red)'}} onClick={() => handleDeleteContact(activeSubTab === 'ext' ? 'unit_ext' : 'custom', c.rowIndex)}>
                         <IconTrash size={18} />
@@ -1261,11 +1303,11 @@ function ContactNetworkView({ member }: { member: Member }) {
       )}
 
       {showAddCustom && (
-        <div className="modal-overlay" onClick={() => setShowAddCustom(false)}>
+        <div className="modal-overlay" onClick={() => { setShowAddCustom(false); setEditingContact(null); }}>
           <div className="modal" style={{ maxWidth: 440 }} onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <span className="modal-title">新增自訂聯絡人</span>
-              <button className="modal-close" onClick={() => setShowAddCustom(false)}><IconX size={16} /></button>
+              <span className="modal-title">{editingContact ? '編輯聯絡人' : '新增自訂聯絡人'}</span>
+              <button className="modal-close" onClick={() => { setShowAddCustom(false); setEditingContact(null); }}><IconX size={16} /></button>
             </div>
             <div className="grid-2">
                <div className="form-group"><label className="form-label">單位/公司</label><input className="form-input" value={newCustom.company} onChange={e => setNewCustom({...newCustom, company: e.target.value})} /></div>
@@ -1278,7 +1320,18 @@ function ContactNetworkView({ member }: { member: Member }) {
             </div>
             <div className="form-group"><label className="form-label">手機</label><input className="form-input" value={newCustom.mobile} onChange={e => setNewCustom({...newCustom, mobile: e.target.value})} /></div>
             <div className="form-group"><label className="form-label">Email</label><input className="form-input" value={newCustom.email} onChange={e => setNewCustom({...newCustom, email: e.target.value})} /></div>
-            <button className="btn btn-primary btn-full" onClick={handleAddCustom} disabled={!newCustom.name || !newCustom.phone}>確認新增</button>
+            <button className="btn btn-primary btn-full" onClick={handleSaveCustom} disabled={!newCustom.name || !newCustom.phone}>{editingContact ? '確認更新' : '確認新增'}</button>
+          </div>
+        </div>
+      )}
+
+      {zoomImage && (
+        <div className="modal-overlay" style={{ background: 'rgba(0,0,0,0.9)', zIndex: 3000 }} onClick={() => setZoomImage(null)}>
+          <div style={{ width: '100vw', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <img src={zoomImage} alt="Zoom" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+            <button style={{ position: 'absolute', top: 40, right: 20, background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: 40, height: 40, color: '#fff' }} onClick={() => setZoomImage(null)}>
+              <IconX size={24} />
+            </button>
           </div>
         </div>
       )}
@@ -1576,35 +1629,35 @@ export default function HomePage() {
             </div>
 
             <div className="ios-cards-scroll">
-              <div className="ios-card" onClick={() => setScreen('query-attendance')}>
-                <div className="ios-card-icon"><IconSearch /></div>
+              <div className="ios-card" onClick={() => { playSystemSound('click'); setScreen('query-attendance'); }}>
+                <div className="ios-card-icon" style={{ background: '#f2f2f7' }}><IconSearch color="#007AFF" size={24} /></div>
                 <div style={{ fontWeight: 600 }}>個人出勤</div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>查看打卡紀錄</div>
               </div>
               {member?.rank !== '準增員' && (
-                <div className="ios-card" onClick={() => setShowScanner(true)}>
-                  <div className="ios-card-icon" style={{ background: 'var(--blue-muted)' }}><IconQrcode color="var(--blue)" size={24} /></div>
+                <div className="ios-card" onClick={() => { playSystemSound('click'); setShowScanner(true); }}>
+                  <div className="ios-card-icon" style={{ background: '#f2f2f7' }}><IconQrcode color="#32ADE6" size={24} /></div>
                   <div style={{ fontWeight: 600 }}>驗證/授權</div>
                   <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>授權驗證</div>
                 </div>
               )}
-              <div className="ios-card" onClick={() => setScreen('leave')}>
-                <div className="ios-card-icon"><IconInbox /></div>
+              <div className="ios-card" onClick={() => { playSystemSound('click'); setScreen('leave'); }}>
+                <div className="ios-card-icon" style={{ background: '#f2f2f7' }}><IconInbox color="#FF9500" size={24} /></div>
                 <div style={{ fontWeight: 600 }}>請假申請</div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>線上辦理請假</div>
               </div>
-              <div className="ios-card" onClick={() => setScreen('visit')}>
-                <div className="ios-card-icon"><IconMapPin /></div>
+              <div className="ios-card" onClick={() => { playSystemSound('click'); setScreen('visit'); }}>
+                <div className="ios-card-icon" style={{ background: '#f2f2f7' }}><IconMapPin color="#FF2D55" size={24} /></div>
                 <div style={{ fontWeight: 600 }}>紀錄拜訪</div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>上傳拜訪資料</div>
               </div>
-              <div className="ios-card" onClick={() => setScreen('todo')}>
-                <div className="ios-card-icon" style={{ background: '#32ADE6' }}><IconClipboard color="#fff" size={24} /></div>
+              <div className="ios-card" onClick={() => { playSystemSound('click'); setScreen('todo'); }}>
+                <div className="ios-card-icon" style={{ background: '#f2f2f7' }}><IconClipboard color="#5856D6" size={24} /></div>
                 <div style={{ fontWeight: 600 }}>待辦事項</div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>查看個人待辦</div>
               </div>
-              <div className="ios-card" onClick={() => setScreen('query-visit')}>
-                <div className="ios-card-icon" style={{ background: 'var(--blue-muted)' }}><IconSearch color="var(--blue)" size={24} /></div>
+              <div className="ios-card" onClick={() => { playSystemSound('click'); setScreen('query-visit'); }}>
+                <div className="ios-card-icon" style={{ background: '#f2f2f7' }}><IconSearch color="#34C759" size={24} /></div>
                 <div style={{ fontWeight: 600 }}>拜訪查詢</div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>歷史拜訪紀錄</div>
               </div>
@@ -1682,10 +1735,22 @@ export default function HomePage() {
       </div>
 
       <div className="ios-tab-bar">
-        <div className={`ios-tab-item ${screen === 'home' ? 'active' : ''}`} onClick={() => setScreen('home')}><IconLogo size={22} /> 首頁</div>
-        <div className={`ios-tab-item ${screen === 'query-attendance' ? 'active' : ''}`} onClick={() => setScreen('query-attendance')}><IconSearch size={22} /> 出勤</div>
-        <div className={`ios-tab-item ${screen === 'query-visit' ? 'active' : ''}`} onClick={() => setScreen('query-visit')}><IconMapPin size={22} /> 拜訪</div>
-        <div className={`ios-tab-item ${screen === 'more' ? 'active' : ''}`} onClick={() => setScreen('more')}><IconGrid size={22} /> 其他</div>
+        <div className={`ios-tab-item ${['home', 'attendance-stats', 'vlink-sso'].includes(screen) ? 'active' : ''}`} onClick={() => { playSystemSound('click'); setScreen('home'); }}>
+          <IconGrid size={24} />
+          <span>首頁</span>
+        </div>
+        <div className={`ios-tab-item ${['checkin', 'field', 'query-attendance'].includes(screen) ? 'active' : ''}`} onClick={() => { playSystemSound('click'); setScreen('checkin'); }}>
+          <IconSearch size={24} />
+          <span>出勤</span>
+        </div>
+        <div className={`ios-tab-item ${['visit', 'query-visit'].includes(screen) ? 'active' : ''}`} onClick={() => { playSystemSound('click'); setScreen('visit'); }}>
+          <IconMapPin size={24} />
+          <span>拜訪</span>
+        </div>
+        <div className={`ios-tab-item ${['more', 'contacts', 'todo', 'history-ext', 'external-training'].includes(screen) ? 'active' : ''}`} onClick={() => { playSystemSound('click'); setScreen('more'); }}>
+          <IconLogo size={24} />
+          <span>其他</span>
+        </div>
       </div>
 
       {showNotif && <NotificationModal agcode={member.agcode} onClose={() => setShowNotif(false)} onRefreshCount={fetchUnread} />}

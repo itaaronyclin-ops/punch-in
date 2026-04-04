@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getContacts, addContact, deleteContact } from '@/lib/gas-client';
+import { getContacts, addContact, updateContact, deleteContact } from '@/lib/gas-client';
 
 export async function GET(req: NextRequest) {
     try {
@@ -19,6 +19,18 @@ export async function POST(req: NextRequest) {
         const { type, ...contact } = body;
         if (!type) return NextResponse.json({ error: 'type is required' }, { status: 400 });
         const result = await addContact(type, contact);
+        return NextResponse.json(result);
+    } catch (err: any) {
+        return NextResponse.json({ error: err.message }, { status: 500 });
+    }
+}
+
+export async function PATCH(req: NextRequest) {
+    try {
+        const body = await req.json();
+        const { type, ...contact } = body;
+        if (!type || !contact.rowIndex) return NextResponse.json({ error: 'type and rowIndex are required' }, { status: 400 });
+        const result = await updateContact(type, contact);
         return NextResponse.json(result);
     } catch (err: any) {
         return NextResponse.json({ error: err.message }, { status: 500 });
