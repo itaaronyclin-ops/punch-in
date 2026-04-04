@@ -1863,7 +1863,7 @@ export default function HomePage() {
 
       <div className="ios-tab-bar">
         <div className={`ios-tab-item ${['home', 'attendance-stats', 'vlink-sso'].includes(screen) ? 'active' : ''}`} onClick={() => setScreen('home')}>
-          <IconGrid size={24} />
+          <IconCheckCircle size={24} />
           <span>首頁</span>
         </div>
         <div className={`ios-tab-item ${['checkin', 'field', 'query-attendance'].includes(screen) ? 'active' : ''}`} onClick={() => setScreen('checkin')}>
@@ -1875,7 +1875,7 @@ export default function HomePage() {
           <span>拜訪</span>
         </div>
         <div className={`ios-tab-item ${['more', 'contacts', 'todo', 'history-ext', 'external-training'].includes(screen) ? 'active' : ''}`} onClick={() => setScreen('more')}>
-          <IconLogo size={24} />
+          <IconGrid size={24} />
           <span>其他</span>
         </div>
       </div>
